@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Users,
+  UserCog,
   Clock,
   CalendarCheck,
   Activity,
@@ -22,6 +23,7 @@ import {
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Employees", href: "/employees", icon: Users },
+  { label: "User Management", href: "/user-management", icon: UserCog },
   { label: "Departments", href: "/departments", icon: Building2 },
   { label: "Time Tracking", href: "/time-tracking", icon: Clock },
   { label: "Attendance", href: "/attendance", icon: CalendarCheck },
