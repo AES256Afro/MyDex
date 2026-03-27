@@ -59,9 +59,20 @@ function LoginForm() {
       }
       setLoading(false);
     } else {
-      // Check if MFA is required — the session callback includes mfaRequired
-      // The middleware will redirect to /mfa-verify if mfa-pending cookie is set
-      // For now, redirect to the callback URL and let the server-side handle MFA check
+      // Check if the user has MFA enabled by fetching MFA status
+      try {
+        const mfaRes = await fetch("/api/v1/auth/mfa");
+        if (mfaRes.ok) {
+          const mfaData = await mfaRes.json();
+          if (mfaData.enabled) {
+            // MFA required — redirect to verification page
+            router.push("/mfa-verify?callbackUrl=" + encodeURIComponent(callbackUrl));
+            return;
+          }
+        }
+      } catch {
+        // If MFA check fails, proceed to dashboard
+      }
       router.push(callbackUrl);
     }
   }

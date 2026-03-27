@@ -18,6 +18,11 @@ const updateSettingsSchema = z.object({
       allowedDevices: z.array(z.string()).optional(),
       deviceAllowlistEnabled: z.boolean().optional(),
       requireApproval: z.boolean().optional(),
+      // Module access control per role
+      moduleAccess: z.record(z.string(), z.object({
+        enabled: z.boolean(),
+        minRole: z.string().optional(),
+      })).optional(),
     })
     .optional(),
 });
@@ -54,7 +59,7 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json(org);
+    return NextResponse.json({ organization: org });
   } catch (error) {
     console.error("Error fetching settings:", error);
     return NextResponse.json(

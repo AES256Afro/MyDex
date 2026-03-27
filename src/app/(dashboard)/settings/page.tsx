@@ -87,8 +87,9 @@ export default function SettingsPage() {
       const res = await fetch("/api/v1/settings");
       if (res.ok) {
         const data = await res.json();
-        setOrgName(data.name || "");
-        const settings = (data.settings || {}) as OrgSettings;
+        const org = data.organization || data;
+        setOrgName(org.name || "");
+        const settings = (org.settings || {}) as OrgSettings;
         setTimezone(settings.timezone || "UTC");
         setWorkHoursStart(settings.workHoursStart || "09:00");
         setWorkHoursEnd(settings.workHoursEnd || "17:00");

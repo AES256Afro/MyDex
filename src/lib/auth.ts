@@ -235,8 +235,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.organizationId = dbUser.organizationId;
           token.userId = dbUser.id;
         }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        token.mfaRequired = (user as any).mfaRequired || false;
+        token.mfaRequired = user.mfaRequired || false;
       }
       return token;
     },
@@ -245,8 +244,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.userId as string;
         session.user.role = token.role as Role;
         session.user.organizationId = token.organizationId as string;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (session.user as any).mfaRequired = token.mfaRequired || false;
+        session.user.mfaRequired = Boolean(token.mfaRequired);
       }
       return session;
     },
