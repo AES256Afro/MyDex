@@ -4,9 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"runtime"
 	"sync"
 	"time"
+
+	"github.com/shirou/gopsutil/v3/host"
 
 	"github.com/AES256Afro/mydex-agent/internal/config"
 )
@@ -93,6 +98,61 @@ func (c *Client) Token() (string, error) {
 	}
 
 	return token, nil
+}
+
+// RegisterDevice registers this machine as a device on the server
+func (c *Client) RegisterDevice() error {
+	hostname, _ := os.Hostname()
+
+	info, _ := host.Info()
+	osVersion := ""
+	platform := runtime.GOOS
+	if info != nil {
+		osVersion = info.Platform + " " + info.PlatformVersion
+		platform = info.OS
+	}
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"hostname":     hostname,
+		"platform":     platform,
+		"osVersion":    osVersion,
+		"agentVersion": "1.0.0",
+		"status":       "ONLINE",
+	})
+
+	req, err := c.AuthenticatedRequest("POST", "/api/v1/agents/devices", body)
+	if err != nil {
+		return fmt.Errorf("creating register request: %w", err)
+	}
+	req.Body = io.NopCloser(bytes.NewReader(body))
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("register request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+		return fmt.Errorf("register failed with status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var result struct {
+		Device struct {
+			ID string `json:"id"`
+		} `json:"device"`
+	}
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return fmt.Errorf("parsing register response: %w", err)
+	}
+
+	c.mu.Lock()
+	c.cfg.DeviceID = result.Device.ID
+	c.mu.Unlock()
+
+	c.cfg.Save()
+	return nil
 }
 
 // AuthenticatedRequest creates an HTTP request with the JWT auth header
