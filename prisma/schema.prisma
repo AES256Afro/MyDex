@@ -27,6 +27,8 @@ model Organization {
   departments      Department[]
   hostGroups       HostGroup[]
   domainBlocklists DomainBlocklist[]
+  agentApiKeys     AgentApiKey[]
+  agentPolicies    AgentPolicy[]
 }
 
 model User {
@@ -158,8 +160,9 @@ model HostGroup {
 
   organization Organization    @relation(fields: [organizationId], references: [id])
   department   Department?     @relation(fields: [departmentId], references: [id])
-  members      HostGroupMember[]
-  policies     HostGroupPolicy[]
+  members       HostGroupMember[]
+  policies      HostGroupPolicy[]
+  agentPolicies AgentPolicy[]
 
   @@unique([organizationId, name])
   @@index([organizationId])
@@ -730,6 +733,11 @@ model AgentDevice {
   commands RemediationCommand[]
   diagnostics DeviceDiagnostic[]
   hostGroupMemberships HostGroupMember[]
+  telemetryBatches     TelemetryBatch[]
+  networkConnections   NetworkConnection[]
+  dnsQueryLogs         DnsQueryLog[]
+  usbDeviceEvents      UsbDeviceEvent[]
+  apiKey               AgentApiKey?
 
   @@unique([organizationId, userId, hostname])
   @@index([organizationId])
@@ -789,6 +797,11 @@ enum CommandType {
   RESTART_SERVICE
   FORCE_REBOOT
   CUSTOM
+  ISOLATE_HOST
+  UNISOLATE_HOST
+  COLLECT_LOGS
+  UPDATE_AGENT
+  CHANGE_POLICY
 }
 
 enum CommandStatus {
@@ -798,4 +811,124 @@ enum CommandStatus {
   COMPLETED
   FAILED
   CANCELLED
+}
+
+// ============================================
+// AGENT API KEYS & TELEMETRY
+// ============================================
+
+model AgentApiKey {
+  id             String    @id @default(cuid())
+  organizationId String
+  deviceId       String?   @unique
+  keyHash        String    @unique
+  keyPrefix      String
+  name           String
+  permissions    String[]
+  isActive       Boolean   @default(true)
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  createdBy      String
+  createdAt      DateTime  @default(now())
+  revokedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  device       AgentDevice? @relation(fields: [deviceId], references: [id])
+
+  @@index([organizationId])
+  @@index([keyHash])
+}
+
+model TelemetryBatch {
+  id             String   @id @default(cuid())
+  organizationId String
+  deviceId       String
+  batchType      String
+  collectedAt    DateTime
+  receivedAt     DateTime @default(now())
+  payload        Json
+  eventCount     Int      @default(0)
+
+  device AgentDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, batchType, collectedAt])
+  @@index([organizationId, collectedAt])
+}
+
+model NetworkConnection {
+  id             String   @id @default(cuid())
+  organizationId String
+  deviceId       String
+  protocol       String
+  localAddress   String
+  localPort      Int
+  remoteAddress  String
+  remotePort     Int
+  state          String
+  processName    String?
+  pid            Int?
+  direction      String?
+  timestamp      DateTime @default(now())
+
+  device AgentDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, timestamp])
+  @@index([organizationId, remoteAddress])
+}
+
+model DnsQueryLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  deviceId       String
+  queryName      String
+  queryType      String
+  responseCode   String?
+  resolvedIps    String[]
+  processName    String?
+  blocked        Boolean  @default(false)
+  blockedBy      String?
+  timestamp      DateTime @default(now())
+
+  device AgentDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, timestamp])
+  @@index([organizationId, queryName])
+}
+
+model UsbDeviceEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  deviceId       String
+  eventType      String
+  vendorId       String?
+  productId      String?
+  serialNumber   String?
+  deviceName     String
+  deviceClass    String?
+  allowed        Boolean  @default(true)
+  timestamp      DateTime @default(now())
+
+  device AgentDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, timestamp])
+  @@index([organizationId, timestamp])
+}
+
+model AgentPolicy {
+  id             String   @id @default(cuid())
+  organizationId String
+  hostGroupId    String?
+  name           String
+  policyType     String
+  config         Json
+  priority       Int      @default(0)
+  isActive       Boolean  @default(true)
+  version        Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  hostGroup    HostGroup?   @relation(fields: [hostGroupId], references: [id])
+
+  @@index([organizationId, policyType])
 }
