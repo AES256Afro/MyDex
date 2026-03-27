@@ -40,10 +40,10 @@ export default function HomePage() {
             Start Free Trial
           </Link>
           <Link
-            href="#features"
+            href="/demo"
             className="rounded-md border border-border px-6 py-3 text-sm font-medium text-foreground hover:bg-accent"
           >
-            View Features
+            Live Demo
           </Link>
         </div>
 
