@@ -519,13 +519,35 @@ export default function ActivityPage() {
       </div>
 
       {/* Hourly Activity Heatmap */}
-      {!loading && selectedUserId && (eventsWithDurations.apps.length > 0 || eventsWithDurations.websites.length > 0) && (
+      {!loading && selectedUserId && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Hourly Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <HourlyHeatmap apps={eventsWithDurations.apps} websites={eventsWithDurations.websites} />
+            {eventsWithDurations.apps.length > 0 || eventsWithDurations.websites.length > 0 ? (
+              <HourlyHeatmap apps={eventsWithDurations.apps} websites={eventsWithDurations.websites} />
+            ) : (
+              <div>
+                <div className="flex items-end gap-1" style={{ height: 120 }}>
+                  {Array(24).fill(0).map((_, hour) => (
+                    <div key={hour} className="flex-1 flex flex-col items-center gap-1" title={`${hour}:00 — No data`}>
+                      <div className="w-full rounded-t bg-muted transition-all" style={{ height: "4%" }} />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-1 mt-1">
+                  {Array(24).fill(0).map((_, hour) => (
+                    <div key={hour} className="flex-1 text-center text-[9px] text-muted-foreground">
+                      {hour % 3 === 0 ? `${hour}` : ""}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-center text-sm text-muted-foreground mt-4">
+                  No activity data for this period. Activity will appear here once the tracker or agent reports events.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
