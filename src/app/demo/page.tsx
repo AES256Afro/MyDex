@@ -15,7 +15,9 @@ import {
   Eye, EyeOff, UserCog, KeyRound, Lock, Unlock, Fingerprint, LogIn, LogOut,
   QrCode, ShieldCheck, ShieldAlert, LinkIcon, ToggleLeft, ToggleRight,
   Mail, UserPlus, Filter, MoreHorizontal, Check, X, Layers, Grid3X3,
-  Briefcase, ClipboardList, Timer, Calendar, Coffee, Star,
+  Briefcase, ClipboardList, Timer, Calendar, Coffee, Star, Download,
+  UserCircle, Bell, Palette, Sun, Moon, Smartphone, Laptop,
+  Phone, Pause,
 } from "lucide-react";
 
 // ─── Mock Timestamps ─────────────────────────────────────────────────────────
@@ -255,6 +257,100 @@ const mockModules = [
 
 const roleHierarchy = ["Employee", "Manager", "Admin", "Super Admin"];
 
+// ─── Mock Time Tracking ─────────────────────────────────────────────────────
+
+const mockTimeLog = [
+  { event: "Clock In", time: "9:02 AM", note: "" },
+  { event: "Break Start", time: "12:15 PM", note: "Lunch" },
+  { event: "Break End", time: "12:48 PM", note: "Lunch" },
+];
+
+const mockWeeklyTimesheet = [
+  { day: "Mon 3/23", start: "9:05 AM", end: "5:32 PM", breaks: "0:33", total: "7:54", overtime: "0:00" },
+  { day: "Tue 3/24", start: "8:58 AM", end: "6:15 PM", breaks: "0:45", total: "8:32", overtime: "0:32" },
+  { day: "Wed 3/25", start: "9:10 AM", end: "5:45 PM", breaks: "0:30", total: "8:05", overtime: "0:05" },
+  { day: "Thu 3/26", start: "9:02 AM", end: "6:48 PM", breaks: "0:33", total: "9:13", overtime: "1:13" },
+  { day: "Fri 3/27", start: "9:02 AM", end: "—", breaks: "0:33", total: "—", overtime: "—" },
+];
+
+// ─── Mock Attendance ────────────────────────────────────────────────────────
+
+const mockLeaveRequests = [
+  { id: "lr1", type: "PTO", dates: "Apr 14–18, 2026", days: 5, status: "Pending", submitted: "Mar 20" },
+  { id: "lr2", type: "Sick", dates: "Mar 10, 2026", days: 1, status: "Approved", submitted: "Mar 10" },
+  { id: "lr3", type: "Personal", dates: "Feb 14, 2026", days: 1, status: "Approved", submitted: "Feb 10" },
+  { id: "lr4", type: "PTO", dates: "Jan 2–3, 2026", days: 2, status: "Approved", submitted: "Dec 20" },
+];
+
+// ─── Mock Projects ──────────────────────────────────────────────────────────
+
+const mockProjects = [
+  {
+    id: "p1", name: "API Gateway v2", status: "In Progress", progress: 68,
+    dueDate: "Apr 15, 2026", team: ["JM", "AP", "MJ"],
+    tasks: { total: 24, done: 16 }, color: "blue",
+  },
+  {
+    id: "p2", name: "Marketing Redesign", status: "In Progress", progress: 42,
+    dueDate: "May 1, 2026", team: ["SC", "LW"],
+    tasks: { total: 18, done: 8 }, color: "purple",
+  },
+  {
+    id: "p3", name: "Q1 Financial Close", status: "Completed", progress: 100,
+    dueDate: "Mar 15, 2026", team: ["TG", "RK"],
+    tasks: { total: 12, done: 12 }, color: "green",
+  },
+  {
+    id: "p4", name: "Mobile App Beta", status: "At Risk", progress: 31,
+    dueDate: "Apr 30, 2026", team: ["AP", "JM", "SC", "MJ"],
+    tasks: { total: 32, done: 10 }, color: "orange",
+  },
+];
+
+// ─── Mock Employees ─────────────────────────────────────────────────────────
+
+const mockEmployees = [
+  { id: "e1", name: "Jordan Miller", email: "jordan@acmecorp.com", dept: "Engineering", role: "Senior Developer", status: "Active", phone: "x4201", avatar: "JM" },
+  { id: "e2", name: "Sarah Chen", email: "sarah@acmecorp.com", dept: "Design", role: "Lead Designer", status: "Active", phone: "x4302", avatar: "SC" },
+  { id: "e3", name: "Tom Garcia", email: "tom@acmecorp.com", dept: "Finance", role: "Financial Analyst", status: "On Leave", phone: "x4103", avatar: "TG" },
+  { id: "e4", name: "Anita Patel", email: "anita@acmecorp.com", dept: "Engineering", role: "Staff Engineer", status: "Active", phone: "x4204", avatar: "AP" },
+  { id: "e5", name: "Lisa Wong", email: "lisa@acmecorp.com", dept: "Sales", role: "Account Executive", status: "Active", phone: "x4505", avatar: "LW" },
+  { id: "e6", name: "Marcus Johnson", email: "marcus@acmecorp.com", dept: "Engineering", role: "Tech Lead", status: "Active", phone: "x4206", avatar: "MJ" },
+  { id: "e7", name: "Rachel Kim", email: "rachel@acmecorp.com", dept: "HR", role: "HR Specialist", status: "Active", phone: "x4607", avatar: "RK" },
+  { id: "e8", name: "David Brooks", email: "david@acmecorp.com", dept: "Sales", role: "Sales Manager", status: "Suspended", phone: "x4508", avatar: "DB" },
+];
+
+// ─── Mock Software Inventory ────────────────────────────────────────────────
+
+const mockSoftwareInventory = [
+  { category: "Development", items: [
+    { name: "VS Code", version: "1.96.2", installs: 3, devices: ["DESKTOP-JMILLER", "MACBOOK-APATEL", "LAPTOP-SCHEN"] },
+    { name: "Docker Desktop", version: "4.36.0", installs: 2, devices: ["DESKTOP-JMILLER", "MACBOOK-APATEL"] },
+    { name: "Node.js", version: "22.12.0", installs: 1, devices: ["DESKTOP-JMILLER"] },
+    { name: "Git", version: "2.47.1", installs: 1, devices: ["DESKTOP-JMILLER"] },
+    { name: "Postman", version: "11.20", installs: 1, devices: ["MACBOOK-APATEL"] },
+    { name: "IntelliJ IDEA", version: "2024.3", installs: 1, devices: ["WS-TGARCIA"] },
+  ]},
+  { category: "Design", items: [
+    { name: "Photoshop", version: "25.7", installs: 1, devices: ["LAPTOP-SCHEN"] },
+    { name: "Figma", version: "124.5", installs: 1, devices: ["LAPTOP-SCHEN"] },
+    { name: "Illustrator", version: "28.5", installs: 1, devices: ["LAPTOP-SCHEN"] },
+    { name: "Canva", version: "1.82", installs: 1, devices: ["LAPTOP-SCHEN"] },
+  ]},
+  { category: "Productivity", items: [
+    { name: "Chrome", version: "123.0", installs: 4, devices: ["DESKTOP-JMILLER", "LAPTOP-SCHEN", "WS-TGARCIA", "MACBOOK-APATEL"] },
+    { name: "Slack", version: "4.38", installs: 3, devices: ["DESKTOP-JMILLER", "LAPTOP-SCHEN", "WS-TGARCIA"] },
+    { name: "Excel", version: "16.0", installs: 1, devices: ["WS-TGARCIA"] },
+    { name: "Adobe Acrobat", version: "24.004", installs: 1, devices: ["WS-TGARCIA"] },
+  ]},
+  { category: "System & Utilities", items: [
+    { name: "Homebrew", version: "4.4.10", installs: 1, devices: ["MACBOOK-APATEL"] },
+    { name: "iTerm2", version: "3.5.2", installs: 1, devices: ["MACBOOK-APATEL"] },
+    { name: "TablePlus", version: "6.2", installs: 1, devices: ["MACBOOK-APATEL"] },
+    { name: "QuickBooks", version: "2024.R8", installs: 1, devices: ["WS-TGARCIA"] },
+  ]},
+];
+
 // ─── Utility Functions ───────────────────────────────────────────────────────
 
 function formatUptime(seconds: number) {
@@ -289,12 +385,15 @@ const sectionGroups = [
     category: "",
     items: [
       { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { id: "time-tracking", label: "Time Tracking", icon: Timer },
+      { id: "attendance", label: "Attendance", icon: CalendarCheck },
+      { id: "projects", label: "Projects", icon: FolderKanban },
+      { id: "my-account", label: "My Account", icon: UserCircle },
     ],
   },
   {
     category: "MONITORING",
     items: [
-      { id: "devices", label: "Devices", icon: Monitor },
       { id: "activity", label: "Activity", icon: Activity },
       { id: "productivity", label: "Productivity", icon: Brain },
     ],
@@ -302,25 +401,29 @@ const sectionGroups = [
   {
     category: "MANAGEMENT",
     items: [
+      { id: "employees", label: "Employees", icon: Users },
+      { id: "user-management", label: "User Management", icon: UserCog },
       { id: "departments", label: "Departments", icon: Building2 },
-      { id: "host-groups", label: "Host Groups", icon: Server },
-      { id: "user-management", label: "User Management", icon: Users },
       { id: "reports", label: "Reports", icon: BarChart3 },
     ],
   },
   {
     category: "SECURITY",
     items: [
+      { id: "devices", label: "Devices", icon: Monitor },
+      { id: "software-inventory", label: "Software Inventory", icon: Package },
+      { id: "host-groups", label: "Host Groups", icon: Server },
       { id: "security", label: "Security", icon: Shield },
     ],
   },
   {
     category: "ADMINISTRATION",
     items: [
-      { id: "employee-view", label: "Employee View", icon: Eye },
+      { id: "settings", label: "Settings", icon: Settings },
       { id: "mfa-security", label: "MFA & Security", icon: Fingerprint },
       { id: "sso-providers", label: "SSO Providers", icon: LinkIcon },
       { id: "module-access", label: "Module Access", icon: Layers },
+      { id: "agent-setup", label: "Agent Setup", icon: Download },
     ],
   },
 ];
@@ -531,6 +634,370 @@ export default function DemoPage() {
                   </CardContent>
                 </Card>
               </div>
+            </div>
+          )}
+
+          {/* ═══ TIME TRACKING ═══ */}
+          {activeSection === "time-tracking" && (
+            <div className="space-y-6">
+              <div><h1 className="text-2xl font-bold flex items-center gap-2"><Timer className="h-6 w-6" /> Time Tracking</h1>
+              <p className="text-muted-foreground text-sm">Clock in/out and weekly timesheet</p></div>
+
+              {/* Clock In/Out Card */}
+              <Card className="border-l-4 border-l-green-500">
+                <CardContent className="py-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="h-14 w-14 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                        <Timer className="h-7 w-7 text-green-600" />
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Current Status</div>
+                        <div className="text-2xl font-bold text-green-600">Clocked In</div>
+                        <div className="text-sm text-muted-foreground">Since 9:02 AM &middot; 7h 23m today</div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"><Pause className="h-4 w-4 mr-2" /> Break</Button>
+                      <Button className="bg-red-600 hover:bg-red-700 text-white"><LogOut className="h-4 w-4 mr-2" /> Clock Out</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Today's Log */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Today&apos;s Log &mdash; Fri, Mar 27</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {mockTimeLog.map((entry, i) => (
+                      <div key={i} className="flex items-center gap-4 text-sm">
+                        <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
+                        <span className="font-mono w-20">{entry.time}</span>
+                        <span className="font-medium">{entry.event}</span>
+                        {entry.note && <Badge variant="outline" className="text-xs">{entry.note}</Badge>}
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="h-2.5 w-2.5 rounded-full bg-green-500 animate-pulse" />
+                      <span className="font-mono w-20">Now</span>
+                      <span className="font-medium text-green-600">Working...</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Weekly Timesheet */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Weekly Timesheet</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead><tr className="border-b bg-muted/30"><th className="text-left p-3">Day</th><th className="text-left p-3">Start</th><th className="text-left p-3">End</th><th className="text-left p-3">Breaks</th><th className="text-left p-3">Total</th><th className="text-right p-3">Overtime</th></tr></thead>
+                      <tbody>
+                        {mockWeeklyTimesheet.map((row) => (
+                          <tr key={row.day} className="border-b last:border-0 hover:bg-muted/30">
+                            <td className="p-3 font-medium">{row.day}</td>
+                            <td className="p-3 text-muted-foreground">{row.start}</td>
+                            <td className="p-3 text-muted-foreground">{row.end}</td>
+                            <td className="p-3 text-muted-foreground">{row.breaks}</td>
+                            <td className="p-3 font-medium">{row.total}</td>
+                            <td className={`p-3 text-right ${row.overtime !== "0:00" && row.overtime !== "—" ? "text-orange-600 font-medium" : "text-muted-foreground"}`}>{row.overtime}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Overtime Summary */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Hours This Week</div><div className="text-2xl font-bold">33:44</div><div className="text-xs text-muted-foreground">of 40h target</div></CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Overtime This Week</div><div className="text-2xl font-bold text-orange-600">1:50</div><div className="text-xs text-muted-foreground">Thu: 1h13m, Wed: 5m, Tue: 32m</div></CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Overtime This Month</div><div className="text-2xl font-bold text-orange-600">6:15</div><div className="text-xs text-muted-foreground">Avg 1.6h/week</div></CardContent></Card>
+              </div>
+            </div>
+          )}
+
+          {/* ═══ ATTENDANCE ═══ */}
+          {activeSection === "attendance" && (
+            <div className="space-y-6">
+              <div><h1 className="text-2xl font-bold flex items-center gap-2"><CalendarCheck className="h-6 w-6" /> Attendance</h1>
+              <p className="text-muted-foreground text-sm">Attendance calendar, leave balances, and requests</p></div>
+
+              {/* Leave Balances */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <Card className="border-l-4 border-l-blue-500">
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-muted-foreground">PTO</div>
+                        <div className="text-2xl font-bold">12 <span className="text-sm font-normal text-muted-foreground">/ 20 days</span></div>
+                        <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-blue-500 rounded-full" style={{ width: "60%" }} /></div>
+                      </div>
+                      <Calendar className="h-8 w-8 text-blue-400" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-red-500">
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Sick Leave</div>
+                        <div className="text-2xl font-bold">3 <span className="text-sm font-normal text-muted-foreground">/ 10 days</span></div>
+                        <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-red-500 rounded-full" style={{ width: "30%" }} /></div>
+                      </div>
+                      <AlertTriangle className="h-8 w-8 text-red-400" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-purple-500">
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Personal</div>
+                        <div className="text-2xl font-bold">1 <span className="text-sm font-normal text-muted-foreground">/ 3 days</span></div>
+                        <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-purple-500 rounded-full" style={{ width: "33%" }} /></div>
+                      </div>
+                      <Star className="h-8 w-8 text-purple-400" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* March 2026 Calendar Grid */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg">March 2026</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-7 gap-1 text-center text-xs">
+                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+                      <div key={d} className="font-semibold text-muted-foreground py-2">{d}</div>
+                    ))}
+                    {/* March 2026 starts on Sunday */}
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                      const isWeekend = new Date(2026, 2, day).getDay() === 0 || new Date(2026, 2, day).getDay() === 6;
+                      const isSick = day === 10;
+                      const isToday = day === 27;
+                      const isPast = day < 27 && !isWeekend && !isSick;
+                      return (
+                        <div key={day} className={`py-2 rounded-lg text-sm ${isToday ? "bg-blue-600 text-white font-bold" : isSick ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300" : isWeekend ? "text-muted-foreground/50" : isPast ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300" : ""}`}>
+                          {day}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-4 mt-4 text-xs">
+                    <div className="flex items-center gap-1"><div className="h-3 w-3 rounded bg-green-50 dark:bg-green-900/20 border border-green-200" /> Present</div>
+                    <div className="flex items-center gap-1"><div className="h-3 w-3 rounded bg-red-100 dark:bg-red-900/30 border border-red-200" /> Sick</div>
+                    <div className="flex items-center gap-1"><div className="h-3 w-3 rounded bg-blue-600" /> Today</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Recent Leave Requests */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg">Leave Requests</CardTitle>
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700">Request Leave</Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead><tr className="border-b bg-muted/30"><th className="text-left p-3">Type</th><th className="text-left p-3">Dates</th><th className="text-center p-3">Days</th><th className="text-left p-3">Submitted</th><th className="text-center p-3">Status</th></tr></thead>
+                      <tbody>
+                        {mockLeaveRequests.map((lr) => (
+                          <tr key={lr.id} className="border-b last:border-0 hover:bg-muted/30">
+                            <td className="p-3 font-medium">{lr.type}</td>
+                            <td className="p-3 text-muted-foreground">{lr.dates}</td>
+                            <td className="p-3 text-center">{lr.days}</td>
+                            <td className="p-3 text-muted-foreground text-xs">{lr.submitted}</td>
+                            <td className="p-3 text-center">
+                              <Badge className={lr.status === "Approved" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>{lr.status}</Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* ═══ PROJECTS ═══ */}
+          {activeSection === "projects" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div><h1 className="text-2xl font-bold flex items-center gap-2"><FolderKanban className="h-6 w-6" /> Projects</h1>
+                <p className="text-muted-foreground text-sm">Active projects and task progress</p></div>
+                <Button className="bg-blue-600 hover:bg-blue-700"><FolderKanban className="h-4 w-4 mr-2" /> New Project</Button>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-4">
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Active Projects</div><div className="text-2xl font-bold">3</div></CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Completed</div><div className="text-2xl font-bold text-green-600">1</div></CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">At Risk</div><div className="text-2xl font-bold text-orange-600">1</div></CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Total Tasks</div><div className="text-2xl font-bold">86</div></CardContent></Card>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {mockProjects.map((project) => {
+                  const statusColors: Record<string, string> = {
+                    "In Progress": "bg-blue-100 text-blue-800",
+                    "Completed": "bg-green-100 text-green-800",
+                    "At Risk": "bg-orange-100 text-orange-800",
+                  };
+                  const barColors: Record<string, string> = {
+                    blue: "bg-blue-500", purple: "bg-purple-500", green: "bg-green-500", orange: "bg-orange-500",
+                  };
+                  return (
+                    <Card key={project.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="pt-6 pb-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h3 className="font-semibold text-lg">{project.name}</h3>
+                            <div className="text-xs text-muted-foreground mt-0.5">Due: {project.dueDate}</div>
+                          </div>
+                          <Badge className={statusColors[project.status] || ""}>{project.status}</Badge>
+                        </div>
+                        <div className="mb-3">
+                          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                            <span>{project.tasks.done}/{project.tasks.total} tasks</span>
+                            <span>{project.progress}%</span>
+                          </div>
+                          <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${barColors[project.color]}`} style={{ width: `${project.progress}%` }} />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex -space-x-2">
+                            {project.team.map((initials) => (
+                              <div key={initials} className="h-7 w-7 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-[10px] font-bold border-2 border-background">
+                                {initials}
+                              </div>
+                            ))}
+                          </div>
+                          <Button size="sm" variant="outline">View Board</Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ═══ MY ACCOUNT ═══ */}
+          {activeSection === "my-account" && (
+            <div className="space-y-6">
+              <div><h1 className="text-2xl font-bold flex items-center gap-2"><UserCircle className="h-6 w-6" /> My Account</h1>
+              <p className="text-muted-foreground text-sm">Profile, security, and preferences</p></div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Profile Info */}
+                <Card>
+                  <CardHeader><CardTitle className="text-lg flex items-center gap-2"><UserCircle className="h-5 w-5" /> Profile</CardTitle></CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-xl font-bold">JM</div>
+                      <div>
+                        <div className="text-lg font-semibold">Jordan Miller</div>
+                        <div className="text-sm text-muted-foreground">jordan@acmecorp.com</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div><span className="text-muted-foreground">Department</span><div className="font-medium">Engineering</div></div>
+                      <div><span className="text-muted-foreground">Role</span><div className="font-medium">Admin</div></div>
+                      <div><span className="text-muted-foreground">Location</span><div className="font-medium">San Francisco, CA</div></div>
+                      <div><span className="text-muted-foreground">Joined</span><div className="font-medium">Jan 15, 2024</div></div>
+                    </div>
+                    <Button size="sm" variant="outline">Edit Profile</Button>
+                  </CardContent>
+                </Card>
+
+                {/* MFA Status */}
+                <Card>
+                  <CardHeader><CardTitle className="text-lg flex items-center gap-2"><ShieldCheck className="h-5 w-5" /> Security</CardTitle></CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                      <div className="flex items-center gap-3">
+                        <Fingerprint className="h-5 w-5 text-green-500" />
+                        <div>
+                          <div className="text-sm font-medium">Two-Factor Authentication</div>
+                          <div className="text-xs text-muted-foreground">TOTP via authenticator app</div>
+                        </div>
+                      </div>
+                      <Badge variant="success">Enabled</Badge>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                      <div className="flex items-center gap-3">
+                        <KeyRound className="h-5 w-5 text-blue-500" />
+                        <div>
+                          <div className="text-sm font-medium">Password</div>
+                          <div className="text-xs text-muted-foreground">Last changed 14 days ago</div>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline">Change</Button>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                      <div className="flex items-center gap-3">
+                        <Smartphone className="h-5 w-5 text-purple-500" />
+                        <div>
+                          <div className="text-sm font-medium">Active Sessions</div>
+                          <div className="text-xs text-muted-foreground">2 devices logged in</div>
+                        </div>
+                      </div>
+                      <Badge variant="outline">2</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Notification Preferences */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Bell className="h-5 w-5" /> Notification Preferences</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      { label: "Email Notifications", desc: "Receive email for important alerts", enabled: true },
+                      { label: "Security Alerts", desc: "Login attempts, password changes", enabled: true },
+                      { label: "Task Assignments", desc: "When you are assigned new tasks", enabled: true },
+                      { label: "Weekly Summary", desc: "Weekly productivity and activity report", enabled: false },
+                      { label: "Marketing Updates", desc: "Product news and feature announcements", enabled: false },
+                    ].map((pref, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-medium">{pref.label}</div>
+                          <div className="text-xs text-muted-foreground">{pref.desc}</div>
+                        </div>
+                        <div className={`w-11 h-6 rounded-full flex items-center px-0.5 cursor-pointer transition-colors ${pref.enabled ? "bg-green-500 justify-end" : "bg-gray-300 dark:bg-gray-600 justify-start"}`}>
+                          <div className="h-5 w-5 rounded-full bg-white shadow-sm" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Theme Selector */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Palette className="h-5 w-5" /> Theme</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="flex gap-4">
+                    {[
+                      { label: "Light", icon: Sun, active: true },
+                      { label: "Dark", icon: Moon, active: false },
+                      { label: "System", icon: Laptop, active: false },
+                    ].map((theme) => (
+                      <div key={theme.label} className={`flex-1 p-4 rounded-lg border-2 text-center cursor-pointer transition-colors ${theme.active ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20" : "border-muted hover:border-muted-foreground/30"}`}>
+                        <theme.icon className={`h-6 w-6 mx-auto mb-2 ${theme.active ? "text-blue-600" : "text-muted-foreground"}`} />
+                        <div className={`text-sm font-medium ${theme.active ? "text-blue-600" : "text-muted-foreground"}`}>{theme.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
 
@@ -971,6 +1438,48 @@ export default function DemoPage() {
             </div>
           )}
 
+          {/* ═══ SOFTWARE INVENTORY ═══ */}
+          {activeSection === "software-inventory" && (
+            <div className="space-y-6">
+              <div><h1 className="text-2xl font-bold flex items-center gap-2"><Package className="h-6 w-6" /> Software Inventory</h1>
+              <p className="text-muted-foreground text-sm">Software detected across all enrolled devices</p></div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Total Software</div><div className="text-2xl font-bold">{mockSoftwareInventory.reduce((s, c) => s + c.items.length, 0)}</div></CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Categories</div><div className="text-2xl font-bold">{mockSoftwareInventory.length}</div></CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Most Installed</div><div className="text-2xl font-bold text-blue-600">Chrome</div><div className="text-xs text-muted-foreground">4 devices</div></CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Devices Scanned</div><div className="text-2xl font-bold">{mockDevices.length}</div></CardContent></Card>
+              </div>
+
+              {mockSoftwareInventory.map((category) => (
+                <Card key={category.category}>
+                  <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Package className="h-5 w-5" /> {category.category} <Badge variant="outline" className="ml-2 text-xs">{category.items.length}</Badge></CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead><tr className="border-b bg-muted/30"><th className="text-left p-3">Software</th><th className="text-left p-3">Version</th><th className="text-center p-3">Installs</th><th className="text-left p-3">Devices</th></tr></thead>
+                        <tbody>
+                          {category.items.map((sw) => (
+                            <tr key={sw.name} className="border-b last:border-0 hover:bg-muted/30">
+                              <td className="p-3 font-medium">{sw.name}</td>
+                              <td className="p-3 font-mono text-xs text-muted-foreground">{sw.version}</td>
+                              <td className="p-3 text-center"><Badge variant="outline">{sw.installs}</Badge></td>
+                              <td className="p-3">
+                                <div className="flex flex-wrap gap-1">
+                                  {sw.devices.map((d) => <Badge key={d} variant="outline" className="text-[10px] font-mono">{d}</Badge>)}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
           {/* ═══ EMPLOYEE VIEW ═══ */}
           {activeSection === "employee-view" && (
             <div className="space-y-6">
@@ -1146,6 +1655,57 @@ export default function DemoPage() {
                   </Card>
                 </>
               )}
+            </div>
+          )}
+
+          {/* ═══ EMPLOYEES ═══ */}
+          {activeSection === "employees" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div><h1 className="text-2xl font-bold flex items-center gap-2"><Users className="h-6 w-6" /> Employees</h1>
+                <p className="text-muted-foreground text-sm">Employee directory and contact information</p></div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm"><Filter className="h-3.5 w-3.5 mr-1" /> Filter</Button>
+                  <Button className="bg-blue-600 hover:bg-blue-700"><UserPlus className="h-4 w-4 mr-2" /> Add Employee</Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Total Employees</div><div className="text-2xl font-bold">{mockEmployees.length}</div></CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Active</div><div className="text-2xl font-bold text-green-600">{mockEmployees.filter((e) => e.status === "Active").length}</div></CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">On Leave</div><div className="text-2xl font-bold text-yellow-600">{mockEmployees.filter((e) => e.status === "On Leave").length}</div></CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Departments</div><div className="text-2xl font-bold">{mockDepartments.length}</div></CardContent></Card>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {mockEmployees.map((emp) => {
+                  const statusColor = emp.status === "Active" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : emp.status === "On Leave" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+                  const deptColors: Record<string, string> = { Engineering: "border-l-blue-500", Design: "border-l-purple-500", Finance: "border-l-yellow-500", Sales: "border-l-green-500", HR: "border-l-pink-500" };
+                  return (
+                    <Card key={emp.id} className={`border-l-4 ${deptColors[emp.dept] || "border-l-gray-500"} hover:shadow-md transition-shadow`}>
+                      <CardContent className="pt-5 pb-4">
+                        <div className="flex items-start gap-3">
+                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold flex-shrink-0">{emp.avatar}</div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between">
+                              <div className="font-semibold truncate">{emp.name}</div>
+                              <Badge className={statusColor}>{emp.status}</Badge>
+                            </div>
+                            <div className="text-sm text-muted-foreground">{emp.role}</div>
+                            <div className="text-xs text-muted-foreground mt-1">{emp.dept}</div>
+                            <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {emp.email}</span>
+                            </div>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {emp.phone}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -1612,6 +2172,232 @@ export default function DemoPage() {
                   </Card>
                 );
               })}
+            </div>
+          )}
+
+          {/* ═══ SETTINGS ═══ */}
+          {activeSection === "settings" && (
+            <div className="space-y-6">
+              <div><h1 className="text-2xl font-bold flex items-center gap-2"><Settings className="h-6 w-6" /> Settings</h1>
+              <p className="text-muted-foreground text-sm">Organization settings and configuration</p></div>
+
+              {/* Org Info */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Building2 className="h-5 w-5" /> Organization</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-medium block mb-1.5">Company Name</label>
+                      <Input defaultValue="Acme Corp" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium block mb-1.5">Timezone</label>
+                      <Input defaultValue="America/Los_Angeles (PST)" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1.5">Company Logo</label>
+                    <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                      <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">Drag & drop or click to upload</p>
+                      <p className="text-xs text-muted-foreground mt-1">PNG, SVG, or JPG (max 2MB)</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Agent Reporting Toggle - PROMINENT */}
+              <Card className="border-2 border-blue-200 dark:border-blue-800">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-blue-500" /> Agent Reporting
+                    <Badge className="bg-blue-100 text-blue-800 ml-2">Privacy Control</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                        <Activity className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <div className="font-semibold">Agent Activity Reporting</div>
+                        <p className="text-sm text-muted-foreground">When enabled, the desktop agent reports app usage, website visits, and activity data. When disabled, the agent only reports device health and security data.</p>
+                      </div>
+                    </div>
+                    <div className="w-14 h-7 rounded-full bg-green-500 flex items-center justify-end px-0.5 cursor-pointer flex-shrink-0">
+                      <div className="h-6 w-6 rounded-full bg-white shadow-sm" />
+                    </div>
+                  </div>
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <p className="text-xs text-amber-800 dark:text-amber-200">
+                      <strong>Privacy Note:</strong> Disabling agent reporting stops all activity monitoring (screenshots, app tracking, website logging). Security features like CVE scanning, firewall status, and update checks remain active regardless of this setting.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Data Retention */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Clock className="h-5 w-5" /> Data Retention</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-medium">Activity Data Retention</label>
+                      <span className="text-sm font-bold text-blue-600">90 days</span>
+                    </div>
+                    <div className="relative">
+                      <div className="h-2 bg-muted rounded-full">
+                        <div className="h-full bg-blue-500 rounded-full" style={{ width: "60%" }} />
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                        <span>30 days</span>
+                        <span>90 days</span>
+                        <span>180 days</span>
+                        <span>365 days</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-medium">Security Logs Retention</label>
+                      <span className="text-sm font-bold text-blue-600">365 days</span>
+                    </div>
+                    <div className="relative">
+                      <div className="h-2 bg-muted rounded-full">
+                        <div className="h-full bg-blue-500 rounded-full" style={{ width: "100%" }} />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Notification Settings */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Bell className="h-5 w-5" /> Org Notification Preferences</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      { label: "Security Alert Emails", desc: "Send email to admins on critical security events", enabled: true },
+                      { label: "Weekly Digest", desc: "Automated weekly summary to all managers", enabled: true },
+                      { label: "New Device Alerts", desc: "Notify when a new device enrolls", enabled: true },
+                      { label: "CVE Notifications", desc: "Alert when new CVEs affect enrolled devices", enabled: false },
+                    ].map((pref, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-medium">{pref.label}</div>
+                          <div className="text-xs text-muted-foreground">{pref.desc}</div>
+                        </div>
+                        <div className={`w-11 h-6 rounded-full flex items-center px-0.5 cursor-pointer transition-colors ${pref.enabled ? "bg-green-500 justify-end" : "bg-gray-300 dark:bg-gray-600 justify-start"}`}>
+                          <div className="h-5 w-5 rounded-full bg-white shadow-sm" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-end">
+                <Button className="bg-blue-600 hover:bg-blue-700">Save Settings</Button>
+              </div>
+            </div>
+          )}
+
+          {/* ═══ AGENT SETUP ═══ */}
+          {activeSection === "agent-setup" && (
+            <div className="space-y-6">
+              <div><h1 className="text-2xl font-bold flex items-center gap-2"><Download className="h-6 w-6" /> Agent Setup</h1>
+              <p className="text-muted-foreground text-sm">Download and deploy the MyDex agent to your devices</p></div>
+
+              {/* Platform Tabs */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Download Agent</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {/* Windows */}
+                    <div className="border-2 border-blue-200 dark:border-blue-800 rounded-lg p-5 text-center bg-blue-50/50 dark:bg-blue-950/20">
+                      <Laptop className="h-10 w-10 mx-auto text-blue-600 mb-3" />
+                      <h3 className="font-semibold text-lg mb-1">Windows</h3>
+                      <p className="text-xs text-muted-foreground mb-4">Windows 10/11, x64</p>
+                      <div className="space-y-2">
+                        <Button className="w-full bg-blue-600 hover:bg-blue-700"><Download className="h-4 w-4 mr-2" /> EXE Installer</Button>
+                        <Button variant="outline" className="w-full"><Download className="h-4 w-4 mr-2" /> MSI Package</Button>
+                      </div>
+                    </div>
+                    {/* macOS */}
+                    <div className="border rounded-lg p-5 text-center">
+                      <Laptop className="h-10 w-10 mx-auto text-gray-600 mb-3" />
+                      <h3 className="font-semibold text-lg mb-1">macOS</h3>
+                      <p className="text-xs text-muted-foreground mb-4">macOS 13+, Apple Silicon & Intel</p>
+                      <div className="space-y-2">
+                        <Button variant="outline" className="w-full"><Download className="h-4 w-4 mr-2" /> PKG Installer</Button>
+                        <Button variant="outline" className="w-full"><Download className="h-4 w-4 mr-2" /> DMG Image</Button>
+                      </div>
+                    </div>
+                    {/* Linux */}
+                    <div className="border rounded-lg p-5 text-center">
+                      <Monitor className="h-10 w-10 mx-auto text-gray-600 mb-3" />
+                      <h3 className="font-semibold text-lg mb-1">Linux</h3>
+                      <p className="text-xs text-muted-foreground mb-4">Ubuntu 20+, Debian, RHEL 8+</p>
+                      <div className="space-y-2">
+                        <Button variant="outline" className="w-full"><Download className="h-4 w-4 mr-2" /> DEB Package</Button>
+                        <Button variant="outline" className="w-full"><Download className="h-4 w-4 mr-2" /> RPM Package</Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Install Command */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><FileText className="h-5 w-5" /> Quick Install Command</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">Run this command on target machines to install and register the agent automatically:</p>
+                  <div className="bg-gray-900 text-green-400 rounded-lg p-4 font-mono text-sm overflow-x-auto">
+                    <div className="flex items-center justify-between">
+                      <code>curl -sSL https://agent.mydex.io/install.sh | sudo bash -s -- --token=eyJhb...demo_token</code>
+                      <Button size="sm" variant="ghost" className="text-green-400 hover:text-green-300 ml-4 flex-shrink-0"><Copy className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">The install script detects your OS and architecture automatically. The token links the agent to your organization.</p>
+                </CardContent>
+              </Card>
+
+              {/* MDM Deployment */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Server className="h-5 w-5" /> MDM / Mass Deployment</CardTitle></CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">Deploy the agent through your MDM or systems management platform:</p>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {[
+                      { name: "Microsoft Intune", desc: "Deploy via Win32 app or LOB app" },
+                      { name: "Jamf Pro", desc: "Deploy PKG via policy or Smart Group" },
+                      { name: "SCCM / MECM", desc: "Distribute MSI via application catalog" },
+                      { name: "Ansible / Puppet", desc: "Use our official playbook/module" },
+                    ].map((mdm) => (
+                      <div key={mdm.name} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/30 transition-colors cursor-pointer">
+                        <div>
+                          <div className="text-sm font-medium">{mdm.name}</div>
+                          <div className="text-xs text-muted-foreground">{mdm.desc}</div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Enrollment Status */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Enrollment Status</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg"><div className="text-2xl font-bold text-green-600">{mockDevices.filter((d) => d.status === "ONLINE").length}</div><div className="text-xs text-muted-foreground">Online</div></div>
+                    <div className="text-center p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg"><div className="text-2xl font-bold">{mockDevices.filter((d) => d.status === "OFFLINE").length}</div><div className="text-xs text-muted-foreground">Offline</div></div>
+                    <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg"><div className="text-2xl font-bold text-blue-600">{mockDevices.length}</div><div className="text-xs text-muted-foreground">Total Enrolled</div></div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
 
