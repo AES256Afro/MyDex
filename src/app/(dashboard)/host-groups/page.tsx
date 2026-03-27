@@ -174,6 +174,8 @@ export default function HostGroupsPage() {
   const [showCreateBlocklist, setShowCreateBlocklist] = useState(false);
   const [showCreatePolicy, setShowCreatePolicy] = useState<string | null>(null); // hostGroupId
   const [showBulkDomains, setShowBulkDomains] = useState(false);
+  const [managingDevicesFor, setManagingDevicesFor] = useState<string | null>(null);
+  const [managingDeviceIds, setManagingDeviceIds] = useState<string[]>([]);
   const [expandedBlocklist, setExpandedBlocklist] = useState<string | null>(null);
   const [editingBlocklistEntries, setEditingBlocklistEntries] = useState<string[]>([]);
   const [newEntry, setNewEntry] = useState("");
@@ -246,6 +248,32 @@ export default function HostGroupsPage() {
     if (!confirm("Delete this host group and all its policies?")) return;
     await fetch(`/api/v1/host-groups?id=${id}`, { method: "DELETE" });
     fetchAll();
+  }
+
+  function startManagingDevices(group: HostGroup) {
+    setManagingDevicesFor(group.id);
+    setManagingDeviceIds(group.members.map((m) => m.device.id));
+  }
+
+  function toggleManagedDevice(deviceId: string) {
+    setManagingDeviceIds((prev) =>
+      prev.includes(deviceId) ? prev.filter((id) => id !== deviceId) : [...prev, deviceId]
+    );
+  }
+
+  async function saveGroupDevices(groupId: string) {
+    const res = await fetch("/api/v1/host-groups", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: groupId, deviceIds: managingDeviceIds }),
+    });
+    if (res.ok) {
+      setManagingDevicesFor(null);
+      fetchAll();
+    } else {
+      const data = await res.json();
+      alert(data.error || "Failed to update devices");
+    }
   }
 
   // ─── Blocklist CRUD ─────────────────────────────────────────────────────
@@ -542,11 +570,48 @@ export default function HostGroupsPage() {
                     <div className="mt-4 space-y-4 border-t pt-4">
                       {/* Devices */}
                       <div>
-                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-1">
-                          <Monitor className="h-4 w-4" /> Devices
-                        </h4>
-                        {group.members.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">No devices in this group</p>
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm font-semibold flex items-center gap-1">
+                            <Monitor className="h-4 w-4" /> Devices ({group.members.length})
+                          </h4>
+                          {managingDevicesFor === group.id ? (
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={() => saveGroupDevices(group.id)}>
+                                <CheckCircle className="h-3.5 w-3.5 mr-1" /> Save
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => setManagingDevicesFor(null)}>Cancel</Button>
+                            </div>
+                          ) : (
+                            <Button size="sm" variant="outline" onClick={() => startManagingDevices(group)}>
+                              <Plus className="h-3.5 w-3.5 mr-1" /> Manage Devices
+                            </Button>
+                          )}
+                        </div>
+
+                        {managingDevicesFor === group.id ? (
+                          <div className="max-h-52 overflow-y-auto border rounded-md p-2 space-y-1">
+                            {allDevices.length === 0 ? (
+                              <p className="text-sm text-muted-foreground text-center py-4">No devices connected yet. Install the agent on a device first.</p>
+                            ) : (
+                              allDevices.map((d) => (
+                                <label key={d.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={managingDeviceIds.includes(d.id)}
+                                    onChange={() => toggleManagedDevice(d.id)}
+                                    className="rounded"
+                                  />
+                                  <Monitor className="h-3.5 w-3.5 text-blue-500" />
+                                  <span className="text-sm font-medium">{d.hostname}</span>
+                                  <span className={`w-2 h-2 rounded-full ${d.status === "ONLINE" ? "bg-green-500" : "bg-red-500"}`} />
+                                  <Badge variant="outline" className="text-[10px] ml-auto">{d.platform}</Badge>
+                                  <span className="text-xs text-muted-foreground">{d.ipAddress}</span>
+                                </label>
+                              ))
+                            )}
+                          </div>
+                        ) : group.members.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No devices in this group — click &quot;Manage Devices&quot; to add some</p>
                         ) : (
                           <div className="flex flex-wrap gap-2">
                             {group.members.map((m) => (
