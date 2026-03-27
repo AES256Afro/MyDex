@@ -63,6 +63,74 @@ interface Blocklist {
 
 // ─── Preset Blocklists ──────────────────────────────────────────────────────
 
+// ─── Public Blocklist Sources ────────────────────────────────────────────────
+
+const PUBLIC_BLOCKLIST_SOURCES = [
+  {
+    name: "StevenBlack Unified Hosts",
+    category: "Malware & Ads",
+    description: "Adware, malware, and trackers from multiple curated sources",
+    url: "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
+    parser: "hosts",
+  },
+  {
+    name: "OISD Big (Full)",
+    category: "Ads & Tracking",
+    description: "One of the most comprehensive domain blocklists",
+    url: "https://big.oisd.nl/domainswild",
+    parser: "domains",
+  },
+  {
+    name: "Phishing Army",
+    category: "Phishing",
+    description: "Known phishing domains, updated regularly",
+    url: "https://phishing.army/download/phishing_army_blocklist.txt",
+    parser: "domains",
+  },
+  {
+    name: "URLhaus Malware",
+    category: "Malware",
+    description: "Active malware distribution domains from abuse.ch",
+    url: "https://urlhaus.abuse.ch/downloads/hostfile/",
+    parser: "hosts",
+  },
+  {
+    name: "NoTracking",
+    category: "Tracking",
+    description: "Blocks ads, trackers, and mining domains",
+    url: "https://raw.githubusercontent.com/notracking/hosts-blocklists/master/dnscrypt-proxy/dnscrypt-proxy.blacklist.txt",
+    parser: "domains",
+  },
+  {
+    name: "Energized Basic",
+    category: "Ads & Tracking",
+    description: "Lightweight blocklist for ads and trackers",
+    url: "https://energized.pro/basic/formats/domains.txt",
+    parser: "domains",
+  },
+  {
+    name: "Dan Pollock's Hosts",
+    category: "Ads & Malware",
+    description: "Long-running curated ad/malware blocklist",
+    url: "https://someonewhocares.org/hosts/zero/hosts",
+    parser: "hosts",
+  },
+  {
+    name: "Feodo Tracker C2 IPs",
+    category: "C2 Servers",
+    description: "Botnet command & control server IPs from abuse.ch",
+    url: "https://feodotracker.abuse.ch/downloads/ipblocklist.txt",
+    parser: "ips",
+  },
+  {
+    name: "Emerging Threats IPs",
+    category: "Compromised IPs",
+    description: "Known compromised IPs and hostile networks",
+    url: "https://rules.emergingthreats.net/blockrules/compromised-ips.txt",
+    parser: "ips",
+  },
+];
+
 const PRESET_BLOCKLISTS: { name: string; category: string; domains: string[] }[] = [
   {
     name: "Social Media",
@@ -106,6 +174,9 @@ export default function HostGroupsPage() {
   const [showCreateBlocklist, setShowCreateBlocklist] = useState(false);
   const [showCreatePolicy, setShowCreatePolicy] = useState<string | null>(null); // hostGroupId
   const [showBulkDomains, setShowBulkDomains] = useState(false);
+  const [expandedBlocklist, setExpandedBlocklist] = useState<string | null>(null);
+  const [editingBlocklistEntries, setEditingBlocklistEntries] = useState<string[]>([]);
+  const [newEntry, setNewEntry] = useState("");
 
   // Form state
   const [groupForm, setGroupForm] = useState({ name: "", description: "", deviceIds: [] as string[] });
@@ -272,6 +343,79 @@ export default function HostGroupsPage() {
     const d = blocklistForm.newDomain.trim().toLowerCase();
     if (d && !blocklistForm.domains.includes(d)) {
       setBlocklistForm({ ...blocklistForm, domains: [...blocklistForm.domains, d], newDomain: "" });
+    }
+  }
+
+  function isIpAddress(entry: string) {
+    return /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/.test(entry) || entry.includes(":");
+  }
+
+  // Save edited entries back to the blocklist
+  async function saveBlocklistEntries(blocklistId: string) {
+    const res = await fetch("/api/v1/domain-blocklists", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: blocklistId, domains: editingBlocklistEntries }),
+    });
+    if (res.ok) {
+      setExpandedBlocklist(null);
+      fetchAll();
+    }
+  }
+
+  function addEntryToEditing() {
+    const entry = newEntry.trim().toLowerCase();
+    if (entry && !editingBlocklistEntries.includes(entry)) {
+      setEditingBlocklistEntries([...editingBlocklistEntries, entry]);
+      setNewEntry("");
+    }
+  }
+
+  function removeEntryFromEditing(entry: string) {
+    setEditingBlocklistEntries(editingBlocklistEntries.filter((e) => e !== entry));
+  }
+
+  const [importingSource, setImportingSource] = useState<string | null>(null);
+  const [importStatus, setImportStatus] = useState<string | null>(null);
+
+  async function importPublicBlocklist(source: typeof PUBLIC_BLOCKLIST_SOURCES[0]) {
+    setImportingSource(source.name);
+    setImportStatus(`Fetching ${source.name}...`);
+
+    try {
+      const res = await fetch(`/api/v1/domain-blocklists`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          importUrl: source.url,
+          parser: source.parser,
+          name: source.name,
+          category: source.category,
+          description: source.description,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setImportStatus(`Imported ${(data.blocklist?.domains as string[])?.length || 0} entries`);
+        fetchAll();
+      } else {
+        const data = await res.json();
+        setImportStatus(`Error: ${data.error}`);
+      }
+    } catch (err) {
+      setImportStatus(`Failed: ${err}`);
+    }
+    setTimeout(() => { setImportingSource(null); setImportStatus(null); }, 3000);
+  }
+
+  function expandBlocklist(bl: Blocklist) {
+    if (expandedBlocklist === bl.id) {
+      setExpandedBlocklist(null);
+    } else {
+      setExpandedBlocklist(bl.id);
+      setEditingBlocklistEntries([...(bl.domains as string[])]);
+      setNewEntry("");
     }
   }
 
@@ -578,6 +722,46 @@ export default function HostGroupsPage() {
             </CardContent>
           </Card>
 
+          {/* Public Blocklist Sources */}
+          <Card>
+            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Upload className="h-5 w-5" /> Import from Public Sources</CardTitle></CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-3">
+                Import from well-known, community-maintained blocklists. Supports domains and IP addresses.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                {PUBLIC_BLOCKLIST_SOURCES.map((source) => {
+                  const alreadyImported = existingBlocklistNames.has(source.name);
+                  const isImporting = importingSource === source.name;
+                  return (
+                    <div key={source.name} className="border rounded-lg p-3 flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold">{source.name}</span>
+                        <Badge variant="outline" className="text-[10px]">{source.category}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground flex-1">{source.description}</p>
+                      <Button
+                        size="sm"
+                        variant={alreadyImported ? "secondary" : "outline"}
+                        disabled={alreadyImported || isImporting}
+                        onClick={() => importPublicBlocklist(source)}
+                        className="mt-1 w-full"
+                      >
+                        {alreadyImported ? (
+                          <><CheckCircle className="h-3.5 w-3.5 mr-1" /> Imported</>
+                        ) : isImporting ? (
+                          <>{importStatus}</>
+                        ) : (
+                          <><Upload className="h-3.5 w-3.5 mr-1" /> Import</>
+                        )}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Create Custom Blocklist Form */}
           {showCreateBlocklist && (
             <Card className="ring-2 ring-primary">
@@ -609,7 +793,7 @@ export default function HostGroupsPage() {
                     <Input
                       value={blocklistForm.newDomain}
                       onChange={(e) => setBlocklistForm({ ...blocklistForm, newDomain: e.target.value })}
-                      placeholder="Add domain (e.g., example.com)"
+                      placeholder="Add domain or IP (e.g., example.com, 10.0.0.0/8)"
                       onKeyDown={(e) => e.key === "Enter" && addDomain()}
                     />
                     <Button variant="outline" onClick={addDomain}>Add</Button>
@@ -623,7 +807,7 @@ export default function HostGroupsPage() {
                       <textarea
                         value={bulkText}
                         onChange={(e) => setBulkText(e.target.value)}
-                        placeholder="Paste domains, one per line or comma-separated..."
+                        placeholder="Paste domains or IPs, one per line or comma-separated..."
                         className="w-full h-24 rounded-md border border-input bg-background px-3 py-2 text-sm"
                       />
                       <Button size="sm" onClick={handleBulkImport}>Import</Button>
@@ -662,50 +846,158 @@ export default function HostGroupsPage() {
               </CardContent>
             </Card>
           ) : (
-            blocklists.map((bl) => (
-              <Card key={bl.id}>
-                <CardContent className="py-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Globe className={`h-5 w-5 ${bl.isActive ? "text-orange-500" : "text-muted-foreground"}`} />
-                      <div>
-                        <div className="font-semibold flex items-center gap-2">
-                          {bl.name}
-                          <Badge variant="outline" className="text-[10px]">{bl.category}</Badge>
-                          {!bl.isActive && <Badge className="bg-gray-100 text-gray-600 text-[10px]">Disabled</Badge>}
-                        </div>
-                        {bl.description && <p className="text-xs text-muted-foreground">{bl.description}</p>}
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {(bl.domains as string[]).slice(0, 8).map((d) => (
-                            <span key={d} className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">{d}</span>
-                          ))}
-                          {(bl.domains as string[]).length > 8 && (
-                            <span className="text-[10px] text-muted-foreground">+{(bl.domains as string[]).length - 8} more</span>
+            blocklists.map((bl) => {
+              const entries = bl.domains as string[];
+              const domainCount = entries.filter((e) => !isIpAddress(e)).length;
+              const ipCount = entries.filter((e) => isIpAddress(e)).length;
+              const isExpanded = expandedBlocklist === bl.id;
+
+              return (
+                <Card key={bl.id} className={isExpanded ? "ring-2 ring-primary" : ""}>
+                  <CardContent className="py-4">
+                    {/* Header — clickable */}
+                    <div
+                      className="flex items-center justify-between cursor-pointer"
+                      onClick={() => expandBlocklist(bl)}
+                    >
+                      <div className="flex items-center gap-3">
+                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        <Globe className={`h-5 w-5 ${bl.isActive ? "text-orange-500" : "text-muted-foreground"}`} />
+                        <div>
+                          <div className="font-semibold flex items-center gap-2">
+                            {bl.name}
+                            <Badge variant="outline" className="text-[10px]">{bl.category}</Badge>
+                            {!bl.isActive && <Badge className="bg-gray-100 text-gray-600 text-[10px]">Disabled</Badge>}
+                          </div>
+                          {bl.description && <p className="text-xs text-muted-foreground">{bl.description}</p>}
+                          {!isExpanded && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {entries.slice(0, 6).map((d) => (
+                                <span key={d} className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${isIpAddress(d) ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300" : "bg-muted"}`}>{d}</span>
+                              ))}
+                              {entries.length > 6 && (
+                                <span className="text-[10px] text-muted-foreground">+{entries.length - 6} more</span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        {domainCount > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            <Globe className="h-3 w-3 mr-1" /> {domainCount} domains
+                          </Badge>
+                        )}
+                        {ipCount > 0 && (
+                          <Badge variant="outline" className="text-xs text-red-600 border-red-300">
+                            {ipCount} IPs
+                          </Badge>
+                        )}
+                        {bl.policies.length > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            <Shield className="h-3 w-3 mr-1" /> {bl.policies.length} groups
+                          </Badge>
+                        )}
+                        <Button size="sm" variant="outline" onClick={() => toggleBlocklist(bl.id, bl.isActive)}>
+                          {bl.isActive ? "Disable" : "Enable"}
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-red-600" onClick={() => deleteBlocklist(bl.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {(bl.domains as string[]).length} domains
-                      </Badge>
-                      {bl.policies.length > 0 && (
-                        <Badge variant="outline" className="text-xs">
-                          <Shield className="h-3 w-3 mr-1" />
-                          {bl.policies.length} groups
-                        </Badge>
-                      )}
-                      <Button size="sm" variant="outline" onClick={() => toggleBlocklist(bl.id, bl.isActive)}>
-                        {bl.isActive ? "Disable" : "Enable"}
-                      </Button>
-                      <Button size="sm" variant="ghost" className="text-red-600" onClick={() => deleteBlocklist(bl.id)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+
+                    {/* Expanded — full entry list with edit */}
+                    {isExpanded && (
+                      <div className="mt-4 border-t pt-4 space-y-3">
+                        {/* Add new entry */}
+                        <div className="flex gap-2">
+                          <Input
+                            value={newEntry}
+                            onChange={(e) => setNewEntry(e.target.value)}
+                            placeholder="Add domain or IP (e.g., example.com, 192.168.1.0/24)"
+                            onKeyDown={(e) => e.key === "Enter" && addEntryToEditing()}
+                            className="flex-1"
+                          />
+                          <Button variant="outline" size="sm" onClick={addEntryToEditing}>
+                            <Plus className="h-4 w-4 mr-1" /> Add
+                          </Button>
+                        </div>
+
+                        {/* Entries grouped by type */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Domains */}
+                          <div>
+                            <h4 className="text-sm font-semibold mb-2 flex items-center gap-1">
+                              <Globe className="h-4 w-4 text-orange-500" /> Domains ({editingBlocklistEntries.filter((e) => !isIpAddress(e)).length})
+                            </h4>
+                            <div className="max-h-60 overflow-y-auto border rounded-md p-2 space-y-1">
+                              {editingBlocklistEntries.filter((e) => !isIpAddress(e)).length === 0 ? (
+                                <p className="text-xs text-muted-foreground text-center py-2">No domains</p>
+                              ) : (
+                                editingBlocklistEntries.filter((e) => !isIpAddress(e)).map((entry) => (
+                                  <div key={entry} className="flex items-center justify-between group py-1 px-2 rounded hover:bg-muted">
+                                    <span className="text-sm font-mono">{entry}</span>
+                                    <button onClick={() => removeEntryFromEditing(entry)} className="opacity-0 group-hover:opacity-100 text-red-500 transition-opacity">
+                                      <X className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+
+                          {/* IPs */}
+                          <div>
+                            <h4 className="text-sm font-semibold mb-2 flex items-center gap-1">
+                              <AlertTriangle className="h-4 w-4 text-red-500" /> IP Addresses ({editingBlocklistEntries.filter((e) => isIpAddress(e)).length})
+                            </h4>
+                            <div className="max-h-60 overflow-y-auto border rounded-md p-2 space-y-1">
+                              {editingBlocklistEntries.filter((e) => isIpAddress(e)).length === 0 ? (
+                                <p className="text-xs text-muted-foreground text-center py-2">No IPs — add IPs or CIDR ranges</p>
+                              ) : (
+                                editingBlocklistEntries.filter((e) => isIpAddress(e)).map((entry) => (
+                                  <div key={entry} className="flex items-center justify-between group py-1 px-2 rounded hover:bg-muted">
+                                    <span className="text-sm font-mono text-red-600 dark:text-red-400">{entry}</span>
+                                    <button onClick={() => removeEntryFromEditing(entry)} className="opacity-0 group-hover:opacity-100 text-red-500 transition-opacity">
+                                      <X className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Applied to groups */}
+                        {bl.policies.length > 0 && (
+                          <div>
+                            <h4 className="text-xs font-semibold text-muted-foreground mb-1">Applied to host groups:</h4>
+                            <div className="flex flex-wrap gap-1">
+                              {bl.policies.map((p, i) => (
+                                <Badge key={i} variant="secondary" className="text-xs">
+                                  <Server className="h-3 w-3 mr-1" /> {p.hostGroup.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Save / Cancel */}
+                        <div className="flex gap-2 pt-2 border-t">
+                          <Button size="sm" onClick={() => saveBlocklistEntries(bl.id)}>
+                            Save Changes ({editingBlocklistEntries.length} entries)
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setExpandedBlocklist(null)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })
           )}
         </div>
       )}
@@ -713,7 +1005,7 @@ export default function HostGroupsPage() {
       {/* Summary Footer */}
       <Card>
         <CardContent className="py-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
             <div>
               <div className="text-2xl font-bold">{hostGroups.length}</div>
               <div className="text-xs text-muted-foreground">Host Groups</div>
@@ -723,8 +1015,12 @@ export default function HostGroupsPage() {
               <div className="text-xs text-muted-foreground">Blocklists</div>
             </div>
             <div>
-              <div className="text-2xl font-bold">{blocklists.reduce((sum, bl) => sum + (bl.domains as string[]).length, 0)}</div>
+              <div className="text-2xl font-bold">{blocklists.reduce((sum, bl) => sum + (bl.domains as string[]).filter((e) => !isIpAddress(e)).length, 0)}</div>
               <div className="text-xs text-muted-foreground">Blocked Domains</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-red-600">{blocklists.reduce((sum, bl) => sum + (bl.domains as string[]).filter((e) => isIpAddress(e)).length, 0)}</div>
+              <div className="text-xs text-muted-foreground">Blocked IPs</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-orange-600">
