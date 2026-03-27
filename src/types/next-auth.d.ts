@@ -9,7 +9,12 @@ declare module "next-auth" {
       image?: string | null;
       role: Role;
       organizationId: string;
+      mfaRequired?: boolean;
     };
+  }
+
+  interface User {
+    mfaRequired?: boolean;
   }
 }
 
@@ -18,5 +23,6 @@ declare module "next-auth/jwt" {
     userId: string;
     role: Role;
     organizationId: string;
+    mfaRequired?: boolean;
   }
 }

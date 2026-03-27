@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,7 +14,17 @@ import {
 import { Shield, Loader2 } from "lucide-react";
 
 export default function MfaVerifyPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
+      <MfaVerifyForm />
+    </Suspense>
+  );
+}
+
+function MfaVerifyForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -79,7 +89,7 @@ export default function MfaVerifyPage() {
       const data = await res.json();
 
       if (res.ok) {
-        router.push("/dashboard");
+        router.push(callbackUrl);
       } else {
         setError(data.error || "Invalid code");
         setCode(["", "", "", "", "", ""]);
