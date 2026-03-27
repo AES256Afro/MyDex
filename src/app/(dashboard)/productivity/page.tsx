@@ -64,6 +64,69 @@ export default async function ProductivityPage() {
     },
   });
 
+  // If no summaries, try to compute from raw ActivityEvents
+  let rawEventSummaries: typeof currentSummaries = [];
+  if (currentSummaries.length === 0) {
+    const rawEvents = await prisma.activityEvent.findMany({
+      where: {
+        organizationId: orgId,
+        timestamp: { gte: currentStart, lte: currentEnd },
+        ...(canReadAll ? {} : { userId: session.user.id }),
+      },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true, department: true },
+        },
+      },
+      orderBy: { timestamp: "asc" },
+    });
+
+    if (rawEvents.length > 0) {
+      // Group events by user+date and infer durations
+      const byUserDate = new Map<string, typeof rawEvents>();
+      for (const ev of rawEvents) {
+        const dateKey = `${ev.userId}-${format(ev.timestamp, "yyyy-MM-dd")}`;
+        if (!byUserDate.has(dateKey)) byUserDate.set(dateKey, []);
+        byUserDate.get(dateKey)!.push(ev);
+      }
+
+      for (const [, events] of byUserDate) {
+        let totalActive = 0;
+        for (let i = 0; i < events.length; i++) {
+          if (events[i].durationSeconds && events[i].durationSeconds! > 0) {
+            totalActive += events[i].durationSeconds!;
+          } else if (i < events.length - 1) {
+            const diff = Math.floor((events[i + 1].timestamp.getTime() - events[i].timestamp.getTime()) / 1000);
+            totalActive += Math.min(diff, 600); // Cap at 10 min
+          } else {
+            totalActive += 30;
+          }
+        }
+
+        const ev0 = events[0];
+        // Estimate productivity: productive apps get higher scores
+        const score = Math.min(100, Math.round((totalActive / 28800) * 100)); // % of 8h workday
+
+        rawEventSummaries.push({
+          id: `computed-${ev0.userId}-${format(ev0.timestamp, "yyyy-MM-dd")}`,
+          organizationId: orgId,
+          userId: ev0.userId,
+          date: startOfDay(ev0.timestamp),
+          hour: null,
+          totalActiveSeconds: totalActive,
+          totalIdleSeconds: 0,
+          topApps: {},
+          topSites: {},
+          productivityScore: score,
+          createdAt: new Date(),
+          user: ev0.user,
+        } as typeof currentSummaries[0]);
+      }
+    }
+  }
+
+  const effectiveSummaries = currentSummaries.length > 0 ? currentSummaries : rawEventSummaries;
+
   // Previous period summaries (for trends)
   const previousSummaries = await prisma.activitySummary.findMany({
     where: {
@@ -95,7 +158,7 @@ export default async function ProductivityPage() {
     }
   >();
 
-  for (const s of currentSummaries) {
+  for (const s of effectiveSummaries) {
     if (!userMap.has(s.userId)) {
       userMap.set(s.userId, {
         user: s.user,
@@ -127,7 +190,7 @@ export default async function ProductivityPage() {
     .sort((a, b) => (b.avgScore ?? 0) - (a.avgScore ?? 0));
 
   // Org-wide current metrics
-  const allCurrentScores = currentSummaries
+  const allCurrentScores = effectiveSummaries
     .filter((s) => s.productivityScore !== null)
     .map((s) => s.productivityScore!);
   const avgProductivityScore =
@@ -137,12 +200,12 @@ export default async function ProductivityPage() {
         )
       : 0;
 
-  const totalActiveSeconds = currentSummaries.reduce(
+  const totalActiveSeconds = effectiveSummaries.reduce(
     (sum, s) => sum + s.totalActiveSeconds,
     0
   );
   const uniqueUserDays = new Set(
-    currentSummaries.map((s) => `${s.userId}-${s.date.toISOString()}`)
+    effectiveSummaries.map((s) => `${s.userId}-${s.date.toISOString()}`)
   ).size;
   const avgActiveHoursPerDay =
     uniqueUserDays > 0
@@ -256,9 +319,22 @@ export default async function ProductivityPage() {
         </CardHeader>
         <CardContent>
           {employees.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">
-              No productivity data available for this period.
-            </p>
+            <div className="py-8 text-center space-y-3">
+              <p className="text-sm text-muted-foreground">
+                No productivity data available for this period.
+              </p>
+              <div className="bg-muted/50 rounded-lg p-4 max-w-md mx-auto text-left space-y-2">
+                <p className="text-sm font-medium">To start tracking productivity:</p>
+                <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1">
+                  <li>Install the MyDex agent on employee devices</li>
+                  <li>Employees open the <a href="/tracker" className="text-primary underline">web tracker</a> or use the desktop agent</li>
+                  <li>Activity events are automatically collected and scored</li>
+                </ol>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Want to see what this looks like? Check the <a href="/demo" className="text-primary underline">interactive demo</a>.
+                </p>
+              </div>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
