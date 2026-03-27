@@ -1,0 +1,49 @@
+{
+  "name": "mydex-agent",
+  "version": "0.2.0",
+  "description": "MyDex Desktop Agent - Employee monitoring client",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "start:hidden": "electron . --hidden",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
+  },
+  "dependencies": {
+    "active-win": "^8.1.0",
+    "node-cron": "^3.0.3",
+    "electron-store": "^8.2.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "work.antifascist.mydex-agent",
+    "productName": "MyDex Agent",
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "requireAdministrator"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "runAfterFinish": true,
+      "installerIcon": "assets/icon.ico",
+      "include": "installer.nsh"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns",
+      "LSUIElement": true
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    }
+  }
+}
