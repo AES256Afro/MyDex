@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Fragment, useMemo } from "react";
+import { useState, Fragment } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,10 @@ import {
   Trash2, ArrowRightLeft, Copy, Bug, Activity, Package, Play,
   Users, CalendarCheck, LayoutDashboard, FolderKanban, BarChart3, Brain, Settings,
   Building2, Server, Globe, Flame, Upload, BarChart, PieChart, TrendingUp,
+  Eye, EyeOff, UserCog, KeyRound, Lock, Unlock, Fingerprint, LogIn, LogOut,
+  QrCode, ShieldCheck, ShieldAlert, LinkIcon, ToggleLeft, ToggleRight,
+  Mail, UserPlus, Filter, MoreHorizontal, Check, X, Layers, Grid3X3,
+  Briefcase, ClipboardList, Timer, Calendar, Coffee, Star,
 } from "lucide-react";
 
 // ─── Mock Timestamps ─────────────────────────────────────────────────────────
@@ -188,6 +192,69 @@ const mockProductivity = [
   { name: "Marcus Johnson", dept: "Engineering", score: 85, activeHrs: 7.0, topApp: "IntelliJ", trend: "+4%" },
 ];
 
+// ─── Mock Users (User Management) ────────────────────────────────────────────
+
+const mockUsers = [
+  { id: "u1", name: "Jordan Miller", email: "jordan@acmecorp.com", role: "Admin", department: "Engineering", status: "Active", lastActive: ago(2), avatar: "JM" },
+  { id: "u2", name: "Sarah Chen", email: "sarah@acmecorp.com", role: "Employee", department: "Design", status: "Active", lastActive: ago(5), avatar: "SC" },
+  { id: "u3", name: "Tom Garcia", email: "tom@acmecorp.com", role: "Employee", department: "Finance", status: "Inactive", lastActive: ago(180), avatar: "TG" },
+  { id: "u4", name: "Anita Patel", email: "anita@acmecorp.com", role: "Manager", department: "Engineering", status: "Active", lastActive: ago(1), avatar: "AP" },
+  { id: "u5", name: "Lisa Wong", email: "lisa@acmecorp.com", role: "Employee", department: "Sales", status: "Active", lastActive: ago(12), avatar: "LW" },
+  { id: "u6", name: "Marcus Johnson", email: "marcus@acmecorp.com", role: "Manager", department: "Engineering", status: "Active", lastActive: ago(8), avatar: "MJ" },
+  { id: "u7", name: "Rachel Kim", email: "rachel@acmecorp.com", role: "Employee", department: "HR", status: "Active", lastActive: ago(30), avatar: "RK" },
+  { id: "u8", name: "David Brooks", email: "david@acmecorp.com", role: "Manager", department: "Sales", status: "Suspended", lastActive: ago(1440), avatar: "DB" },
+];
+
+// ─── Mock Login Audit (MFA & Security) ───────────────────────────────────────
+
+const mockLoginAudit = [
+  { id: "la1", user: "jordan@acmecorp.com", ip: "192.168.1.105", device: "Chrome / Windows 11", time: ago(2), success: true, mfa: true },
+  { id: "la2", user: "sarah@acmecorp.com", ip: "192.168.1.112", device: "Firefox / Windows 11", time: ago(15), success: true, mfa: true },
+  { id: "la3", user: "tom@acmecorp.com", ip: "45.33.21.8", device: "Safari / macOS", time: ago(60), success: false, mfa: false },
+  { id: "la4", user: "anita@acmecorp.com", ip: "192.168.1.120", device: "Chrome / macOS 15", time: ago(90), success: true, mfa: true },
+  { id: "la5", user: "unknown@external.com", ip: "103.45.67.89", device: "curl/7.88", time: ago(180), success: false, mfa: false },
+  { id: "la6", user: "lisa@acmecorp.com", ip: "10.0.0.55", device: "Edge / Windows 11", time: ago(240), success: true, mfa: false },
+  { id: "la7", user: "marcus@acmecorp.com", ip: "192.168.1.130", device: "Chrome / Linux", time: ago(480), success: true, mfa: true },
+  { id: "la8", user: "rachel@acmecorp.com", ip: "192.168.1.140", device: "Safari / iOS 18", time: ago(600), success: true, mfa: true },
+];
+
+// ─── Mock SSO Providers ──────────────────────────────────────────────────────
+
+const mockSSOProviders = [
+  { id: "sso1", name: "Microsoft Entra ID", status: "Active", color: "bg-blue-500", clientIdPrefix: "a3f7c2d1-...", jit: true, lastUsed: ago(5), icon: "M" },
+  { id: "sso2", name: "Okta", status: "Pending Config", color: "bg-indigo-500", clientIdPrefix: "0oa8b7c6d5...", jit: false, lastUsed: null, icon: "O" },
+  { id: "sso3", name: "GitHub", status: "Active", color: "bg-gray-700", clientIdPrefix: "Iv1.a9b8c7d6...", jit: true, lastUsed: ago(60), icon: "G" },
+];
+
+// ─── Mock Module Access ──────────────────────────────────────────────────────
+
+const mockModules = [
+  { category: "Core", name: "Dashboard", description: "Overview metrics and widgets", icon: LayoutDashboard, minRole: "Employee", fixed: true },
+  { category: "Core", name: "My Profile", description: "Personal settings and preferences", icon: UserCog, minRole: "Employee", fixed: true },
+  { category: "Core", name: "Time Tracking", description: "Clock in/out and timesheets", icon: Timer, minRole: "Employee", fixed: false },
+  { category: "Core", name: "My Tasks", description: "Personal task board and assignments", icon: ClipboardList, minRole: "Employee", fixed: false },
+  { category: "Core", name: "Attendance", description: "Attendance records and leave requests", icon: Calendar, minRole: "Employee", fixed: false },
+  { category: "Core", name: "Announcements", description: "Company-wide announcements", icon: Mail, minRole: "Employee", fixed: true },
+  { category: "Monitoring", name: "Device List", description: "View and manage enrolled devices", icon: Monitor, minRole: "Manager", fixed: false },
+  { category: "Monitoring", name: "Activity Feed", description: "Real-time user activity stream", icon: Activity, minRole: "Manager", fixed: false },
+  { category: "Monitoring", name: "Productivity", description: "Productivity scores and analytics", icon: Brain, minRole: "Manager", fixed: false },
+  { category: "Monitoring", name: "App Usage", description: "Application usage breakdown", icon: Package, minRole: "Manager", fixed: false },
+  { category: "Monitoring", name: "Screenshots", description: "Periodic screenshot capture", icon: Eye, minRole: "Manager", fixed: false },
+  { category: "Monitoring", name: "Website Tracking", description: "Browsing history and categorization", icon: Globe, minRole: "Manager", fixed: false },
+  { category: "Management", name: "Departments", description: "Organization hierarchy management", icon: Building2, minRole: "Admin", fixed: false },
+  { category: "Management", name: "Host Groups", description: "Device group policies and blocklists", icon: Server, minRole: "Admin", fixed: false },
+  { category: "Management", name: "Reports", description: "Generate and schedule reports", icon: BarChart3, minRole: "Admin", fixed: false },
+  { category: "Management", name: "User Management", description: "Create, edit, and deactivate users", icon: Users, minRole: "Admin", fixed: false },
+  { category: "Security", name: "Security Center", description: "Alerts, CVEs, and threat intel", icon: Shield, minRole: "Admin", fixed: false },
+  { category: "Security", name: "MFA Settings", description: "Multi-factor authentication config", icon: Fingerprint, minRole: "Admin", fixed: false },
+  { category: "Security", name: "SSO Providers", description: "Single sign-on configuration", icon: LinkIcon, minRole: "Super Admin", fixed: false },
+  { category: "Admin", name: "Module Access", description: "Role-based module visibility", icon: Layers, minRole: "Super Admin", fixed: false },
+  { category: "Admin", name: "Audit Log", description: "Complete system audit trail", icon: FileText, minRole: "Super Admin", fixed: false },
+  { category: "Admin", name: "Billing", description: "Subscription and payment management", icon: Briefcase, minRole: "Super Admin", fixed: false },
+];
+
+const roleHierarchy = ["Employee", "Manager", "Admin", "Super Admin"];
+
 // ─── Utility Functions ───────────────────────────────────────────────────────
 
 function formatUptime(seconds: number) {
@@ -226,6 +293,11 @@ const sections = [
   { id: "productivity", label: "Productivity", icon: Brain },
   { id: "reports", label: "Reports", icon: BarChart3 },
   { id: "security", label: "Security", icon: Shield },
+  { id: "employee-view", label: "Employee View", icon: Eye },
+  { id: "user-management", label: "User Management", icon: Users },
+  { id: "mfa-security", label: "MFA & Security", icon: Fingerprint },
+  { id: "sso-providers", label: "SSO Providers", icon: LinkIcon },
+  { id: "module-access", label: "Module Access", icon: Layers },
 ];
 
 // ─── Demo Page ───────────────────────────────────────────────────────────────
@@ -236,6 +308,9 @@ export default function DemoPage() {
   const [deviceTab, setDeviceTab] = useState("overview");
   const [expandedGroup, setExpandedGroup] = useState<string | null>("hg1");
   const [search, setSearch] = useState("");
+  const [employeeViewMode, setEmployeeViewMode] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [userSearch, setUserSearch] = useState("");
 
   const onlineCount = mockDevices.filter((d) => d.status === "ONLINE").length;
   const totalCves = mockDevices.reduce((s, d) => s + d.openCves, 0);
@@ -251,6 +326,48 @@ export default function DemoPage() {
     d.hostname.toLowerCase().includes(search.toLowerCase()) ||
     d.user.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const filteredUsers = mockUsers.filter((u) =>
+    u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+    u.email.toLowerCase().includes(userSearch.toLowerCase())
+  );
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUsers((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const toggleAllUsers = () => {
+    if (selectedUsers.length === filteredUsers.length) {
+      setSelectedUsers([]);
+    } else {
+      setSelectedUsers(filteredUsers.map((u) => u.id));
+    }
+  };
+
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case "Admin": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+      case "Manager": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+      case "Employee": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case "Active": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case "Inactive": return "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300";
+      case "Suspended": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getModulesForRole = (role: string) => {
+    const roleIdx = roleHierarchy.indexOf(role);
+    return mockModules.filter((m) => roleHierarchy.indexOf(m.minRole) <= roleIdx);
+  };
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -667,7 +784,7 @@ export default function DemoPage() {
                     <table className="w-full text-sm">
                       <thead><tr className="border-b"><th className="text-left pb-3">Employee</th><th className="text-left pb-3">Department</th><th className="text-center pb-3">Score</th><th className="text-center pb-3">Active Hrs</th><th className="text-left pb-3">Top App</th><th className="text-right pb-3">Trend</th></tr></thead>
                       <tbody>
-                        {mockProductivity.sort((a, b) => b.score - a.score).map((p) => (
+                        {[...mockProductivity].sort((a, b) => b.score - a.score).map((p) => (
                           <tr key={p.name} className="border-b last:border-0 hover:bg-muted/50">
                             <td className="py-3 font-medium">{p.name}</td>
                             <td className="py-3 text-muted-foreground">{p.dept}</td>
@@ -731,8 +848,9 @@ export default function DemoPage() {
                   </div>
                   <div>
                     <h4 className="text-sm font-semibold mb-2">Compliance Status by Department</h4>
-                    {mockDepartments.map((dept) => {
-                      const score = 60 + Math.floor(Math.random() * 35);
+                    {mockDepartments.map((dept, idx) => {
+                      const scores = [92, 85, 71, 88, 78];
+                      const score = scores[idx] || 80;
                       return (
                         <div key={dept.id} className="flex items-center gap-3 mb-2">
                           <span className="text-xs w-24 text-right text-muted-foreground">{dept.name}</span>
@@ -813,6 +931,650 @@ export default function DemoPage() {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          )}
+
+          {/* ═══ EMPLOYEE VIEW ═══ */}
+          {activeSection === "employee-view" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold flex items-center gap-2"><Eye className="h-6 w-6" /> Employee View</h1>
+                  <p className="text-muted-foreground text-sm">Preview what employees see when they log in</p>
+                </div>
+                <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
+                  <button
+                    onClick={() => setEmployeeViewMode(false)}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${!employeeViewMode ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    <Shield className="h-3.5 w-3.5 inline mr-1" /> Admin View
+                  </button>
+                  <button
+                    onClick={() => setEmployeeViewMode(true)}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${employeeViewMode ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    <Eye className="h-3.5 w-3.5 inline mr-1" /> Employee View
+                  </button>
+                </div>
+              </div>
+
+              {!employeeViewMode ? (
+                <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20">
+                  <CardContent className="py-6">
+                    <div className="flex items-center gap-3">
+                      <Shield className="h-8 w-8 text-blue-500" />
+                      <div>
+                        <h3 className="font-semibold text-lg">Admin View Active</h3>
+                        <p className="text-sm text-muted-foreground">You are viewing the full admin dashboard. Toggle to &quot;Employee View&quot; to see the simplified employee experience.</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  {/* MFA Setup Banner */}
+                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center">
+                        <Fingerprint className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-sm">Secure Your Account</h3>
+                        <p className="text-xs text-muted-foreground">Enable two-factor authentication for added security</p>
+                      </div>
+                    </div>
+                    <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white">Enable 2FA</Button>
+                  </div>
+
+                  {/* Employee Stats */}
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <Card className="border-l-4 border-l-green-500">
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Clock Status</div>
+                            <div className="text-lg font-bold text-green-600">Clocked In</div>
+                            <div className="text-xs text-muted-foreground">Since 9:02 AM</div>
+                          </div>
+                          <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                            <Timer className="h-5 w-5 text-green-600" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-l-4 border-l-blue-500">
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Today&apos;s Attendance</div>
+                            <div className="text-lg font-bold">Present</div>
+                            <div className="text-xs text-muted-foreground">On time</div>
+                          </div>
+                          <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                            <CalendarCheck className="h-5 w-5 text-blue-600" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-l-4 border-l-purple-500">
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Open Tasks</div>
+                            <div className="text-lg font-bold">4</div>
+                            <div className="text-xs text-muted-foreground">2 due today</div>
+                          </div>
+                          <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
+                            <ClipboardList className="h-5 w-5 text-purple-600" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-l-4 border-l-amber-500">
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm text-muted-foreground">Pending Leave</div>
+                            <div className="text-lg font-bold">1</div>
+                            <div className="text-xs text-muted-foreground">Apr 14-18</div>
+                          </div>
+                          <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center">
+                            <Calendar className="h-5 w-5 text-amber-600" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardContent className="pt-6 pb-4 flex flex-col items-center text-center gap-3">
+                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                          <Timer className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">Time Tracking</h3>
+                          <p className="text-xs text-muted-foreground mt-1">View timesheet, clock in/out, log hours</p>
+                        </div>
+                        <Badge variant="success">7h 23m today</Badge>
+                      </CardContent>
+                    </Card>
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardContent className="pt-6 pb-4 flex flex-col items-center text-center gap-3">
+                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                          <FolderKanban className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">My Projects</h3>
+                          <p className="text-xs text-muted-foreground mt-1">Active projects and task assignments</p>
+                        </div>
+                        <Badge variant="outline">3 active</Badge>
+                      </CardContent>
+                    </Card>
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardContent className="pt-6 pb-4 flex flex-col items-center text-center gap-3">
+                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center">
+                          <Settings className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">My Account</h3>
+                          <p className="text-xs text-muted-foreground mt-1">Profile, password, and preferences</p>
+                        </div>
+                        <Badge variant="warning">2FA off</Badge>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Employee Sidebar Preview */}
+                  <Card>
+                    <CardHeader><CardTitle className="text-lg flex items-center gap-2"><LayoutDashboard className="h-5 w-5" /> Employee Sidebar Preview</CardTitle></CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-4">Employees see a simplified navigation with only the modules visible to their role.</p>
+                      <div className="bg-muted/50 rounded-lg p-4 max-w-xs">
+                        {[
+                          { icon: LayoutDashboard, label: "Dashboard", active: true },
+                          { icon: Timer, label: "Time Tracking", active: false },
+                          { icon: ClipboardList, label: "My Tasks", active: false },
+                          { icon: Calendar, label: "Attendance", active: false },
+                          { icon: Mail, label: "Announcements", active: false },
+                          { icon: Settings, label: "My Account", active: false },
+                        ].map((item, idx) => (
+                          <div key={idx} className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm ${item.active ? "bg-background shadow-sm font-medium" : "text-muted-foreground"}`}>
+                            <item.icon className="h-4 w-4" /> {item.label}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ═══ USER MANAGEMENT ═══ */}
+          {activeSection === "user-management" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold flex items-center gap-2"><Users className="h-6 w-6" /> User Management</h1>
+                  <p className="text-muted-foreground text-sm">Manage team members, roles, and permissions</p>
+                </div>
+                <Button className="bg-blue-600 hover:bg-blue-700"><UserPlus className="h-4 w-4 mr-2" /> Add User</Button>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card><CardContent className="pt-4 pb-3">
+                  <div className="text-sm text-muted-foreground">Total Users</div>
+                  <div className="text-2xl font-bold">32</div>
+                  <div className="text-xs text-muted-foreground">Across all departments</div>
+                </CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3">
+                  <div className="text-sm text-muted-foreground">Active</div>
+                  <div className="text-2xl font-bold text-green-600">28</div>
+                  <div className="text-xs text-muted-foreground">Currently enabled</div>
+                </CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3">
+                  <div className="text-sm text-muted-foreground">Managers</div>
+                  <div className="text-2xl font-bold text-purple-600">3</div>
+                  <div className="text-xs text-muted-foreground">Team leads</div>
+                </CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3">
+                  <div className="text-sm text-muted-foreground">Admins</div>
+                  <div className="text-2xl font-bold text-red-600">1</div>
+                  <div className="text-xs text-muted-foreground">Full access</div>
+                </CardContent></Card>
+              </div>
+
+              {/* Search & Filters */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input className="pl-10" placeholder="Search users by name or email..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} />
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm"><Filter className="h-3.5 w-3.5 mr-1" /> Role</Button>
+                  <Button variant="outline" size="sm"><Building2 className="h-3.5 w-3.5 mr-1" /> Department</Button>
+                  <Button variant="outline" size="sm"><Activity className="h-3.5 w-3.5 mr-1" /> Status</Button>
+                </div>
+              </div>
+
+              {/* Bulk Actions Toolbar */}
+              {selectedUsers.length >= 2 && (
+                <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 flex items-center justify-between">
+                  <span className="text-sm font-medium text-blue-800 dark:text-blue-200">{selectedUsers.length} users selected</span>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300"><UserCog className="h-3.5 w-3.5 mr-1" /> Assign Role</Button>
+                    <Button size="sm" variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300"><Building2 className="h-3.5 w-3.5 mr-1" /> Assign Department</Button>
+                    <Button size="sm" variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300"><Activity className="h-3.5 w-3.5 mr-1" /> Change Status</Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Users Table */}
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/30">
+                          <th className="text-left p-3 w-10">
+                            <input
+                              type="checkbox"
+                              className="rounded border-gray-300"
+                              checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                              onChange={toggleAllUsers}
+                            />
+                          </th>
+                          <th className="text-left p-3">User</th>
+                          <th className="text-left p-3">Role</th>
+                          <th className="text-left p-3">Department</th>
+                          <th className="text-left p-3">Status</th>
+                          <th className="text-left p-3">Last Active</th>
+                          <th className="text-right p-3">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredUsers.map((user) => (
+                          <tr key={user.id} className={`border-b last:border-0 hover:bg-muted/30 transition-colors ${selectedUsers.includes(user.id) ? "bg-blue-50/50 dark:bg-blue-950/20" : ""}`}>
+                            <td className="p-3">
+                              <input
+                                type="checkbox"
+                                className="rounded border-gray-300"
+                                checked={selectedUsers.includes(user.id)}
+                                onChange={() => toggleUserSelection(user.id)}
+                              />
+                            </td>
+                            <td className="p-3">
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold">{user.avatar}</div>
+                                <div>
+                                  <div className="font-medium">{user.name}</div>
+                                  <div className="text-xs text-muted-foreground">{user.email}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3"><Badge className={getRoleBadgeColor(user.role)}>{user.role}</Badge></td>
+                            <td className="p-3"><span className="text-muted-foreground">{user.department}</span></td>
+                            <td className="p-3"><Badge className={getStatusBadgeColor(user.status)}>{user.status}</Badge></td>
+                            <td className="p-3 text-muted-foreground text-xs">{formatTimeAgo(user.lastActive)}</td>
+                            <td className="p-3 text-right">
+                              <Button size="sm" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* ═══ MFA & SECURITY ═══ */}
+          {activeSection === "mfa-security" && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2"><Fingerprint className="h-6 w-6" /> MFA & Security</h1>
+                <p className="text-muted-foreground text-sm">Multi-factor authentication setup and login audit trail</p>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* MFA Status */}
+                <Card>
+                  <CardHeader><CardTitle className="text-lg flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-green-500" /> MFA Status</CardTitle></CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Two-Factor Authentication</span>
+                      <Badge variant="success">Enabled</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Authentication Method</span>
+                      <span className="text-sm font-medium">TOTP (Authenticator App)</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Backup Codes Remaining</span>
+                      <Badge variant="outline">8 of 10</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Last Verified</span>
+                      <span className="text-sm text-muted-foreground">2 minutes ago</span>
+                    </div>
+                    <div className="pt-2 flex gap-2">
+                      <Button size="sm" variant="outline">Regenerate Codes</Button>
+                      <Button size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50">Disable MFA</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* QR Code Setup */}
+                <Card>
+                  <CardHeader><CardTitle className="text-lg flex items-center gap-2"><QrCode className="h-5 w-5" /> Setup Wizard</CardTitle></CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">Scan this QR code with your authenticator app (Google Authenticator, Authy, or 1Password).</p>
+                    {/* QR Code Placeholder */}
+                    <div className="flex justify-center">
+                      <div className="w-40 h-40 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl flex items-center justify-center bg-white dark:bg-gray-900">
+                        <div className="grid grid-cols-8 grid-rows-8 gap-0.5 w-28 h-28">
+                          {Array.from({ length: 64 }).map((_, i) => {
+                            const isCorner = (i < 3 || (i >= 5 && i < 8)) && (Math.floor(i / 8) < 3 || Math.floor(i / 8) >= 5);
+                            const isDark = (i + Math.floor(i / 8)) % 3 === 0 || isCorner;
+                            return <div key={i} className={`rounded-sm ${isDark ? "bg-gray-900 dark:bg-white" : "bg-gray-100 dark:bg-gray-800"}`} />;
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Verification Input */}
+                    <div>
+                      <label className="text-sm font-medium block mb-2">Enter 6-digit verification code</label>
+                      <div className="flex gap-2 justify-center">
+                        {[0,1,2,3,4,5].map((i) => (
+                          <input
+                            key={i}
+                            type="text"
+                            maxLength={1}
+                            className="w-10 h-12 text-center text-lg font-bold border rounded-lg bg-background focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                            placeholder="-"
+                            readOnly
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700">Verify & Activate</Button>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Backup Codes */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><KeyRound className="h-5 w-5" /> Backup Codes</CardTitle></CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">Store these codes in a safe place. Each code can only be used once.</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {["A1B2-C3D4", "E5F6-G7H8", "J9K0-L1M2", "N3P4-Q5R6", "S7T8-U9V0", "W1X2-Y3Z4", "B5C6-D7E8", "F9G0-H1J2"].map((code, i) => (
+                      <div key={i} className={`font-mono text-sm px-3 py-2 rounded-lg text-center border ${i < 8 ? "bg-muted/50" : "bg-red-50 dark:bg-red-950/20 line-through text-muted-foreground"}`}>
+                        {code}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <Button size="sm" variant="outline"><Copy className="h-3.5 w-3.5 mr-1" /> Copy All</Button>
+                    <Button size="sm" variant="outline"><FileText className="h-3.5 w-3.5 mr-1" /> Download</Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Security Checklist */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><ShieldCheck className="h-5 w-5" /> Security Checklist</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {[
+                      { label: "Two-Factor Authentication", done: true, desc: "TOTP authenticator configured" },
+                      { label: "Strong Password", done: true, desc: "Last changed 14 days ago" },
+                      { label: "SSO Connection", done: false, desc: "No SSO provider linked" },
+                      { label: "IP Allowlist", done: false, desc: "Not configured" },
+                      { label: "Audit Logging", done: true, desc: "All login events recorded" },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                        {item.done ? <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" /> : <XCircle className="h-5 w-5 text-red-400 flex-shrink-0" />}
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">{item.label}</div>
+                          <div className="text-xs text-muted-foreground">{item.desc}</div>
+                        </div>
+                        {item.done ? <Badge variant="success">Complete</Badge> : <Button size="sm" variant="outline">Configure</Button>}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Login Activity */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><LogIn className="h-5 w-5" /> Login Activity</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/30">
+                          <th className="text-left p-3">User</th>
+                          <th className="text-left p-3">IP Address</th>
+                          <th className="text-left p-3">Device</th>
+                          <th className="text-left p-3">Time</th>
+                          <th className="text-center p-3">Result</th>
+                          <th className="text-center p-3">MFA</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mockLoginAudit.map((entry) => (
+                          <tr key={entry.id} className="border-b last:border-0 hover:bg-muted/30">
+                            <td className="p-3 font-medium text-xs">{entry.user}</td>
+                            <td className="p-3 font-mono text-xs text-muted-foreground">{entry.ip}</td>
+                            <td className="p-3 text-xs text-muted-foreground">{entry.device}</td>
+                            <td className="p-3 text-xs text-muted-foreground">{formatTimeAgo(entry.time)}</td>
+                            <td className="p-3 text-center">
+                              {entry.success
+                                ? <Badge variant="success">Success</Badge>
+                                : <Badge variant="destructive">Failed</Badge>
+                              }
+                            </td>
+                            <td className="p-3 text-center">
+                              {entry.mfa
+                                ? <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">MFA</Badge>
+                                : <Badge variant="outline" className="text-muted-foreground">None</Badge>
+                              }
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* ═══ SSO PROVIDERS ═══ */}
+          {activeSection === "sso-providers" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold flex items-center gap-2"><LinkIcon className="h-6 w-6" /> SSO Providers</h1>
+                  <p className="text-muted-foreground text-sm">Configure single sign-on identity providers</p>
+                </div>
+                <Button className="bg-blue-600 hover:bg-blue-700"><UserPlus className="h-4 w-4 mr-2" /> Add Provider</Button>
+              </div>
+
+              {/* Callback URL */}
+              <Card className="border-dashed">
+                <CardContent className="py-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium mb-1">Callback URL</div>
+                      <code className="text-xs bg-muted px-2 py-1 rounded font-mono">https://app.mydex.io/api/auth/callback/sso</code>
+                    </div>
+                    <Button size="sm" variant="outline"><Copy className="h-3.5 w-3.5 mr-1" /> Copy</Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Provider Cards */}
+              <div className="grid gap-4 md:grid-cols-3">
+                {mockSSOProviders.map((provider) => (
+                  <Card key={provider.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="pt-6 pb-4">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className={`h-12 w-12 rounded-xl ${provider.color} flex items-center justify-center text-white text-xl font-bold`}>
+                          {provider.icon}
+                        </div>
+                        <Badge className={
+                          provider.status === "Active"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                            : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                        }>{provider.status}</Badge>
+                      </div>
+                      <h3 className="font-semibold text-lg mb-1">{provider.name}</h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Client ID</span>
+                          <span className="font-mono text-xs">{provider.clientIdPrefix}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">JIT Provisioning</span>
+                          <Badge variant={provider.jit ? "success" : "outline"} className={!provider.jit ? "text-muted-foreground" : ""}>
+                            {provider.jit ? "Enabled" : "Disabled"}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Last Used</span>
+                          <span className="text-xs text-muted-foreground">{provider.lastUsed ? formatTimeAgo(provider.lastUsed) : "Never"}</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex gap-2">
+                        <Button size="sm" variant="outline" className="flex-1">Configure</Button>
+                        <Button size="sm" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Setup Guide */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <FileText className="h-5 w-5" /> Setup Guide: Microsoft Entra ID
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      { step: 1, title: "Register MyDex in Azure Portal", desc: "Navigate to Azure Active Directory > App Registrations > New Registration. Set the redirect URI to your callback URL." },
+                      { step: 2, title: "Configure Client Credentials", desc: "Copy the Application (client) ID and create a new client secret. Enter both values in MyDex SSO settings." },
+                      { step: 3, title: "Set API Permissions", desc: "Grant 'openid', 'profile', and 'email' delegated permissions under Microsoft Graph. Admin consent may be required." },
+                      { step: 4, title: "Enable JIT Provisioning (Optional)", desc: "Toggle on Just-In-Time provisioning to auto-create user accounts on first SSO login." },
+                      { step: 5, title: "Test & Activate", desc: "Use the 'Test Connection' button to verify the configuration, then activate the provider." },
+                    ].map((s) => (
+                      <div key={s.step} className="flex gap-4">
+                        <div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 text-sm font-bold">{s.step}</div>
+                        <div>
+                          <h4 className="font-semibold text-sm">{s.title}</h4>
+                          <p className="text-xs text-muted-foreground mt-0.5">{s.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-xs text-blue-800 dark:text-blue-200">
+                      <strong>Tip:</strong> For production environments, use certificate-based credentials instead of client secrets for enhanced security.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* ═══ MODULE ACCESS ═══ */}
+          {activeSection === "module-access" && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2"><Layers className="h-6 w-6" /> Module Access</h1>
+                <p className="text-muted-foreground text-sm">Configure which roles can see which platform modules</p>
+              </div>
+
+              {/* Role Visibility Cards */}
+              <div className="grid gap-4 md:grid-cols-4">
+                {[
+                  { role: "Employee", count: getModulesForRole("Employee").length, color: "from-blue-500 to-blue-600", total: mockModules.length },
+                  { role: "Manager", count: getModulesForRole("Manager").length, color: "from-purple-500 to-purple-600", total: mockModules.length },
+                  { role: "Admin", count: getModulesForRole("Admin").length, color: "from-orange-500 to-orange-600", total: mockModules.length },
+                  { role: "Super Admin", count: getModulesForRole("Super Admin").length, color: "from-red-500 to-red-600", total: mockModules.length },
+                ].map((r) => (
+                  <Card key={r.role} className="overflow-hidden">
+                    <div className={`h-1.5 bg-gradient-to-r ${r.color}`} />
+                    <CardContent className="pt-4 pb-3">
+                      <div className="text-sm font-semibold">{r.role}</div>
+                      <div className="text-2xl font-bold mt-1">{r.count} <span className="text-sm font-normal text-muted-foreground">/ {r.total} modules</span></div>
+                      <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full bg-gradient-to-r ${r.color}`} style={{ width: `${(r.count / r.total) * 100}%` }} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Module List by Category */}
+              {["Core", "Monitoring", "Management", "Security", "Admin"].map((category) => {
+                const categoryModules = mockModules.filter((m) => m.category === category);
+                const categoryColors: Record<string, string> = {
+                  Core: "text-blue-600",
+                  Monitoring: "text-green-600",
+                  Management: "text-purple-600",
+                  Security: "text-red-600",
+                  Admin: "text-orange-600",
+                };
+                return (
+                  <Card key={category}>
+                    <CardHeader>
+                      <CardTitle className={`text-lg flex items-center gap-2 ${categoryColors[category]}`}>
+                        <Grid3X3 className="h-5 w-5" /> {category}
+                        <Badge variant="outline" className="ml-2 text-xs">{categoryModules.length} modules</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {categoryModules.map((mod) => {
+                          const ModIcon = mod.icon;
+                          return (
+                            <div key={mod.name} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-lg bg-background border flex items-center justify-center">
+                                  <ModIcon className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium flex items-center gap-2">
+                                    {mod.name}
+                                    {mod.fixed && <Badge variant="outline" className="text-[10px] text-muted-foreground">Always Visible</Badge>}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">{mod.description}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div className="text-xs text-muted-foreground hidden sm:block">Min Role:</div>
+                                <Badge className={getRoleBadgeColor(mod.minRole)}>{mod.minRole}</Badge>
+                                <div className="w-10 h-6 rounded-full bg-green-500 flex items-center justify-end px-0.5 cursor-pointer">
+                                  <div className="h-5 w-5 rounded-full bg-white shadow-sm" />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
 
