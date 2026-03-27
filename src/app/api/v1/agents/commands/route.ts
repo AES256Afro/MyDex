@@ -7,8 +7,12 @@ import { z } from "zod";
 const createCommandSchema = z.object({
   deviceId: z.string(),
   cveEntryId: z.string().optional(),
-  commandType: z.enum(["UPDATE_SOFTWARE", "UNINSTALL_SOFTWARE", "RUN_SCRIPT", "RESTART_SERVICE", "FORCE_REBOOT", "CUSTOM"]),
-  command: z.string().min(1),
+  commandType: z.enum([
+    "UPDATE_SOFTWARE", "UNINSTALL_SOFTWARE", "RUN_SCRIPT", "RESTART_SERVICE",
+    "FORCE_REBOOT", "CUSTOM", "ISOLATE_HOST", "UNISOLATE_HOST",
+    "COLLECT_LOGS", "UPDATE_AGENT", "CHANGE_POLICY",
+  ]),
+  command: z.string().optional().default("auto"),
   description: z.string().optional(),
 });
 

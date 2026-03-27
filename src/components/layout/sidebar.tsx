@@ -25,6 +25,7 @@ import {
   KeyRound,
   User,
   Blocks,
+  Download,
   type LucideIcon,
 } from "lucide-react";
 
@@ -48,6 +49,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   "mfa-security": ShieldCheck,
   "sso-providers": KeyRound,
   "module-access": Blocks,
+  "agent-setup": Download,
 };
 
 // Category labels and order

@@ -191,6 +191,15 @@ export const MODULE_REGISTRY: ModuleConfig[] = [
     configurable: false,
     category: "admin",
   },
+  {
+    id: "agent-setup",
+    label: "Agent Setup",
+    href: "/settings/agent-setup",
+    description: "Deploy, download, and manage monitoring agents",
+    minRole: "ADMIN",
+    configurable: false,
+    category: "admin",
+  },
 ];
 
 const ROLE_LEVEL: Record<Role, number> = {
