@@ -57,6 +57,8 @@ export async function getAccessSettings(): Promise<AccessSettings> {
 
 /**
  * Check if an email is allowed to register or login.
+ * Also checks against existing users — if the email belongs to a user
+ * already in any org, they're always allowed (they were invited).
  */
 export async function isEmailAllowed(email: string): Promise<{ allowed: boolean; reason?: string }> {
   const settings = await getAccessSettings();
@@ -68,13 +70,19 @@ export async function isEmailAllowed(email: string): Promise<{ allowed: boolean;
     return { allowed: true };
   }
 
-  // Closed mode — no new registrations at all
+  // Closed mode — no new registrations, but existing users can still login
   if (settings.registrationMode === "closed") {
+    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existingUser) return { allowed: true };
     return { allowed: false, reason: "Registration is currently closed" };
   }
 
-  // Allowlist mode — check email and domain
+  // Allowlist mode — check email, domain, and existing users
   if (settings.registrationMode === "allowlist") {
+    // Existing users are always allowed (they were invited by an admin)
+    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existingUser) return { allowed: true };
+
     const emails = (settings.allowedEmails || []).map((e) => e.toLowerCase());
     const domains = (settings.allowedDomains || []).map((d) => d.toLowerCase());
 
@@ -95,6 +103,40 @@ export async function isEmailAllowed(email: string): Promise<{ allowed: boolean;
   }
 
   return { allowed: true };
+}
+
+/**
+ * Add an email to the organization's allowlist.
+ * Called automatically when inviting a user.
+ */
+export async function addToAllowlist(orgId: string, email: string): Promise<void> {
+  try {
+    const org = await prisma.organization.findUnique({
+      where: { id: orgId },
+      select: { settings: true },
+    });
+
+    const settings = (org?.settings as Record<string, unknown>) || {};
+    const currentEmails = (settings.allowedEmails as string[]) || [];
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Don't add duplicates
+    if (currentEmails.some((e) => e.toLowerCase() === normalizedEmail)) {
+      return;
+    }
+
+    await prisma.organization.update({
+      where: { id: orgId },
+      data: {
+        settings: {
+          ...settings,
+          allowedEmails: [...currentEmails, normalizedEmail],
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Failed to add email to allowlist:", error);
+  }
 }
 
 /**
