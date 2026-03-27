@@ -496,52 +496,86 @@ export default function AgentKeysPage() {
             Installation Instructions
           </CardTitle>
           <CardDescription>
-            Use one of the commands below to install the MyDex agent on a device.
-            Replace the API key placeholder with a generated key.
+            Install the MyDex agent on endpoint devices. Replace <code className="bg-muted px-1 rounded">YOUR_API_KEY</code> with a generated key from above.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          {/* Quick Start */}
+          <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800 p-4 space-y-2">
+            <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">Quick Start (any platform)</p>
+            <p className="text-xs text-blue-700 dark:text-blue-400">Run the agent binary directly — it will register with the server on first launch.</p>
+            <pre className="rounded-md bg-white dark:bg-muted px-4 py-3 text-sm font-mono overflow-x-auto whitespace-pre-wrap">{`./mydex-agent --api-key="YOUR_API_KEY" --server="https://antifascist.work"`}</pre>
+          </div>
+
+          <Separator />
+
           {/* Windows */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
+          <div className="space-y-3">
+            <Label className="flex items-center gap-2 text-base font-semibold">
               <Monitor className="h-4 w-4" />
-              Windows (PowerShell)
+              Windows — Install as Service
             </Label>
-            <div className="relative">
-              <pre className="rounded-md bg-muted px-4 py-3 text-sm font-mono overflow-x-auto">
-                {`.\\install.ps1 -ApiKey "mdx_xxxxx" -ServerUrl "https://antifascist.work"`}
-              </pre>
-            </div>
+            <p className="text-xs text-muted-foreground">Run PowerShell as Administrator. The agent installs as a Windows Service that starts automatically on boot.</p>
+            <pre className="rounded-md bg-muted px-4 py-3 text-sm font-mono overflow-x-auto whitespace-pre-wrap">{`# Step 1: Run once to register with server and save config
+.\\mydex-agent.exe --api-key="YOUR_API_KEY" --server="https://antifascist.work"
+# Wait until you see "Registered. Device ID: ..." then press Ctrl+C
+
+# Step 2: Install as Windows Service (requires Admin)
+.\\mydex-agent.exe --install
+
+# Step 3: Start the service
+net start MyDexAgent
+
+# To check status:
+Get-Service MyDexAgent
+
+# To uninstall:
+net stop MyDexAgent
+.\\mydex-agent.exe --uninstall`}</pre>
+            <p className="text-xs text-muted-foreground">
+              <strong>MDM (Intune/SCCM):</strong> Use <code className="bg-muted px-1 rounded">.\\scripts\\install.ps1 -ApiKey &quot;YOUR_API_KEY&quot;</code> for silent deployment.
+            </p>
           </div>
 
           <Separator />
 
           {/* macOS */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
+          <div className="space-y-3">
+            <Label className="flex items-center gap-2 text-base font-semibold">
               <Terminal className="h-4 w-4" />
-              macOS
+              macOS — Install as LaunchDaemon
             </Label>
-            <div className="relative">
-              <pre className="rounded-md bg-muted px-4 py-3 text-sm font-mono overflow-x-auto">
-                {`sudo ./install.sh --api-key "mdx_xxxxx" --server "https://antifascist.work"`}
-              </pre>
-            </div>
+            <p className="text-xs text-muted-foreground">Installs as a LaunchDaemon that persists across reboots. Requires sudo.</p>
+            <pre className="rounded-md bg-muted px-4 py-3 text-sm font-mono overflow-x-auto whitespace-pre-wrap">{`# Install and start (requires sudo)
+sudo ./scripts/install.sh --api-key "YOUR_API_KEY"
+
+# Check status:
+sudo launchctl list | grep mydex
+
+# View logs:
+tail -f /var/log/mydex-agent.log`}</pre>
+            <p className="text-xs text-muted-foreground">
+              <strong>MDM (Jamf/Mosyle):</strong> Deploy the .pkg installer with the install.sh script as a post-install hook.
+            </p>
           </div>
 
           <Separator />
 
           {/* Linux */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
+          <div className="space-y-3">
+            <Label className="flex items-center gap-2 text-base font-semibold">
               <Terminal className="h-4 w-4" />
-              Linux
+              Linux — Install as systemd Service
             </Label>
-            <div className="relative">
-              <pre className="rounded-md bg-muted px-4 py-3 text-sm font-mono overflow-x-auto">
-                {`sudo ./install.sh --api-key "mdx_xxxxx" --server "https://antifascist.work"`}
-              </pre>
-            </div>
+            <p className="text-xs text-muted-foreground">Installs a systemd unit that auto-starts on boot.</p>
+            <pre className="rounded-md bg-muted px-4 py-3 text-sm font-mono overflow-x-auto whitespace-pre-wrap">{`# Install and start (requires sudo)
+sudo ./scripts/install.sh --api-key "YOUR_API_KEY"
+
+# Check status:
+systemctl status mydex-agent
+
+# View logs:
+journalctl -u mydex-agent -f`}</pre>
           </div>
         </CardContent>
       </Card>
