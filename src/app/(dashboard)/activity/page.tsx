@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -116,6 +117,110 @@ function BarChart({ items, label }: { items: { name: string; value: number }[]; 
   );
 }
 
+// ─── Hourly Heatmap ─────────────────────────────────────────────────────────
+
+function HourlyHeatmap({
+  apps,
+  websites,
+}: {
+  apps: { timestamp: string; inferredDuration: number }[];
+  websites: { timestamp: string; inferredDuration: number }[];
+}) {
+  // Group all events by hour (0-23) and sum durations
+  const hourlyData = useMemo(() => {
+    const hours = Array(24).fill(0);
+    for (const ev of [...apps, ...websites]) {
+      const hour = new Date(ev.timestamp).getHours();
+      hours[hour] += ev.inferredDuration;
+    }
+    return hours;
+  }, [apps, websites]);
+
+  const maxSec = Math.max(...hourlyData, 1);
+
+  return (
+    <div>
+      <div className="flex items-end gap-1" style={{ height: 120 }}>
+        {hourlyData.map((sec, hour) => {
+          const pct = (sec / maxSec) * 100;
+          const intensity = sec === 0 ? "bg-muted" : pct > 75 ? "bg-blue-600" : pct > 50 ? "bg-blue-500" : pct > 25 ? "bg-blue-400" : "bg-blue-300";
+          return (
+            <div key={hour} className="flex-1 flex flex-col items-center gap-1" title={`${hour}:00 — ${formatDuration(sec)}`}>
+              <div className={`w-full rounded-t ${intensity} transition-all`} style={{ height: `${Math.max(pct, 2)}%` }} />
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex gap-1 mt-1">
+        {hourlyData.map((_, hour) => (
+          <div key={hour} className="flex-1 text-center text-[9px] text-muted-foreground">
+            {hour % 3 === 0 ? `${hour}` : ""}
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+        <span>Less</span>
+        <div className="h-3 w-4 bg-muted rounded" />
+        <div className="h-3 w-4 bg-blue-300 rounded" />
+        <div className="h-3 w-4 bg-blue-400 rounded" />
+        <div className="h-3 w-4 bg-blue-500 rounded" />
+        <div className="h-3 w-4 bg-blue-600 rounded" />
+        <span>More</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Interactive Bar Chart ───────────────────────────────────────────────────
+
+function InteractiveBarChart({
+  items,
+  label,
+  onBarClick,
+  selectedItem,
+}: {
+  items: { name: string; value: number }[];
+  label: string;
+  onBarClick?: (name: string) => void;
+  selectedItem?: string | null;
+}) {
+  const max = Math.max(...items.map((i) => i.value), 1);
+  const colors = [
+    "bg-blue-500", "bg-emerald-500", "bg-violet-500", "bg-amber-500", "bg-rose-500",
+    "bg-cyan-500", "bg-pink-500", "bg-indigo-500", "bg-teal-500", "bg-orange-500",
+  ];
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
+      {items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No data</p>
+      ) : (
+        items.map((item, idx) => (
+          <div
+            key={item.name}
+            className={`flex items-center gap-3 cursor-pointer rounded px-1 py-0.5 transition-colors ${
+              selectedItem === item.name ? "bg-muted ring-1 ring-primary" : "hover:bg-muted/50"
+            }`}
+            onClick={() => onBarClick?.(item.name)}
+          >
+            <span className="text-xs w-32 truncate text-right text-muted-foreground" title={item.name}>
+              {item.name}
+            </span>
+            <div className="flex-1 h-6 bg-muted rounded overflow-hidden">
+              <div
+                className={`h-full ${colors[idx % colors.length]} rounded transition-all`}
+                style={{ width: `${Math.max((item.value / max) * 100, 2)}%` }}
+              />
+            </div>
+            <span className="text-xs w-16 text-muted-foreground">{formatDuration(item.value)}</span>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 // ─── File Action Colors ──────────────────────────────────────────────────────
 
 const FILE_ACTION_STYLES: Record<string, { bg: string; text: string; label: string }> = {
@@ -142,6 +247,7 @@ export default function ActivityPage() {
 
   const [loading, setLoading] = useState(false);
   const [employeesLoading, setEmployeesLoading] = useState(true);
+  const [selectedAppFilter, setSelectedAppFilter] = useState<string | null>(null);
 
   // ─── Fetch employees on mount ────────────────────────────────────────────
 
@@ -233,33 +339,62 @@ export default function ActivityPage() {
 
   // ─── Computed aggregations ───────────────────────────────────────────────
 
+  // Calculate durations from consecutive events (time between this event and the next)
+  // since the agent doesn't send durationSeconds
+  const eventsWithDurations = useMemo(() => {
+    function inferDurations(events: ActivityEvent[]): (ActivityEvent & { inferredDuration: number })[] {
+      // Sort oldest first to calculate forward durations
+      const sorted = [...events].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      return sorted.map((ev, i) => {
+        // If the event already has a duration, use it
+        if (ev.durationSeconds && ev.durationSeconds > 0) {
+          return { ...ev, inferredDuration: ev.durationSeconds };
+        }
+        // Otherwise calculate from the gap to the next event
+        if (i < sorted.length - 1) {
+          const current = new Date(ev.timestamp).getTime();
+          const next = new Date(sorted[i + 1].timestamp).getTime();
+          const diffSec = Math.floor((next - current) / 1000);
+          // Cap at 10 minutes — anything longer is likely idle/away
+          return { ...ev, inferredDuration: Math.min(diffSec, 600) };
+        }
+        // Last event — assume still active, give it 30 seconds
+        return { ...ev, inferredDuration: 30 };
+      });
+    }
+    return {
+      websites: inferDurations(websiteEvents),
+      apps: inferDurations(appEvents),
+    };
+  }, [websiteEvents, appEvents]);
+
   const domainAggregation = useMemo(() => {
     const map = new Map<string, number>();
-    for (const ev of websiteEvents) {
+    for (const ev of eventsWithDurations.websites) {
       const domain = ev.domain || "unknown";
-      map.set(domain, (map.get(domain) || 0) + (ev.durationSeconds || 0));
+      map.set(domain, (map.get(domain) || 0) + ev.inferredDuration);
     }
     return Array.from(map.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-  }, [websiteEvents]);
+  }, [eventsWithDurations.websites]);
 
   const appAggregation = useMemo(() => {
     const map = new Map<string, number>();
-    for (const ev of appEvents) {
+    for (const ev of eventsWithDurations.apps) {
       const app = ev.appName || "unknown";
-      map.set(app, (map.get(app) || 0) + (ev.durationSeconds || 0));
+      map.set(app, (map.get(app) || 0) + ev.inferredDuration);
     }
     return Array.from(map.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-  }, [appEvents]);
+  }, [eventsWithDurations.apps]);
 
   const totalActiveSeconds = useMemo(() => {
-    const siteSecs = websiteEvents.reduce((sum, e) => sum + (e.durationSeconds || 0), 0);
-    const appSecs = appEvents.reduce((sum, e) => sum + (e.durationSeconds || 0), 0);
+    const siteSecs = eventsWithDurations.websites.reduce((sum, e) => sum + e.inferredDuration, 0);
+    const appSecs = eventsWithDurations.apps.reduce((sum, e) => sum + e.inferredDuration, 0);
     return siteSecs + appSecs;
-  }, [websiteEvents, appEvents]);
+  }, [eventsWithDurations]);
 
   const uniqueDomains = useMemo(() => new Set(websiteEvents.map((e) => e.domain).filter(Boolean)).size, [websiteEvents]);
   const uniqueApps = useMemo(() => new Set(appEvents.map((e) => e.appName).filter(Boolean)).size, [appEvents]);
@@ -338,10 +473,19 @@ export default function ActivityPage() {
               </div>
             )}
 
-            {/* Refresh button */}
-            <Button onClick={loadAllData} disabled={loading || !selectedUserId} variant="outline" size="sm">
-              {loading ? "Loading..." : "Refresh"}
-            </Button>
+            {/* Refresh + View Profile */}
+            <div className="flex gap-2">
+              <Button onClick={loadAllData} disabled={loading || !selectedUserId} variant="outline" size="sm">
+                {loading ? "Loading..." : "Refresh"}
+              </Button>
+              {selectedUserId && (
+                <Link href={`/activity/${selectedUserId}`}>
+                  <Button variant="default" size="sm">
+                    Full Report
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -374,6 +518,18 @@ export default function ActivityPage() {
         </Card>
       </div>
 
+      {/* Hourly Activity Heatmap */}
+      {!loading && selectedUserId && (eventsWithDurations.apps.length > 0 || eventsWithDurations.websites.length > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Hourly Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <HourlyHeatmap apps={eventsWithDurations.apps} websites={eventsWithDurations.websites} />
+          </CardContent>
+        </Card>
+      )}
+
       {loading && (
         <div className="text-center py-8 text-muted-foreground">Loading activity data...</div>
       )}
@@ -401,7 +557,7 @@ export default function ActivityPage() {
               )}
 
               {/* Website visit table */}
-              {websiteEvents.length === 0 ? (
+              {eventsWithDurations.websites.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">No website visits recorded for this period.</p>
               ) : (
                 <div className="overflow-x-auto">
@@ -416,7 +572,7 @@ export default function ActivityPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {websiteEvents
+                      {[...eventsWithDurations.websites]
                         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                         .map((ev) => (
                           <tr key={ev.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
@@ -441,7 +597,7 @@ export default function ActivityPage() {
                             </td>
                             <td className="py-2.5 pr-4 text-muted-foreground">{ev.appName || "—"}</td>
                             <td className="py-2.5 text-right text-muted-foreground whitespace-nowrap">
-                              {ev.durationSeconds != null ? formatDuration(ev.durationSeconds) : "—"}
+                              {formatDuration(ev.inferredDuration)}
                             </td>
                           </tr>
                         ))}
@@ -454,14 +610,51 @@ export default function ActivityPage() {
 
           {/* App Usage Summary */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg">App Usage Summary</CardTitle>
+              {selectedAppFilter && (
+                <Button variant="ghost" size="sm" onClick={() => setSelectedAppFilter(null)}>
+                  Clear filter
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               {appAggregation.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">No app usage recorded for this period.</p>
               ) : (
-                <BarChart items={appAggregation.slice(0, 15)} label="Time spent per application" />
+                <>
+                  <InteractiveBarChart
+                    items={appAggregation.slice(0, 15)}
+                    label="Time spent per application"
+                    onBarClick={(name) => setSelectedAppFilter(selectedAppFilter === name ? null : name)}
+                    selectedItem={selectedAppFilter}
+                  />
+                  {selectedAppFilter && (
+                    <div className="mt-4 border-t pt-4">
+                      <h4 className="text-sm font-semibold mb-2">
+                        {selectedAppFilter} — Window History
+                      </h4>
+                      <div className="max-h-60 overflow-y-auto space-y-1">
+                        {[...eventsWithDurations.apps]
+                          .filter((ev) => ev.appName === selectedAppFilter)
+                          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                          .map((ev, i) => (
+                            <div key={i} className="flex items-center gap-3 text-sm py-1.5 border-b last:border-0">
+                              <span className="text-xs text-muted-foreground whitespace-nowrap w-20">
+                                {formatTime(ev.timestamp)}
+                              </span>
+                              <span className="flex-1 truncate" title={ev.windowTitle || ""}>
+                                {ev.windowTitle || "—"}
+                              </span>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                {formatDuration(ev.inferredDuration)}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
