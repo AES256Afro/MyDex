@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyDex Agent Setup</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f8f9fa;
+      color: #1a1a2e;
+      padding: 24px;
+    }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .subtitle { color: #666; font-size: 13px; margin-bottom: 20px; }
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #333; }
+    input[type="url"], input[type="email"], input[type="password"], input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: #4f46e5; }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #4338ca; }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+    .btn-danger { background: #dc2626; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-secondary { background: #6b7280; margin-top: 8px; }
+    .btn-secondary:hover { background: #4b5563; }
+    .status {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      display: none;
+    }
+    .status.error { display: block; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .status.success { display: block; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .status.info { display: block; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .status-bar.online { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .status-bar.offline { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .status-bar.reconnecting { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .online .status-dot { background: #16a34a; }
+    .offline .status-dot { background: #dc2626; }
+    .reconnecting .status-dot { background: #d97706; animation: pulse 1.5s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+    }
+    .toggle-label { font-size: 13px; font-weight: 600; color: #333; }
+    .toggle-desc { font-size: 11px; color: #888; margin-top: 2px; }
+    .toggle {
+      position: relative;
+      width: 44px; height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle .slider {
+      position: absolute; cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ccc; border-radius: 24px;
+      transition: 0.3s;
+    }
+    .toggle .slider:before {
+      content: "";
+      position: absolute;
+      width: 18px; height: 18px;
+      left: 3px; bottom: 3px;
+      background: white; border-radius: 50%;
+      transition: 0.3s;
+    }
+    .toggle input:checked + .slider { background: #4f46e5; }
+    .toggle input:checked + .slider:before { transform: translateX(20px); }
+
+    .section-title {
+      font-size: 14px; font-weight: 600;
+      margin: 20px 0 10px;
+      padding-top: 14px;
+      border-top: 1px solid #eee;
+    }
+
+    .device-info {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>MyDex Agent</h1>
+  <p class="subtitle">Connect to your MyDex server</p>
+
+  <div id="status-bar" class="status-bar offline">
+    <span class="status-dot"></span>
+    <span id="status-text">Disconnected</span>
+  </div>
+
+  <form id="config-form">
+    <div class="form-group">
+      <label for="serverUrl">Server URL</label>
+      <input type="url" id="serverUrl" placeholder="http://localhost:3000" required>
+    </div>
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="you@company.com" required>
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="Your password" required>
+    </div>
+
+    <div class="section-title">Settings</div>
+
+    <div class="form-group">
+      <label for="collectInterval">Activity report interval (seconds)</label>
+      <input type="number" id="collectInterval" min="10" max="300" value="30">
+    </div>
+
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">Start with Windows</div>
+        <div class="toggle-desc">Agent starts automatically on boot</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="autoStart" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <button type="submit" id="submit-btn">Connect</button>
+    <button type="button" id="disconnect-btn" class="btn-danger" style="display:none; margin-top:8px;">Disconnect</button>
+    <div id="status" class="status"></div>
+    <div id="device-info" class="device-info"></div>
+  </form>
+
+  <script>
+    const form = document.getElementById("config-form");
+    const statusEl = document.getElementById("status");
+    const submitBtn = document.getElementById("submit-btn");
+    const disconnectBtn = document.getElementById("disconnect-btn");
+    const statusBar = document.getElementById("status-bar");
+    const statusText = document.getElementById("status-text");
+    const deviceInfo = document.getElementById("device-info");
+
+    function updateStatusBar(state) {
+      statusBar.className = "status-bar " + state.class;
+      statusText.textContent = state.text;
+    }
+
+    async function refreshStatus() {
+      try {
+        const status = await window.mydex.getStatus();
+        if (status.connected) {
+          updateStatusBar({ class: "online", text: "Connected" });
+          submitBtn.textContent = "Reconnect";
+          disconnectBtn.style.display = "block";
+          if (status.deviceId) {
+            deviceInfo.textContent = "Device ID: " + status.deviceId;
+          }
+        } else if (status.reconnecting) {
+          updateStatusBar({ class: "reconnecting", text: "Reconnecting... (attempt " + status.retryCount + ")" });
+          submitBtn.textContent = "Reconnect Now";
+          disconnectBtn.style.display = "block";
+        } else {
+          updateStatusBar({ class: "offline", text: "Disconnected" });
+          submitBtn.textContent = "Connect";
+          disconnectBtn.style.display = "none";
+          deviceInfo.textContent = "";
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    async function loadConfig() {
+      const config = await window.mydex.getConfig();
+      document.getElementById("serverUrl").value = config.serverUrl || "";
+      document.getElementById("email").value = config.email || "";
+      document.getElementById("collectInterval").value = config.collectInterval || 30;
+      document.getElementById("autoStart").checked = config.autoStart !== false;
+      await refreshStatus();
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Connecting...";
+      statusEl.className = "status";
+
+      const serverUrl = document.getElementById("serverUrl").value;
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const collectInterval = parseInt(document.getElementById("collectInterval").value);
+      const autoStart = document.getElementById("autoStart").checked;
+
+      await window.mydex.saveConfig({ serverUrl, email, collectInterval, autoStart });
+
+      const result = await window.mydex.login({ serverUrl, email, password });
+
+      if (result.success) {
+        statusEl.className = "status success";
+        statusEl.textContent = "Connected! Agent is now running in the background.";
+        await refreshStatus();
+      } else {
+        statusEl.className = "status error";
+        statusEl.textContent = result.error || "Connection failed";
+        submitBtn.textContent = "Connect";
+      }
+      submitBtn.disabled = false;
+    });
+
+    disconnectBtn.addEventListener("click", async () => {
+      await window.mydex.disconnect();
+      statusEl.className = "status info";
+      statusEl.textContent = "Disconnected from server.";
+      await refreshStatus();
+    });
+
+    // Auto-start toggle saves immediately
+    document.getElementById("autoStart").addEventListener("change", async (e) => {
+      const config = await window.mydex.getConfig();
+      await window.mydex.saveConfig({
+        serverUrl: config.serverUrl,
+        email: config.email,
+        collectInterval: config.collectInterval,
+        autoStart: e.target.checked,
+      });
+    });
+
+    loadConfig();
+
+    // Refresh status every 5 seconds
+    setInterval(refreshStatus, 5000);
+  </script>
+</body>
+</html>
