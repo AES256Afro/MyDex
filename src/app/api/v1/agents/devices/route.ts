@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { authenticateAgent } from "@/lib/agent-auth";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { isDeviceAllowed } from "@/lib/allowlist";
@@ -106,10 +107,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - register/heartbeat a device (called by agent)
+// POST - register/heartbeat a device (called by agent — supports both NextAuth and agent JWT)
 export async function POST(request: NextRequest) {
+  // Try NextAuth session first, then agent JWT
   const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const agentAuth = !session ? await authenticateAgent(request) : null;
+
+  if (!session && !agentAuth) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
     const body = await request.json();
@@ -118,8 +124,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid input", details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const orgId = session.user.organizationId;
-    const userId = session.user.id;
+    const orgId = session ? session.user.organizationId : agentAuth!.organizationId;
+    // For agent JWT auth, use a system user or find any admin user in the org
+    let userId: string;
+    if (session) {
+      userId = session.user.id;
+    } else {
+      const adminUser = await prisma.user.findFirst({
+        where: { organizationId: orgId, role: "ADMIN" },
+        select: { id: true },
+      });
+      if (!adminUser) {
+        return NextResponse.json({ error: "No admin user found in organization" }, { status: 500 });
+      }
+      userId = adminUser.id;
+    }
 
     // Check device allowlist
     const { allowed, reason } = await isDeviceAllowed(parsed.data.hostname);
@@ -140,7 +159,7 @@ export async function POST(request: NextRequest) {
       },
       update: {
         platform: parsed.data.platform,
-        agentVersion: parsed.data.agentVersion || "0.2.0",
+        agentVersion: parsed.data.agentVersion || "1.0.0",
         osVersion: parsed.data.osVersion,
         ipAddress: parsed.data.ipAddress,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -153,7 +172,7 @@ export async function POST(request: NextRequest) {
         userId,
         hostname: parsed.data.hostname,
         platform: parsed.data.platform,
-        agentVersion: parsed.data.agentVersion || "0.2.0",
+        agentVersion: parsed.data.agentVersion || "1.0.0",
         osVersion: parsed.data.osVersion,
         ipAddress: parsed.data.ipAddress,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -169,21 +188,32 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH - update device diagnostics (called by agent)
+// PATCH - update device diagnostics / heartbeat (supports both NextAuth and agent JWT)
 export async function PATCH(request: NextRequest) {
   const session = await auth();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const agentAuth = !session ? await authenticateAgent(request) : null;
+
+  if (!session && !agentAuth) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
     const body = await request.json();
-    const orgId = session.user.organizationId;
-    const userId = session.user.id;
+    const orgId = session ? session.user.organizationId : agentAuth!.organizationId;
+    const deviceId = body.deviceId || agentAuth?.deviceId;
 
-    // Find the device for this user
-    const device = await prisma.agentDevice.findFirst({
-      where: { organizationId: orgId, userId },
-      orderBy: { lastSeenAt: "desc" },
-    });
+    // Find the device
+    let device;
+    if (deviceId) {
+      device = await prisma.agentDevice.findFirst({
+        where: { id: deviceId, organizationId: orgId },
+      });
+    } else if (session) {
+      device = await prisma.agentDevice.findFirst({
+        where: { organizationId: orgId, userId: session.user.id },
+        orderBy: { lastSeenAt: "desc" },
+      });
+    }
 
     if (!device) {
       return NextResponse.json({ error: "Device not found" }, { status: 404 });

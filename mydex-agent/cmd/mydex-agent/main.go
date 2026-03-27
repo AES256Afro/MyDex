@@ -113,18 +113,30 @@ func runAgent(cfg *config.Config) {
 
 	// Authenticate with server
 	log.Println("Authenticating with server...")
+	var authenticated bool
 	for retries := 0; retries < 5; retries++ {
 		if err := authClient.Authenticate(); err != nil {
 			log.Printf("Auth attempt %d failed: %v", retries+1, err)
 			time.Sleep(time.Duration(retries+1) * 10 * time.Second)
 			continue
 		}
-		log.Printf("Authenticated. Device ID: %s", cfg.DeviceID)
+		authenticated = true
 		break
 	}
 
-	if cfg.DeviceID == "" {
+	if !authenticated {
 		log.Fatal("Failed to authenticate after 5 attempts")
+	}
+
+	// If no device ID yet, register this device
+	if cfg.DeviceID == "" {
+		log.Println("No device ID — registering with server...")
+		if err := authClient.RegisterDevice(); err != nil {
+			log.Fatalf("Device registration failed: %v", err)
+		}
+		log.Printf("Registered. Device ID: %s", cfg.DeviceID)
+	} else {
+		log.Printf("Device ID: %s", cfg.DeviceID)
 	}
 
 	// Initialize transport
