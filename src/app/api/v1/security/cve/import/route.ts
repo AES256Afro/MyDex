@@ -326,6 +326,118 @@ async function fetchAndImportFromNvd(opts: {
   return { totalFromNvd, imported, skipped, filteredOut, importedCves };
 }
 
+// ─── Assess applicability of CVEs against device inventory ────────────────────
+async function assessCveApplicability(orgId: string): Promise<{
+  confirmed: number;
+  potential: number;
+  notApplicable: number;
+}> {
+  // Get all installed software across all devices in this org
+  const devices = await prisma.agentDevice.findMany({
+    where: { organizationId: orgId },
+    select: { installedSoftware: true, platform: true, osVersion: true },
+  });
+
+  // Build a set of installed software names (lowercased) and platform info
+  const installedSoftwareNames = new Set<string>();
+  const platforms = new Set<string>();
+  for (const device of devices) {
+    if (device.platform) platforms.add(device.platform.toLowerCase());
+    if (device.osVersion) installedSoftwareNames.add(device.osVersion.toLowerCase());
+    const sw = device.installedSoftware;
+    if (Array.isArray(sw)) {
+      for (const item of sw as Array<{ name?: string; version?: string }>) {
+        if (item?.name) {
+          installedSoftwareNames.add(item.name.toLowerCase());
+        }
+      }
+    }
+  }
+
+  // Get all UNASSESSED CVEs for this org
+  const unassessedCves = await prisma.cveEntry.findMany({
+    where: { organizationId: orgId, applicability: "UNASSESSED" },
+    select: { id: true, affectedSoftware: true, description: true },
+  });
+
+  let confirmed = 0;
+  let potential = 0;
+  let notApplicable = 0;
+
+  // If no devices enrolled, mark everything as POTENTIAL
+  if (devices.length === 0) {
+    if (unassessedCves.length > 0) {
+      await prisma.cveEntry.updateMany({
+        where: { organizationId: orgId, applicability: "UNASSESSED" },
+        data: { applicability: "POTENTIAL" },
+      });
+      potential = unassessedCves.length;
+    }
+    return { confirmed, potential, notApplicable };
+  }
+
+  for (const cve of unassessedCves) {
+    const software = cve.affectedSoftware.toLowerCase();
+    const desc = (cve.description || "").toLowerCase();
+
+    // Extract product name from CPE-style "vendor/product" format
+    const product = software.includes("/")
+      ? software.split("/")[1].replace(/_/g, " ")
+      : software;
+
+    // Check for direct match against installed software
+    const directMatch = [...installedSoftwareNames].some((installed) => {
+      // Fuzzy matching: check if the installed software name contains the CVE product
+      // or vice versa, handling common naming variations
+      const normalizedProduct = product.replace(/[_\-\.]/g, " ").trim();
+      const normalizedInstalled = installed.replace(/[_\-\.]/g, " ").trim();
+      return (
+        normalizedInstalled.includes(normalizedProduct) ||
+        normalizedProduct.includes(normalizedInstalled)
+      );
+    });
+
+    // Check platform relevance
+    const isWindowsCve = desc.includes("windows") || software.includes("windows") || software.includes("microsoft");
+    const isMacCve = desc.includes("macos") || desc.includes("mac os") || software.includes("apple") || software.includes("macos");
+    const isLinuxCve = desc.includes("linux") || software.includes("linux");
+
+    const hasWindowsDevice = platforms.has("win32") || platforms.has("windows");
+    const hasMacDevice = platforms.has("darwin") || platforms.has("macos");
+    const hasLinuxDevice = platforms.has("linux");
+
+    // If CVE is OS-specific and we don't have that OS, it's not applicable
+    const osSpecific = isWindowsCve || isMacCve || isLinuxCve;
+    const osRelevant =
+      (isWindowsCve && hasWindowsDevice) ||
+      (isMacCve && hasMacDevice) ||
+      (isLinuxCve && hasLinuxDevice) ||
+      !osSpecific; // Cross-platform CVEs are always relevant
+
+    let applicability: "CONFIRMED" | "POTENTIAL" | "NOT_APPLICABLE";
+
+    if (directMatch && osRelevant) {
+      applicability = "CONFIRMED";
+      confirmed++;
+    } else if (osRelevant) {
+      // OS matches but no direct software match — could still apply
+      applicability = "POTENTIAL";
+      potential++;
+    } else {
+      // Wrong OS entirely
+      applicability = "NOT_APPLICABLE";
+      notApplicable++;
+    }
+
+    await prisma.cveEntry.update({
+      where: { id: cve.id },
+      data: { applicability },
+    });
+  }
+
+  return { confirmed, potential, notApplicable };
+}
+
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session)
@@ -445,6 +557,9 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Assess applicability of all unassessed CVEs against device inventory
+      const applicabilityResults = await assessCveApplicability(orgId);
+
       return NextResponse.json({
         totalFromNvd,
         imported: totalImported,
@@ -452,6 +567,7 @@ export async function POST(request: NextRequest) {
         filteredOut: totalFilteredOut,
         importedCves: allImportedCves,
         categoryResults,
+        applicability: applicabilityResults,
         mode: "bulk",
       });
     }

@@ -44,12 +44,16 @@ export async function GET(request: NextRequest) {
       orderBy: { lastSeenAt: "desc" },
     });
 
-    // For each device, count open CVEs and IOC matches from the org
+    // For each device, count applicable CVEs and IOC matches
     const enrichedDevices = await Promise.all(
       devices.map(async (device) => {
-        // Count open CVEs for the org
+        // Count only CONFIRMED or POTENTIAL open CVEs (not NOT_APPLICABLE or UNASSESSED)
         const openCves = await prisma.cveEntry.count({
-          where: { organizationId: orgId, status: "OPEN" },
+          where: {
+            organizationId: orgId,
+            status: "OPEN",
+            applicability: { in: ["CONFIRMED", "POTENTIAL"] },
+          },
         });
 
         // Count active IOC entries
