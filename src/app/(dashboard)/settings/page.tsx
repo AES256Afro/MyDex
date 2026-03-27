@@ -15,7 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Monitor, X, Upload, Plus, AlertTriangle } from "lucide-react";
+import { Shield, Monitor, X, Upload, Plus, AlertTriangle, Key, ChevronRight } from "lucide-react";
+import Link from "next/link";
 
 const TIMEZONES = [
   "UTC",
@@ -619,6 +620,26 @@ export default function SettingsPage() {
               </div>
             </>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Agent API Keys */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Key className="h-5 w-5" /> Agent API Keys
+          </CardTitle>
+          <CardDescription>
+            Generate and manage API keys for the MyDex desktop agent
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link href="/settings/agent-keys">
+            <Button variant="outline" className="gap-2">
+              Manage Agent Keys
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </Link>
         </CardContent>
       </Card>
 
