@@ -284,21 +284,49 @@ function StatusBadge({ status }: { status: string }) {
 
 // ─── Nav Items ───────────────────────────────────────────────────────────────
 
-const sections = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "devices", label: "Devices", icon: Monitor },
-  { id: "departments", label: "Departments", icon: Building2 },
-  { id: "host-groups", label: "Host Groups", icon: Server },
-  { id: "activity", label: "Activity", icon: Activity },
-  { id: "productivity", label: "Productivity", icon: Brain },
-  { id: "reports", label: "Reports", icon: BarChart3 },
-  { id: "security", label: "Security", icon: Shield },
-  { id: "employee-view", label: "Employee View", icon: Eye },
-  { id: "user-management", label: "User Management", icon: Users },
-  { id: "mfa-security", label: "MFA & Security", icon: Fingerprint },
-  { id: "sso-providers", label: "SSO Providers", icon: LinkIcon },
-  { id: "module-access", label: "Module Access", icon: Layers },
+const sectionGroups = [
+  {
+    category: "",
+    items: [
+      { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    ],
+  },
+  {
+    category: "MONITORING",
+    items: [
+      { id: "devices", label: "Devices", icon: Monitor },
+      { id: "activity", label: "Activity", icon: Activity },
+      { id: "productivity", label: "Productivity", icon: Brain },
+    ],
+  },
+  {
+    category: "MANAGEMENT",
+    items: [
+      { id: "departments", label: "Departments", icon: Building2 },
+      { id: "host-groups", label: "Host Groups", icon: Server },
+      { id: "user-management", label: "User Management", icon: Users },
+      { id: "reports", label: "Reports", icon: BarChart3 },
+    ],
+  },
+  {
+    category: "SECURITY",
+    items: [
+      { id: "security", label: "Security", icon: Shield },
+    ],
+  },
+  {
+    category: "ADMINISTRATION",
+    items: [
+      { id: "employee-view", label: "Employee View", icon: Eye },
+      { id: "mfa-security", label: "MFA & Security", icon: Fingerprint },
+      { id: "sso-providers", label: "SSO Providers", icon: LinkIcon },
+      { id: "module-access", label: "Module Access", icon: Layers },
+    ],
+  },
 ];
+
+// Flat list for compatibility
+const sections = sectionGroups.flatMap((g) => g.items);
 
 // ─── Demo Page ───────────────────────────────────────────────────────────────
 
@@ -378,14 +406,23 @@ export default function DemoPage() {
           <Badge className="ml-2 bg-blue-100 text-blue-800 text-[10px]">DEMO</Badge>
         </div>
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-          {sections.map((s) => (
-            <button key={s.id} onClick={() => setActiveSection(s.id)}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors w-full text-left ${
-                activeSection === s.id ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-              }`}
-            >
-              <s.icon className="h-4 w-4" /> {s.label}
-            </button>
+          {sectionGroups.map((group) => (
+            <Fragment key={group.category || "core"}>
+              {group.category && (
+                <div className="px-3 pt-4 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+                  {group.category}
+                </div>
+              )}
+              {group.items.map((s) => (
+                <button key={s.id} onClick={() => setActiveSection(s.id)}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors w-full text-left ${
+                    activeSection === s.id ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                  }`}
+                >
+                  <s.icon className="h-4 w-4" /> {s.label}
+                </button>
+              ))}
+            </Fragment>
           ))}
         </nav>
         <div className="p-4 border-t">
