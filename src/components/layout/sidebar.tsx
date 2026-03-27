@@ -15,16 +15,20 @@ import {
   Brain,
   Settings,
   Monitor,
+  Building2,
+  Server,
 } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Employees", href: "/employees", icon: Users },
+  { label: "Departments", href: "/departments", icon: Building2 },
   { label: "Time Tracking", href: "/time-tracking", icon: Clock },
   { label: "Attendance", href: "/attendance", icon: CalendarCheck },
   { label: "Activity", href: "/activity", icon: Activity },
   { label: "Projects", href: "/projects", icon: FolderKanban },
   { label: "Devices", href: "/devices", icon: Monitor },
+  { label: "Host Groups", href: "/host-groups", icon: Server },
   { label: "Security", href: "/security", icon: Shield },
   { label: "Reports", href: "/reports", icon: BarChart3 },
   { label: "Productivity", href: "/productivity", icon: Brain },

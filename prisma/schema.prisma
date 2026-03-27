@@ -24,6 +24,9 @@ model Organization {
   projects         Project[]
   dlpPolicies      DlpPolicy[]
   scheduledReports ScheduledReport[]
+  departments      Department[]
+  hostGroups       HostGroup[]
+  domainBlocklists DomainBlocklist[]
 }
 
 model User {
@@ -41,9 +44,11 @@ model User {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id])
-  manager      User?        @relation("ManagerReports", fields: [managerId], references: [id])
-  directReports User[]      @relation("ManagerReports")
+  organization  Organization  @relation(fields: [organizationId], references: [id])
+  manager       User?         @relation("ManagerReports", fields: [managerId], references: [id])
+  directReports User[]        @relation("ManagerReports")
+  departmentRef Department?   @relation("UserDepartment", fields: [departmentId], references: [id])
+  departmentId  String?
 
   accounts          Account[]
   sessions          Session[]
@@ -110,6 +115,117 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// ============================================
+// DEPARTMENTS
+// ============================================
+
+model Department {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  color          String?  // hex color for UI badges
+  managerId      String?  // department head
+  parentId       String?  // for nested departments
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  members      User[]       @relation("UserDepartment")
+  parent       Department?  @relation("SubDepartments", fields: [parentId], references: [id])
+  children     Department[] @relation("SubDepartments")
+  hostGroups   HostGroup[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+// ============================================
+// HOST GROUPS & DOMAIN BLOCKLISTS
+// ============================================
+
+model HostGroup {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  color          String?
+  departmentId   String?  // optionally auto-assign by department
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id])
+  department   Department?     @relation(fields: [departmentId], references: [id])
+  members      HostGroupMember[]
+  policies     HostGroupPolicy[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model HostGroupMember {
+  id          String   @id @default(cuid())
+  hostGroupId String
+  deviceId    String
+  addedAt     DateTime @default(now())
+
+  hostGroup HostGroup   @relation(fields: [hostGroupId], references: [id], onDelete: Cascade)
+  device    AgentDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([hostGroupId, deviceId])
+}
+
+model DomainBlocklist {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  category       String?  // e.g., "Social Media", "Gambling", "Adult", "Custom"
+  domains        Json     // string[] of domains
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id])
+  policies     HostGroupPolicy[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model HostGroupPolicy {
+  id              String   @id @default(cuid())
+  hostGroupId     String
+  blocklistId     String?  // link to domain blocklist
+  policyType      PolicyType
+  action          PolicyAction @default(LOG)
+  // Firewall rule fields (used when policyType == FIREWALL)
+  direction       String?  // "inbound" | "outbound"
+  protocol        String?  // "TCP" | "UDP" | "ANY"
+  port            String?  // "80", "443", "3389", "1000-2000"
+  remoteAddress   String?  // IP or CIDR
+  description     String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  hostGroup HostGroup        @relation(fields: [hostGroupId], references: [id], onDelete: Cascade)
+  blocklist DomainBlocklist? @relation(fields: [blocklistId], references: [id])
+
+  @@index([hostGroupId])
+}
+
+enum PolicyType {
+  DOMAIN_BLOCK
+  FIREWALL
+}
+
+enum PolicyAction {
+  BLOCK
+  LOG
+  WARN
 }
 
 // ============================================
@@ -613,6 +729,7 @@ model AgentDevice {
   user     User                  @relation(fields: [userId], references: [id])
   commands RemediationCommand[]
   diagnostics DeviceDiagnostic[]
+  hostGroupMemberships HostGroupMember[]
 
   @@unique([organizationId, userId, hostname])
   @@index([organizationId])
