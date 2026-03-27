@@ -41,6 +41,23 @@ export async function POST(request: NextRequest) {
 
     const { deviceId } = agentAuth;
     const organizationId = agentAuth.organizationId;
+
+    // Check if the device owner has monitoring paused
+    const device = await prisma.agentDevice.findUnique({
+      where: { id: deviceId },
+      select: { userId: true },
+    });
+    if (device) {
+      const user = await prisma.user.findUnique({
+        where: { id: device.userId },
+        select: { monitoringPaused: true },
+      });
+      if (user?.monitoringPaused) {
+        // Silently accept but don't store telemetry
+        return NextResponse.json({ processed: 0, paused: true });
+      }
+    }
+
     let batchesProcessed = 0;
 
     for (const batch of parsed.data.batches) {

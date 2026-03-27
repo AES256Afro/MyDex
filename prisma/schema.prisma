@@ -44,6 +44,8 @@ model User {
   department     String?
   jobTitle       String?
   managerId      String?
+  monitoringPaused Boolean  @default(false)
+  monitoringPausedAt DateTime?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
