@@ -3,6 +3,7 @@ import { generateAgentJwt } from "@/lib/agent-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 const authSchema = z.object({
   apiKey: z.string().min(1),
@@ -10,6 +11,16 @@ const authSchema = z.object({
 
 // POST - Agent presents API key, gets back JWT + device info
 export async function POST(request: NextRequest) {
+  // Rate limit agent auth
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rateCheck = checkRateLimit(`agent-auth:${ip}`, RATE_LIMITS.agentAuth);
+  if (!rateCheck.allowed) {
+    return NextResponse.json(
+      { error: "Rate limited. Try again later.", retryAfter: rateCheck.retryAfterSeconds },
+      { status: 429 }
+    );
+  }
+
   try {
     const body = await request.json();
     const parsed = authSchema.safeParse(body);
