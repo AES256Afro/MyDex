@@ -33,6 +33,7 @@ import {
   User,
   Blocks,
   Download,
+  Package,
   type LucideIcon,
 } from "lucide-react";
 
@@ -55,6 +56,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   "mfa-security": ShieldCheck,
   "sso-providers": KeyRound,
   "module-access": Blocks,
+  "software-inventory": Package,
   "agent-setup": Download,
 };
 
