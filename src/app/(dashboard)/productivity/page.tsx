@@ -117,6 +117,7 @@ export default async function ProductivityPage() {
           totalIdleSeconds: 0,
           topApps: {},
           topSites: {},
+          topDomains: {},
           productivityScore: score,
           createdAt: new Date(),
           user: ev0.user,
