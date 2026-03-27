@@ -641,8 +641,9 @@ model CveEntry {
   affectedVersions String?
   fixedVersion   String?
   remediation    String?
-  status         CveStatus     @default(OPEN)
-  detectedAt     DateTime      @default(now())
+  status         CveStatus          @default(OPEN)
+  applicability  CveApplicability   @default(UNASSESSED)
+  detectedAt     DateTime           @default(now())
   resolvedAt     DateTime?
   resolvedBy     String?
 
@@ -651,6 +652,7 @@ model CveEntry {
 
   @@unique([organizationId, cveId, affectedSoftware])
   @@index([organizationId, status])
+  @@index([organizationId, applicability])
   @@index([cveId])
 }
 
@@ -660,6 +662,13 @@ enum CveStatus {
   MITIGATED
   ACCEPTED
   FALSE_POSITIVE
+}
+
+enum CveApplicability {
+  CONFIRMED       // Matched installed software on a device
+  POTENTIAL       // Software category matches but version not confirmed
+  NOT_APPLICABLE  // No devices have this software
+  UNASSESSED      // Not yet checked against device inventory
 }
 
 model CveScanResult {

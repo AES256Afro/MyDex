@@ -24,6 +24,8 @@ type CommandType =
   | "RESTART_SERVICE"
   | "CUSTOM";
 
+type CveApplicability = "CONFIRMED" | "POTENTIAL" | "NOT_APPLICABLE" | "UNASSESSED";
+
 interface CveEntry {
   id: string;
   cveId: string;
@@ -35,6 +37,7 @@ interface CveEntry {
   fixedVersion: string | null;
   remediation: string | null;
   status: CveStatus;
+  applicability: CveApplicability;
   detectedAt: string;
   createdAt: string;
 }
@@ -145,6 +148,24 @@ function suggestFixCommand(entry: CveEntry): string {
   return `winget upgrade --id ${entry.affectedSoftware}`;
 }
 
+function applicabilityLabel(a: CveApplicability): string {
+  switch (a) {
+    case "CONFIRMED": return "Applies to your devices";
+    case "POTENTIAL": return "May apply";
+    case "NOT_APPLICABLE": return "Does not apply";
+    case "UNASSESSED": return "Not assessed";
+  }
+}
+
+function applicabilityBadgeClass(a: CveApplicability): string {
+  switch (a) {
+    case "CONFIRMED": return "bg-red-100 text-red-700 border-red-300";
+    case "POTENTIAL": return "bg-yellow-100 text-yellow-700 border-yellow-300";
+    case "NOT_APPLICABLE": return "bg-gray-100 text-gray-500 border-gray-300";
+    case "UNASSESSED": return "bg-blue-100 text-blue-600 border-blue-300";
+  }
+}
+
 const CVE_PATTERN = /^CVE-\d{4}-\d{4,}$/;
 
 export default function CvePage() {
@@ -155,6 +176,7 @@ export default function CvePage() {
   // Search and filter
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<CveStatus | null>(null);
+  const [applicabilityFilter, setApplicabilityFilter] = useState<CveApplicability | "ALL">("ALL");
 
   // Add form state
   const [showForm, setShowForm] = useState(false);
@@ -198,6 +220,11 @@ export default function CvePage() {
       imported: number;
       error?: string;
     }>;
+    applicability?: {
+      confirmed: number;
+      potential: number;
+      notApplicable: number;
+    };
   } | null>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
@@ -518,6 +545,7 @@ export default function CvePage() {
   // Filter entries
   const filtered = entries.filter((entry) => {
     if (statusFilter && entry.status !== statusFilter) return false;
+    if (applicabilityFilter !== "ALL" && entry.applicability !== applicabilityFilter) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       return (
@@ -527,6 +555,14 @@ export default function CvePage() {
     }
     return true;
   });
+
+  // Applicability counts
+  const applicabilityCounts = {
+    CONFIRMED: entries.filter((e) => e.applicability === "CONFIRMED" && e.status === "OPEN").length,
+    POTENTIAL: entries.filter((e) => e.applicability === "POTENTIAL" && e.status === "OPEN").length,
+    NOT_APPLICABLE: entries.filter((e) => e.applicability === "NOT_APPLICABLE" && e.status === "OPEN").length,
+    UNASSESSED: entries.filter((e) => e.applicability === "UNASSESSED" && e.status === "OPEN").length,
+  };
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
@@ -601,7 +637,16 @@ export default function CvePage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">CVE Scanner</h1>
           <p className="text-muted-foreground">
-            Common Vulnerabilities and Exposures management
+            {applicabilityCounts.CONFIRMED > 0 ? (
+              <span className="text-red-600 font-medium">{applicabilityCounts.CONFIRMED} confirmed</span>
+            ) : (
+              <span className="text-green-600 font-medium">No confirmed</span>
+            )}
+            {" "}vulnerabilities on your devices
+            {applicabilityCounts.POTENTIAL > 0 && (
+              <span className="text-yellow-600"> &middot; {applicabilityCounts.POTENTIAL} potential</span>
+            )}
+            {" "}&middot; {entries.length} total tracked
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -692,6 +737,20 @@ export default function CvePage() {
                     <p>Filtered out {bulkResult.filteredOut} (wrong OS / old Windows)</p>
                   )}
                 </div>
+                {bulkResult.applicability && (
+                  <div className="mt-3 flex flex-wrap gap-3 text-sm">
+                    <span className="px-2 py-1 rounded bg-red-100 text-red-700 font-medium">
+                      {bulkResult.applicability.confirmed} confirmed on your devices
+                    </span>
+                    <span className="px-2 py-1 rounded bg-yellow-100 text-yellow-700 font-medium">
+                      {bulkResult.applicability.potential} may apply
+                    </span>
+                    <span className="px-2 py-1 rounded bg-gray-100 text-gray-500 font-medium">
+                      {bulkResult.applicability.notApplicable} not applicable
+                    </span>
+                  </div>
+                )}
+
                 {bulkResult.categoryResults.length > 0 && (
                   <details className="mt-3">
                     <summary className="text-sm font-medium text-green-800 cursor-pointer hover:underline">
@@ -864,6 +923,47 @@ export default function CvePage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Applicability Summary */}
+      {entries.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {([
+            { key: "CONFIRMED" as CveApplicability, label: "Confirmed", desc: "Matches installed software", color: "border-red-300 bg-red-50", textColor: "text-red-700", countColor: "text-red-600" },
+            { key: "POTENTIAL" as CveApplicability, label: "Potential", desc: "May affect your environment", color: "border-yellow-300 bg-yellow-50", textColor: "text-yellow-700", countColor: "text-yellow-600" },
+            { key: "NOT_APPLICABLE" as CveApplicability, label: "Not Applicable", desc: "No matching devices", color: "border-gray-200 bg-gray-50", textColor: "text-gray-500", countColor: "text-gray-500" },
+            { key: "UNASSESSED" as CveApplicability, label: "Unassessed", desc: "Not yet checked", color: "border-blue-200 bg-blue-50", textColor: "text-blue-600", countColor: "text-blue-600" },
+          ]).map((item) => (
+            <button
+              key={item.key}
+              onClick={() => setApplicabilityFilter(applicabilityFilter === item.key ? "ALL" : item.key)}
+              className={`rounded-lg border p-3 text-left transition-all hover:shadow-md ${item.color} ${
+                applicabilityFilter === item.key ? "ring-2 ring-primary shadow-md" : ""
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className={`text-sm font-medium ${item.textColor}`}>{item.label}</span>
+                <span className={`text-xl font-bold ${item.countColor}`}>{applicabilityCounts[item.key]}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">{item.desc}</p>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {applicabilityFilter !== "ALL" && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Showing:</span>
+          <Badge variant="outline" className={applicabilityBadgeClass(applicabilityFilter)}>
+            {applicabilityLabel(applicabilityFilter)}
+          </Badge>
+          <button
+            onClick={() => setApplicabilityFilter("ALL")}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       )}
 
       {/* Status Count Cards */}
@@ -1141,6 +1241,9 @@ export default function CvePage() {
                         Versions
                       </th>
                       <th className="pb-3 pr-4 font-medium text-muted-foreground">
+                        Applies?
+                      </th>
+                      <th className="pb-3 pr-4 font-medium text-muted-foreground">
                         Status
                       </th>
                       <th className="pb-3 pr-4 font-medium text-muted-foreground">
@@ -1162,10 +1265,10 @@ export default function CvePage() {
                             className="h-4 w-4 rounded border-input"
                           />
                         </td>
-                        <td className="py-3 pr-4" colSpan={8}>
+                        <td className="py-3 pr-4" colSpan={9}>
                           <details className="cursor-pointer">
                             <summary className="list-none">
-                              <div className="grid grid-cols-8 gap-4 items-center">
+                              <div className="grid grid-cols-9 gap-4 items-center">
                                 <div className="font-mono font-medium">
                                   {entry.cveId}
                                 </div>
@@ -1180,6 +1283,13 @@ export default function CvePage() {
                                 <div>{entry.affectedSoftware}</div>
                                 <div className="text-muted-foreground">
                                   {entry.affectedVersions}
+                                </div>
+                                <div>
+                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border ${applicabilityBadgeClass(entry.applicability)}`}>
+                                    {entry.applicability === "CONFIRMED" ? "Yes" :
+                                     entry.applicability === "POTENTIAL" ? "Maybe" :
+                                     entry.applicability === "NOT_APPLICABLE" ? "No" : "?"}
+                                  </span>
                                 </div>
                                 <div>
                                   <select

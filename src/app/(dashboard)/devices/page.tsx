@@ -175,9 +175,9 @@ export default function DevicesPage() {
         </Card>
         <Card>
           <CardContent className="pt-4 pb-3">
-            <div className="text-sm text-muted-foreground">Open CVEs</div>
+            <div className="text-sm text-muted-foreground">Applicable CVEs</div>
             <div className="text-2xl font-bold text-orange-600">{totalCves}</div>
-            <div className="text-xs text-muted-foreground">across all devices</div>
+            <div className="text-xs text-muted-foreground">confirmed or potential</div>
           </CardContent>
         </Card>
         <Card>
@@ -459,10 +459,10 @@ export default function DevicesPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                           <div>
                             <h3 className="font-semibold text-sm mb-2 flex items-center gap-1">
-                              <Bug className="h-4 w-4" /> Open CVEs ({device.openCves})
+                              <Bug className="h-4 w-4" /> Applicable CVEs ({device.openCves})
                             </h3>
                             {device.openCves > 0 ? (
-                              <p className="text-sm text-orange-600">{device.openCves} unpatched vulnerabilities detected for this organization</p>
+                              <p className="text-sm text-orange-600">{device.openCves} vulnerabilities may affect this device</p>
                             ) : (
                               <p className="text-sm text-green-600">No open CVEs</p>
                             )}
