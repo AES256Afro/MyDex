@@ -46,17 +46,17 @@ async function verifyAgentJwt(token: string): Promise<AgentAuthResult | null> {
     });
 
     if (
-      !payload.deviceId ||
+      payload.deviceId === undefined ||
+      payload.deviceId === null ||
       !payload.organizationId ||
-      typeof payload.deviceId !== "string" ||
       typeof payload.organizationId !== "string"
     ) {
       return null;
     }
 
     return {
-      deviceId: payload.deviceId,
-      organizationId: payload.organizationId,
+      deviceId: (payload.deviceId as string) || "",
+      organizationId: payload.organizationId as string,
       permissions: Array.isArray(payload.permissions)
         ? (payload.permissions as string[])
         : [],
