@@ -29,6 +29,7 @@ model Organization {
   domainBlocklists DomainBlocklist[]
   agentApiKeys     AgentApiKey[]
   agentPolicies    AgentPolicy[]
+  ssoProviders     SsoProvider[]
 }
 
 model User {
@@ -64,6 +65,8 @@ model User {
   securityAlerts    SecurityAlert[]
   auditLogs         AuditLog[]
   agentDevices      AgentDevice[]
+  mfaCredential     MfaCredential?
+  activeSessions    ActiveSession[]
 
   @@index([organizationId])
   @@index([email])
@@ -931,4 +934,84 @@ model AgentPolicy {
   hostGroup    HostGroup?   @relation(fields: [hostGroupId], references: [id])
 
   @@index([organizationId, policyType])
+}
+
+// ============================================
+// MFA & SSO
+// ============================================
+
+model MfaCredential {
+  id             String   @id @default(cuid())
+  userId         String
+  secret         String   // encrypted TOTP secret
+  verified       Boolean  @default(false)
+  backupCodes    String[] // hashed backup codes
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+}
+
+model SsoProvider {
+  id             String   @id @default(cuid())
+  organizationId String
+  providerType   SsoProviderType
+  name           String
+  clientId       String
+  clientSecret   String   // encrypted
+  tenantId       String?  // for Entra ID
+  domain         String?  // for Okta
+  issuerUrl      String?
+  metadataUrl    String?
+  isActive       Boolean  @default(true)
+  autoProvision  Boolean  @default(false) // JIT user provisioning
+  defaultRole    Role     @default(EMPLOYEE)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, providerType])
+  @@index([organizationId])
+}
+
+enum SsoProviderType {
+  MICROSOFT_ENTRA
+  OKTA
+  GOOGLE_WORKSPACE
+  GITHUB
+}
+
+model LoginAttempt {
+  id             String   @id @default(cuid())
+  email          String
+  ipAddress      String?
+  userAgent      String?
+  success        Boolean
+  failureReason  String?
+  mfaRequired    Boolean  @default(false)
+  mfaPassed      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ipAddress, createdAt])
+}
+
+model ActiveSession {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  ipAddress      String?
+  userAgent      String?
+  lastActiveAt   DateTime @default(now())
+  expiresAt      DateTime
+  isRevoked      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([organizationId])
 }

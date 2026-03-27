@@ -18,6 +18,8 @@ import {
   Monitor,
   Building2,
   Server,
+  ShieldCheck,
+  KeyRound,
 } from "lucide-react";
 
 const navItems = [
@@ -35,6 +37,8 @@ const navItems = [
   { label: "Reports", href: "/reports", icon: BarChart3 },
   { label: "Productivity", href: "/productivity", icon: Brain },
   { label: "Settings", href: "/settings", icon: Settings },
+  { label: "MFA & Security", href: "/settings/security", icon: ShieldCheck },
+  { label: "SSO Providers", href: "/settings/sso", icon: KeyRound },
 ];
 
 export function Sidebar() {
