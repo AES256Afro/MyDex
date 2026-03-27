@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
+import { addToAllowlist } from "@/lib/allowlist";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -124,6 +125,9 @@ export async function POST(request: NextRequest) {
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
+
+    // Auto-add invited email to the org's allowlist
+    await addToAllowlist(orgId, email);
 
     const employee = await prisma.user.create({
       data: {
