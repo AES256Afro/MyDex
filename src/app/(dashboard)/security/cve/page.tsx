@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, X, Search, Bug, Download, Send, Monitor } from "lucide-react";
+import { Plus, Trash2, X, Search, Bug, Download, Send, Monitor, RefreshCw, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 type Severity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
@@ -172,7 +172,7 @@ export default function CvePage() {
   const [showImport, setShowImport] = useState(false);
   const [importKeyword, setImportKeyword] = useState("");
   const [importMaxResults, setImportMaxResults] = useState(20);
-  const [importMinYear, setImportMinYear] = useState(2025);
+  const [importMinYear, setImportMinYear] = useState(new Date().getFullYear());
   const [importing, setImporting] = useState(false);
   const [importOsFilters, setImportOsFilters] = useState<Set<string>>(
     new Set(["windows11"])
@@ -184,6 +184,22 @@ export default function CvePage() {
     filteredOut: number;
   } | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+
+  // Bulk update state
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [bulkResult, setBulkResult] = useState<{
+    totalFromNvd: number;
+    imported: number;
+    skipped: number;
+    filteredOut: number;
+    categoryResults: Array<{
+      category: string;
+      found: number;
+      imported: number;
+      error?: string;
+    }>;
+  } | null>(null);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   // Send Fix Command state (tracked per CVE entry id)
   const [fixFormOpen, setFixFormOpen] = useState<string | null>(null);
@@ -471,6 +487,34 @@ export default function CvePage() {
     }
   }
 
+  async function handleBulkUpdate() {
+    setBulkUpdating(true);
+    setBulkError(null);
+    setBulkResult(null);
+
+    try {
+      const res = await fetch("/api/v1/security/cve/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bulkUpdate: true,
+          maxResults: 20,
+          minYear: new Date().getFullYear(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Bulk update failed");
+
+      setBulkResult(data);
+      fetchEntries();
+    } catch (err) {
+      setBulkError(err instanceof Error ? err.message : "Bulk update failed");
+    } finally {
+      setBulkUpdating(false);
+    }
+  }
+
   // Filter entries
   const filtered = entries.filter((entry) => {
     if (statusFilter && entry.status !== statusFilter) return false;
@@ -567,14 +611,22 @@ export default function CvePage() {
           >
             Back to Security
           </Link>
+          <Button
+            onClick={handleBulkUpdate}
+            disabled={bulkUpdating}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${bulkUpdating ? "animate-spin" : ""}`} />
+            {bulkUpdating ? "Updating..." : "Update CVEs"}
+          </Button>
           {!showImport && (
             <Button variant="outline" onClick={() => setShowImport(true)}>
               <Download className="h-4 w-4 mr-2" />
-              Import from NVD
+              Manual Import
             </Button>
           )}
           {!showForm && (
-            <Button onClick={() => setShowForm(true)}>
+            <Button variant="outline" onClick={() => setShowForm(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add CVE
             </Button>
@@ -592,6 +644,90 @@ export default function CvePage() {
             Dismiss
           </button>
         </div>
+      )}
+
+      {/* Bulk Update Result */}
+      {bulkError && (
+        <div className="rounded-md bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive">
+          {bulkError}
+          <button
+            onClick={() => setBulkError(null)}
+            className="ml-2 underline hover:no-underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {bulkUpdating && (
+        <Card className="border-blue-200 bg-blue-50/50">
+          <CardContent className="py-6">
+            <div className="flex items-center gap-3">
+              <RefreshCw className="h-5 w-5 animate-spin text-blue-600" />
+              <div>
+                <p className="font-medium text-blue-800">Scanning NVD for vulnerabilities...</p>
+                <p className="text-sm text-blue-600 mt-1">
+                  Checking Windows 11, Chrome, Firefox, Edge, Office, Node.js, Python, Docker, macOS, Linux, and installed software from your devices. This may take 1-2 minutes due to NVD rate limits.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {bulkResult && (
+        <Card className="border-green-200 bg-green-50/50">
+          <CardContent className="py-6">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium text-green-800">
+                  CVE Update Complete
+                </p>
+                <div className="mt-2 grid gap-1 text-sm text-green-700">
+                  <p>Found {bulkResult.totalFromNvd} CVEs across all categories</p>
+                  <p>Imported {bulkResult.imported} new CVEs</p>
+                  <p>Skipped {bulkResult.skipped} (already in database)</p>
+                  {bulkResult.filteredOut > 0 && (
+                    <p>Filtered out {bulkResult.filteredOut} (wrong OS / old Windows)</p>
+                  )}
+                </div>
+                {bulkResult.categoryResults.length > 0 && (
+                  <details className="mt-3">
+                    <summary className="text-sm font-medium text-green-800 cursor-pointer hover:underline">
+                      Category breakdown ({bulkResult.categoryResults.length} categories scanned)
+                    </summary>
+                    <div className="mt-2 grid gap-1">
+                      {bulkResult.categoryResults.map((cat) => (
+                        <div
+                          key={cat.category}
+                          className="flex items-center justify-between text-sm px-2 py-1 rounded bg-white/60"
+                        >
+                          <span className="font-medium">{cat.category}</span>
+                          <span className="text-muted-foreground">
+                            {cat.error ? (
+                              <span className="text-destructive">{cat.error}</span>
+                            ) : (
+                              <>
+                                {cat.found} found, {cat.imported} imported
+                              </>
+                            )}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+                <button
+                  onClick={() => setBulkResult(null)}
+                  className="mt-3 text-sm text-green-700 underline hover:no-underline"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* NVD Import */}

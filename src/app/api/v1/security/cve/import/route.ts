@@ -5,11 +5,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 const importSchema = z.object({
-  keyword: z.string().min(1, "Search keyword required"),
+  keyword: z.string().optional(),
   maxResults: z.number().min(1).max(100).default(20),
   osFilters: z.array(z.string()).optional(),
   minYear: z.number().min(1999).max(2030).optional(),
+  // One-click bulk update mode — no keyword needed
+  bulkUpdate: z.boolean().optional(),
 });
+
+// Categories to auto-scan in bulk update mode
+const BULK_UPDATE_CATEGORIES = [
+  { keyword: "Windows 11", osFilters: ["windows11"] },
+  { keyword: "Windows Server", osFilters: ["windowsServer2022"] },
+  { keyword: "Microsoft Edge", osFilters: [] },
+  { keyword: "Google Chrome", osFilters: [] },
+  { keyword: "Mozilla Firefox", osFilters: [] },
+  { keyword: "Microsoft Office", osFilters: [] },
+  { keyword: "Visual Studio Code", osFilters: [] },
+  { keyword: "Node.js", osFilters: [] },
+  { keyword: "Python", osFilters: [] },
+  { keyword: "Docker", osFilters: [] },
+  { keyword: "macOS", osFilters: ["macOS"] },
+  { keyword: "Linux kernel", osFilters: ["linux"] },
+];
 
 // Map CVSS v3.1 severity string to our enum
 function mapSeverity(cvssScore: number): "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" {
@@ -187,6 +205,127 @@ function extractSoftwareInfo(item: NvdCveItem): {
   return { software: "Unknown", versions: "*" };
 }
 
+// ─── Reusable NVD fetch + import helper ──────────────────────────────────────
+async function fetchAndImportFromNvd(opts: {
+  keyword: string;
+  maxResults: number;
+  osFilters?: string[];
+  minYear: number;
+  orgId: string;
+}): Promise<{
+  totalFromNvd: number;
+  imported: number;
+  skipped: number;
+  filteredOut: number;
+  importedCves: Array<{
+    cveId: string;
+    severity: string;
+    cvssScore: number;
+    software: string;
+  }>;
+}> {
+  const { keyword, maxResults, osFilters, minYear, orgId } = opts;
+
+  // Build NVD API URL
+  const nvdUrl = new URL("https://services.nvd.nist.gov/rest/json/cves/2.0");
+  nvdUrl.searchParams.set("keywordSearch", keyword);
+  nvdUrl.searchParams.set("resultsPerPage", String(maxResults));
+
+  // Date range filter: from Jan 1 of minYear to now
+  const startDate = new Date(`${minYear}-01-01T00:00:00.000`);
+  const endDate = new Date();
+  nvdUrl.searchParams.set("pubStartDate", startDate.toISOString());
+  nvdUrl.searchParams.set("pubEndDate", endDate.toISOString());
+
+  const response = await fetch(nvdUrl.toString(), {
+    headers: { "Accept": "application/json" },
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`NVD API error ${response.status}: ${text.slice(0, 200)}`);
+  }
+
+  const nvdData = await response.json();
+  const vulnerabilities: NvdCveItem[] = nvdData.vulnerabilities || [];
+  const totalFromNvd = vulnerabilities.length;
+
+  let imported = 0;
+  let skipped = 0;
+  let filteredOut = 0;
+  const importedCves: Array<{
+    cveId: string;
+    severity: string;
+    cvssScore: number;
+    software: string;
+  }> = [];
+
+  for (const vuln of vulnerabilities) {
+    // Apply OS / old-Windows filter
+    if (!matchesOsFilters(vuln, osFilters)) {
+      filteredOut++;
+      continue;
+    }
+
+    const cveId = vuln.cve.id;
+    const description =
+      vuln.cve.descriptions.find((d) => d.lang === "en")?.value ||
+      vuln.cve.descriptions[0]?.value ||
+      "";
+
+    // Extract CVSS score
+    let cvssScore = 0;
+    let severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" = "MEDIUM";
+    const v31 = vuln.cve.metrics?.cvssMetricV31?.[0];
+    if (v31) {
+      cvssScore = v31.cvssData.baseScore;
+      severity = mapSeverity(cvssScore);
+    } else {
+      const v2 = vuln.cve.metrics?.cvssMetricV2?.[0];
+      if (v2) {
+        cvssScore = v2.cvssData.baseScore;
+        severity = mapSeverity(cvssScore);
+      }
+    }
+
+    const { software, versions } = extractSoftwareInfo(vuln);
+
+    // Upsert — skip if already exists for this org + cveId + software
+    try {
+      const existing = await prisma.cveEntry.findFirst({
+        where: { organizationId: orgId, cveId, affectedSoftware: software },
+        select: { id: true },
+      });
+
+      if (existing) {
+        skipped++;
+        continue;
+      }
+
+      await prisma.cveEntry.create({
+        data: {
+          organizationId: orgId,
+          cveId,
+          severity,
+          cvssScore,
+          description: description.slice(0, 2000),
+          affectedSoftware: software,
+          affectedVersions: versions,
+          status: "OPEN",
+        },
+      });
+
+      imported++;
+      importedCves.push({ cveId, severity, cvssScore, software });
+    } catch {
+      // Unique constraint or other DB error — treat as skipped
+      skipped++;
+    }
+  }
+
+  return { totalFromNvd, imported, skipped, filteredOut, importedCves };
+}
+
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session)
@@ -205,141 +344,135 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { keyword, maxResults, osFilters, minYear } = parsed.data;
+    const { keyword, maxResults, osFilters, minYear, bulkUpdate } = parsed.data;
     const orgId = session.user.organizationId;
+    const currentYear = new Date().getFullYear();
+    const effectiveMinYear = minYear || currentYear;
 
-    // Known CPE name mappings for common OS/product searches
-    const CPE_MAPPINGS: Record<string, string> = {
-      "windows 11": "cpe:2.3:o:microsoft:windows_11:*:*:*:*:*:*:*:*",
-      "windows server 2022": "cpe:2.3:o:microsoft:windows_server_2022:*:*:*:*:*:*:*:*",
-      "windows server 2025": "cpe:2.3:o:microsoft:windows_server_2025:*:*:*:*:*:*:*:*",
-      "macos": "cpe:2.3:o:apple:macos:*:*:*:*:*:*:*:*",
-      "mac os": "cpe:2.3:o:apple:macos:*:*:*:*:*:*:*:*",
-      "chrome": "cpe:2.3:a:google:chrome:*:*:*:*:*:*:*:*",
-      "firefox": "cpe:2.3:a:mozilla:firefox:*:*:*:*:*:*:*:*",
-      "edge": "cpe:2.3:a:microsoft:edge:*:*:*:*:*:*:*:*",
-      "office": "cpe:2.3:a:microsoft:office:*:*:*:*:*:*:*:*",
-    };
+    // ─── Bulk Update Mode ───────────────────────────────────────────────
+    if (bulkUpdate) {
+      let totalImported = 0;
+      let totalSkipped = 0;
+      let totalFilteredOut = 0;
+      let totalFromNvd = 0;
+      const allImportedCves: Array<{
+        cveId: string;
+        severity: string;
+        cvssScore: number;
+        software: string;
+      }> = [];
+      const categoryResults: Array<{
+        category: string;
+        found: number;
+        imported: number;
+        error?: string;
+      }> = [];
 
-    // Fetch from NIST NVD API v2.0
-    const nvdUrl = new URL("https://services.nvd.nist.gov/rest/json/cves/2.0");
+      // Also scan installed software from enrolled devices
+      const deviceSoftware = await prisma.agentDevice.findMany({
+        where: { organizationId: orgId },
+        select: { installedSoftware: true },
+      });
 
-    // Always use keyword search — cpeName with wildcards returns 404
-    nvdUrl.searchParams.set("keywordSearch", keyword);
+      // Extract unique software names from devices
+      const installedNames = new Set<string>();
+      for (const device of deviceSoftware) {
+        const sw = device.installedSoftware;
+        if (Array.isArray(sw)) {
+          for (const item of sw as Array<{ name?: string }>) {
+            if (item?.name) {
+              installedNames.add(item.name);
+            }
+          }
+        }
+      }
 
-    nvdUrl.searchParams.set("resultsPerPage", String(maxResults));
+      // Add device-specific software to scan categories
+      const dynamicCategories = [...BULK_UPDATE_CATEGORIES];
+      const alreadyScanned = new Set(
+        BULK_UPDATE_CATEGORIES.map((c) => c.keyword.toLowerCase())
+      );
 
-    // Add date range — only fetch CVEs published from minYear onward
-    // NVD API requires ISO 8601 format with timezone offset
-    if (minYear) {
-      nvdUrl.searchParams.set("pubStartDate", `${minYear}-01-01T00:00:00.000-00:00`);
-      nvdUrl.searchParams.set("pubEndDate", `${minYear + 1}-12-31T23:59:59.999-00:00`);
+      // Common software to look for from device inventories
+      const interestingSoftware = [
+        "7-Zip", "WinRAR", "Adobe Acrobat", "Adobe Reader",
+        "Zoom", "Slack", "Teams", "Git", "OpenSSH", "PowerShell",
+        "Java", "Apache", "nginx", "PostgreSQL", "MySQL",
+      ];
+      for (const name of interestingSoftware) {
+        if (
+          installedNames.has(name) &&
+          !alreadyScanned.has(name.toLowerCase())
+        ) {
+          dynamicCategories.push({ keyword: name, osFilters: [] });
+          alreadyScanned.add(name.toLowerCase());
+        }
+      }
+
+      for (const category of dynamicCategories) {
+        try {
+          // Rate limit: NVD allows 5 requests per 30 seconds without API key
+          // Add a small delay between requests
+          if (totalFromNvd > 0) {
+            await new Promise((resolve) => setTimeout(resolve, 6500));
+          }
+
+          const result = await fetchAndImportFromNvd({
+            keyword: category.keyword,
+            maxResults: maxResults || 20,
+            osFilters: category.osFilters.length > 0 ? category.osFilters : undefined,
+            minYear: effectiveMinYear,
+            orgId,
+          });
+
+          totalFromNvd += result.totalFromNvd;
+          totalImported += result.imported;
+          totalSkipped += result.skipped;
+          totalFilteredOut += result.filteredOut;
+          allImportedCves.push(...result.importedCves);
+          categoryResults.push({
+            category: category.keyword,
+            found: result.totalFromNvd,
+            imported: result.imported,
+          });
+        } catch (err) {
+          categoryResults.push({
+            category: category.keyword,
+            found: 0,
+            imported: 0,
+            error: err instanceof Error ? err.message : "Failed",
+          });
+        }
+      }
+
+      return NextResponse.json({
+        totalFromNvd,
+        imported: totalImported,
+        skipped: totalSkipped,
+        filteredOut: totalFilteredOut,
+        importedCves: allImportedCves,
+        categoryResults,
+        mode: "bulk",
+      });
     }
 
-    const nvdRes = await fetch(nvdUrl.toString(), {
-      headers: {
-        "User-Agent": "MyDex-Security-Scanner/1.0",
-      },
-    });
-
-    if (!nvdRes.ok) {
-      const text = await nvdRes.text();
-      console.error("NVD API error:", nvdRes.status, text);
+    // ─── Single Keyword Mode (legacy) ───────────────────────────────────
+    if (!keyword?.trim()) {
       return NextResponse.json(
-        {
-          error: `NVD API returned ${nvdRes.status}. The NVD API has rate limits (5 requests per 30 seconds without an API key). Please wait and try again.`,
-        },
-        { status: 502 }
+        { error: "Search keyword required for manual import" },
+        { status: 400 }
       );
     }
 
-    const nvdData = await nvdRes.json();
-    const vulnerabilities: NvdCveItem[] = nvdData.vulnerabilities || [];
-
-    let imported = 0;
-    let skipped = 0;
-    let filteredOut = 0;
-    const importedCves: Array<{
-      cveId: string;
-      severity: string;
-      cvssScore: number;
-      software: string;
-    }> = [];
-
-    for (const vuln of vulnerabilities) {
-      // Filter by minimum CVE year (e.g. CVE-2025-xxxx)
-      if (minYear) {
-        const yearMatch = vuln.cve.id.match(/^CVE-(\d{4})-/);
-        if (yearMatch && parseInt(yearMatch[1]) < minYear) {
-          filteredOut++;
-          continue;
-        }
-      }
-
-      // Filter by OS if specified
-      if (!matchesOsFilters(vuln, osFilters)) {
-        filteredOut++;
-        continue;
-      }
-      const cveId = vuln.cve.id;
-
-      // Get CVSS score
-      const cvssV31 = vuln.cve.metrics?.cvssMetricV31?.[0]?.cvssData;
-      const cvssV2 = vuln.cve.metrics?.cvssMetricV2?.[0]?.cvssData;
-      const cvssScore = cvssV31?.baseScore ?? cvssV2?.baseScore ?? 0;
-
-      // Get description
-      const description =
-        vuln.cve.descriptions.find((d) => d.lang === "en")?.value ||
-        vuln.cve.descriptions[0]?.value ||
-        "";
-
-      // Extract affected software
-      const { software, versions } = extractSoftwareInfo(vuln);
-
-      const severity = mapSeverity(cvssScore);
-
-      try {
-        await prisma.cveEntry.create({
-          data: {
-            organizationId: orgId,
-            cveId,
-            severity,
-            cvssScore,
-            description:
-              description.length > 500
-                ? description.slice(0, 497) + "..."
-                : description,
-            affectedSoftware: software,
-            affectedVersions: versions,
-            status: "OPEN",
-          },
-        });
-        imported++;
-        importedCves.push({ cveId, severity, cvssScore, software });
-      } catch (err: unknown) {
-        // Skip duplicates
-        if (
-          err &&
-          typeof err === "object" &&
-          "code" in err &&
-          err.code === "P2002"
-        ) {
-          skipped++;
-        } else {
-          console.error(`Error importing ${cveId}:`, err);
-          skipped++;
-        }
-      }
-    }
-
-    return NextResponse.json({
-      totalFromNvd: vulnerabilities.length,
-      imported,
-      skipped,
-      filteredOut,
-      importedCves,
+    const result = await fetchAndImportFromNvd({
+      keyword: keyword.trim(),
+      maxResults,
+      osFilters,
+      minYear: effectiveMinYear,
+      orgId,
     });
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Error importing CVEs:", error);
     return NextResponse.json(
