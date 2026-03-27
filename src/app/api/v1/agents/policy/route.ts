@@ -116,6 +116,20 @@ export async function GET(request: NextRequest) {
     // Deduplicate blocked domains
     const uniqueBlockedDomains = [...new Set(blockedDomains.map((d) => d.toLowerCase()))];
 
+    // Check if the device owner has monitoring paused
+    const device = await prisma.agentDevice.findUnique({
+      where: { id: deviceId },
+      select: { userId: true },
+    });
+    let monitoringPaused = false;
+    if (device) {
+      const user = await prisma.user.findUnique({
+        where: { id: device.userId },
+        select: { monitoringPaused: true },
+      });
+      monitoringPaused = user?.monitoringPaused ?? false;
+    }
+
     return NextResponse.json({
       version: maxVersion,
       deviceId,
@@ -124,6 +138,7 @@ export async function GET(request: NextRequest) {
       config: mergedConfig,
       domainBlocklist: uniqueBlockedDomains,
       firewallRules,
+      monitoringPaused,
     });
   } catch (error) {
     console.error("Error fetching agent policy:", error);

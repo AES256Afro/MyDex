@@ -130,6 +130,17 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // Check if user has monitoring paused
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { monitoringPaused: true },
+    });
+
+    if (user?.monitoringPaused) {
+      // Silently accept but don't store — the user has paused monitoring
+      return NextResponse.json({ created: 0, paused: true });
+    }
+
     const body = await request.json();
     const parsed = bulkCreateSchema.safeParse(body);
 

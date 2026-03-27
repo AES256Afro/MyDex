@@ -8,16 +8,31 @@ export async function PATCH(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { name } = body;
+  const { name, monitoringPaused } = body;
 
-  if (!name || typeof name !== "string" || name.trim().length < 1) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  // Build update data
+  const data: Record<string, unknown> = {};
+
+  if (name !== undefined) {
+    if (typeof name !== "string" || name.trim().length < 1) {
+      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    }
+    data.name = name.trim();
+  }
+
+  if (monitoringPaused !== undefined) {
+    data.monitoringPaused = Boolean(monitoringPaused);
+    data.monitoringPausedAt = monitoringPaused ? new Date() : null;
+  }
+
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ error: "No fields to update" }, { status: 400 });
   }
 
   const updated = await prisma.user.update({
     where: { id: session.user.id },
-    data: { name: name.trim() },
-    select: { id: true, name: true, email: true },
+    data,
+    select: { id: true, name: true, email: true, monitoringPaused: true, monitoringPausedAt: true },
   });
 
   return NextResponse.json({ user: updated });
@@ -38,6 +53,8 @@ export async function GET() {
       department: true,
       jobTitle: true,
       image: true,
+      monitoringPaused: true,
+      monitoringPausedAt: true,
       createdAt: true,
     },
   });

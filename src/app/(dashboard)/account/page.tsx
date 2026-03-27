@@ -31,6 +31,8 @@ import {
   Copy,
   Lock,
   Briefcase,
+  Pause,
+  Play,
 } from "lucide-react";
 
 export default function AccountPage() {
@@ -62,9 +64,15 @@ export default function AccountPage() {
   const [showSecret, setShowSecret] = useState(false);
   const [copiedBackup, setCopiedBackup] = useState(false);
 
+  // Monitoring pause state
+  const [monitoringPaused, setMonitoringPaused] = useState(false);
+  const [monitoringPausedAt, setMonitoringPausedAt] = useState<string | null>(null);
+  const [monitoringToggling, setMonitoringToggling] = useState(false);
+
   useEffect(() => {
     if (session?.user?.name) setName(session.user.name);
     fetchMfaStatus();
+    fetchMonitoringStatus();
   }, [session]);
 
   async function fetchMfaStatus() {
@@ -79,6 +87,40 @@ export default function AccountPage() {
       console.error(e);
     } finally {
       setMfaLoading(false);
+    }
+  }
+
+  async function fetchMonitoringStatus() {
+    try {
+      const res = await fetch("/api/v1/account/profile");
+      if (res.ok) {
+        const data = await res.json();
+        setMonitoringPaused(data.user?.monitoringPaused ?? false);
+        setMonitoringPausedAt(data.user?.monitoringPausedAt ?? null);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function toggleMonitoring() {
+    setMonitoringToggling(true);
+    try {
+      const newState = !monitoringPaused;
+      const res = await fetch("/api/v1/account/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ monitoringPaused: newState }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMonitoringPaused(data.user.monitoringPaused);
+        setMonitoringPausedAt(data.user.monitoringPausedAt);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setMonitoringToggling(false);
     }
   }
 
@@ -276,6 +318,89 @@ export default function AccountPage() {
                 <Check className="h-4 w-4" /> Profile updated
               </span>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Monitoring & Privacy Card */}
+      <Card className={monitoringPaused ? "border-amber-300" : ""}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {monitoringPaused ? (
+                <Pause className="h-6 w-6 text-amber-500" />
+              ) : (
+                <Play className="h-6 w-6 text-green-500" />
+              )}
+              <div>
+                <CardTitle>Monitoring & Privacy</CardTitle>
+                <CardDescription>
+                  Control whether activity data is collected from your devices
+                </CardDescription>
+              </div>
+            </div>
+            <Badge
+              variant={monitoringPaused ? "outline" : "default"}
+              className={monitoringPaused ? "border-amber-300 text-amber-700" : "bg-green-500"}
+            >
+              {monitoringPaused ? "Paused" : "Active"}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className={`rounded-lg border p-4 ${
+            monitoringPaused
+              ? "border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800"
+              : "border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800"
+          }`}>
+            <div className="flex items-start gap-3">
+              {monitoringPaused ? (
+                <Pause className="h-5 w-5 text-amber-600 mt-0.5" />
+              ) : (
+                <Play className="h-5 w-5 text-green-600 mt-0.5" />
+              )}
+              <div>
+                <p className={`font-medium ${monitoringPaused ? "text-amber-800 dark:text-amber-200" : "text-green-800 dark:text-green-200"}`}>
+                  {monitoringPaused
+                    ? "Activity monitoring is paused"
+                    : "Activity monitoring is active"}
+                </p>
+                <p className={`text-sm mt-1 ${monitoringPaused ? "text-amber-700 dark:text-amber-300" : "text-green-700 dark:text-green-300"}`}>
+                  {monitoringPaused
+                    ? "No activity data, telemetry, or app usage is being recorded. Your agent will still check in for security policies but won't report activity."
+                    : "Activity events, app usage, and telemetry are being collected and reported."}
+                </p>
+                {monitoringPaused && monitoringPausedAt && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                    Paused since {new Date(monitoringPausedAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              {monitoringPaused
+                ? "Turn monitoring back on to resume activity tracking"
+                : "Pause monitoring to stop all activity data collection"}
+            </div>
+            <button
+              onClick={toggleMonitoring}
+              disabled={monitoringToggling}
+              className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                monitoringPaused ? "bg-amber-400" : "bg-green-500"
+              }`}
+              role="switch"
+              aria-checked={!monitoringPaused}
+              aria-label="Toggle monitoring"
+            >
+              <span
+                className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                  monitoringPaused ? "translate-x-0" : "translate-x-5"
+                }`}
+              />
+            </button>
           </div>
         </CardContent>
       </Card>
