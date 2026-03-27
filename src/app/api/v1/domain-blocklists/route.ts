@@ -67,6 +67,70 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
+    // Check if this is a public blocklist import
+    if (body.importUrl) {
+      const { importUrl, parser, name, category, description } = body;
+
+      try {
+        const response = await fetch(importUrl, {
+          headers: { "User-Agent": "MyDex/1.0 Blocklist-Importer" },
+          signal: AbortSignal.timeout(30000),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const text = await response.text();
+        const entries: string[] = [];
+        const lines = text.split("\n");
+
+        for (const rawLine of lines) {
+          const line = rawLine.trim();
+          if (!line || line.startsWith("#") || line.startsWith("!")) continue;
+
+          if (parser === "hosts") {
+            // hosts file format: "0.0.0.0 domain.com" or "127.0.0.1 domain.com"
+            const parts = line.split(/\s+/);
+            if (parts.length >= 2 && (parts[0] === "0.0.0.0" || parts[0] === "127.0.0.1")) {
+              const domain = parts[1].toLowerCase().trim();
+              if (domain && domain !== "localhost" && domain.includes(".")) {
+                entries.push(domain);
+              }
+            }
+          } else if (parser === "ips") {
+            // One IP per line
+            const ip = line.split(/\s+/)[0];
+            if (ip && /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/.test(ip)) {
+              entries.push(ip);
+            }
+          } else {
+            // domains format: one domain per line
+            const domain = line.toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
+            if (domain && domain.includes(".") && !domain.startsWith("*")) {
+              entries.push(domain);
+            }
+          }
+        }
+
+        // Deduplicate and cap at 50k entries
+        const unique = [...new Set(entries)].slice(0, 50000);
+
+        const blocklist = await prisma.domainBlocklist.create({
+          data: {
+            organizationId: orgId,
+            name: name || "Imported Blocklist",
+            description: description || `Imported from ${importUrl}`,
+            category: category || "Imported",
+            domains: unique,
+            isActive: true,
+          },
+        });
+
+        return NextResponse.json({ blocklist }, { status: 201 });
+      } catch (importErr) {
+        console.error("Import error:", importErr);
+        return NextResponse.json({ error: `Failed to import: ${importErr}` }, { status: 500 });
+      }
+    }
+
     // Check if this is a policy creation
     if (body.policyType) {
       const parsed = policySchema.safeParse(body);
