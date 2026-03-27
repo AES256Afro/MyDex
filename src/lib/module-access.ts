@@ -136,6 +136,15 @@ export const MODULE_REGISTRY: ModuleConfig[] = [
     category: "security",
   },
   {
+    id: "software-inventory",
+    label: "Software Inventory",
+    href: "/software-inventory",
+    description: "Software versions, paths, and usage across devices",
+    minRole: "ADMIN",
+    configurable: false,
+    category: "security",
+  },
+  {
     id: "host-groups",
     label: "Host Groups",
     href: "/host-groups",
