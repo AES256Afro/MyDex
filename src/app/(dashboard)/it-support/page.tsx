@@ -323,15 +323,26 @@ export default function ITSupportPage() {
     try {
       const reason = stockReasons.find(r => r.id === selectedReason);
       const dev = devices.find(d => d.hostname === selectedDevice);
+      const subject = `${reason?.label || "Support Request"}${selectedApp ? ` — ${selectedApp}` : ""}${dev ? ` (${dev.hostname})` : ""}`;
+      const autoInfo = [
+        `Issue: ${reason?.label}`,
+        dev ? `Device: ${dev.hostname} (${dev.platform})` : null,
+        dev ? `IP: ${dev.ipAddress}` : null,
+        selectedApp ? `Application: ${selectedApp}` : null,
+      ].filter(Boolean).join("\n");
+      const fullDescription = ticketDescription
+        ? `${ticketDescription}\n\n--- Auto-captured Info ---\n${autoInfo}`
+        : autoInfo;
+
       const res = await fetch("/api/v1/tickets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          subject: reason?.label || "Support Request",
+          subject,
           category: reason?.category || "other",
           reason: reason?.label,
           appName: selectedApp || undefined,
-          description: ticketDescription || undefined,
+          description: fullDescription,
           deviceId: dev?.id,
           deviceInfo: dev ? { hostname: dev.hostname, platform: dev.platform, ipAddress: dev.ipAddress } : undefined,
         }),
@@ -342,8 +353,13 @@ export default function ITSupportPage() {
         setTicketDescription("");
         setActiveTab("tickets");
         fetchTickets();
+      } else {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        alert(`Failed to submit ticket: ${err.error || res.statusText}`);
       }
-    } catch { /* ignore */ } finally {
+    } catch (error) {
+      alert(`Network error: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
       setSubmittingTicket(false);
     }
   };

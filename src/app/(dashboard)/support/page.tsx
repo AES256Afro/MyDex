@@ -285,20 +285,56 @@ export default function SupportPage() {
   }, [activeTab, fetchTickets]);
 
   // Submit a ticket
+  // Auto-populate ticket subject based on selected issue + app
+  const getTicketSubject = () => {
+    const reason = stockReasons.find(r => r.id === selectedReason);
+    if (!reason) return "Support Request";
+    let subject = reason.label;
+    if (selectedApp) subject += ` — ${selectedApp}`;
+    if (myDevice) subject += ` (${myDevice.hostname})`;
+    return subject;
+  };
+
+  // Auto-populate description based on issue type
+  const getAutoDescription = () => {
+    const reason = stockReasons.find(r => r.id === selectedReason);
+    if (!reason) return "";
+    const lines: string[] = [];
+    lines.push(`Issue: ${reason.label}`);
+    if (myDevice) {
+      lines.push(`Device: ${myDevice.hostname} (${isWindows ? "Windows" : isMac ? "macOS" : "Linux"})`);
+      lines.push(`IP: ${myDevice.ipAddress}`);
+      if (myDevice.osVersion) lines.push(`OS: ${myDevice.osVersion}`);
+      if (myDevice.cpuName) lines.push(`CPU: ${myDevice.cpuName}`);
+      if (myDevice.ramTotalGb) lines.push(`RAM: ${myDevice.ramTotalGb}GB`);
+    }
+    if (selectedApp) {
+      lines.push(`Application: ${selectedApp}`);
+      const appVersion = deviceApps.find(a => a.name === selectedApp)?.version;
+      if (appVersion) lines.push(`App Version: ${appVersion}`);
+    }
+    return lines.join("\n");
+  };
+
   const submitTicket = async () => {
     if (!selectedReason) return;
     setSubmittingTicket(true);
     try {
       const reason = stockReasons.find(r => r.id === selectedReason);
+      const autoDesc = getAutoDescription();
+      const fullDescription = ticketDescription
+        ? `${ticketDescription}\n\n--- Auto-captured Info ---\n${autoDesc}`
+        : autoDesc;
+
       const res = await fetch("/api/v1/tickets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          subject: reason?.label || "Support Request",
+          subject: getTicketSubject(),
           category: reason?.category || "other",
           reason: reason?.label,
           appName: selectedApp || undefined,
-          description: ticketDescription || undefined,
+          description: fullDescription,
           deviceId: myDevice?.id,
           deviceInfo: myDevice ? {
             hostname: myDevice.hostname,
@@ -321,8 +357,13 @@ export default function SupportPage() {
         setTicketDescription("");
         setActiveTab("tickets");
         fetchTickets();
+      } else {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        alert(`Failed to submit ticket: ${err.error || res.statusText}`);
       }
-    } catch { /* ignore */ } finally {
+    } catch (error) {
+      alert(`Network error submitting ticket: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
       setSubmittingTicket(false);
     }
   };
