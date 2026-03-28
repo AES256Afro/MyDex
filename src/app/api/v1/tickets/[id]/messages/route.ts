@@ -91,13 +91,15 @@ export async function POST(
     });
 
     // Auto-update ticket status based on who replied
-    const isSubmitter = ticket.submittedBy === session.user.id;
+    // If user is admin, treat as IT staff even if they submitted the ticket
+    const isActingAsIT = isAdmin && !isInternal;
+    const isSubmitter = ticket.submittedBy === session.user.id && !isActingAsIT;
     const newStatus = isSubmitter ? "WAITING_ON_IT" : "IN_PROGRESS";
 
     const ticketUpdate: Record<string, unknown> = {};
 
     // Track first response time (when IT first replies, not internal notes)
-    if (!isSubmitter && !isInternal && !ticket.firstResponseAt) {
+    if (isActingAsIT && !ticket.firstResponseAt) {
       ticketUpdate.firstResponseAt = new Date();
       // Check if SLA response was breached
       if (ticket.slaResponseDue && new Date() > ticket.slaResponseDue) {
