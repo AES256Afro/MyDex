@@ -353,6 +353,65 @@ const mockSoftwareInventory = [
   ]},
 ];
 
+// ─── Mock Support Tickets ───────────────────────────────────────────────────
+
+const mockTickets = [
+  { id: "TKT-1042", user: "Jordan Miller", device: "DESKTOP-JMILLER", subject: "System is slow", category: "performance", status: "open" as const, priority: "high" as const, created: ago(15), stockReason: "System is slow", assignedTo: "IT Support", networkInfo: null, appName: null },
+  { id: "TKT-1041", user: "Sarah Chen", device: "LAPTOP-SCHEN", subject: "Can't access Figma", category: "access", status: "open" as const, priority: "medium" as const, created: ago(45), stockReason: "Unable to access SaaS/cloud app", assignedTo: "IT Support", networkInfo: { ip: "192.168.1.112", dns: "8.8.8.8", gateway: "192.168.1.1", ssid: "AcmeCorp-5G", signal: "72%", latency: "145ms" }, appName: "Figma" },
+  { id: "TKT-1040", user: "Tom Garcia", device: "WS-TGARCIA", subject: "QuickBooks freezing", category: "app-issue", status: "in-progress" as const, priority: "high" as const, created: ago(120), stockReason: "App is slow", assignedTo: "admin@acme.com", networkInfo: null, appName: "QuickBooks" },
+  { id: "TKT-1039", user: "Anita Patel", device: "MACBOOK-APATEL", subject: "VPN won't connect", category: "network", status: "in-progress" as const, priority: "medium" as const, created: ago(180), stockReason: "Unable to access SaaS/cloud app", assignedTo: "admin@acme.com", networkInfo: { ip: "192.168.1.120", dns: "8.8.8.8", gateway: "192.168.1.1", ssid: "AcmeCorp-5G", signal: "89%", latency: "12ms" }, appName: null },
+  { id: "TKT-1038", user: "Jordan Miller", device: "DESKTOP-JMILLER", subject: "Docker not starting", category: "app-issue", status: "resolved" as const, priority: "low" as const, created: ago(360), stockReason: "App is slow", assignedTo: "IT Support", networkInfo: null, appName: "Docker Desktop" },
+  { id: "TKT-1037", user: "Sarah Chen", device: "LAPTOP-SCHEN", subject: "Printer not working", category: "hardware", status: "resolved" as const, priority: "low" as const, created: ago(1440), stockReason: "Other", assignedTo: "IT Support", networkInfo: null, appName: null },
+];
+
+const mockStockReasons = [
+  { id: "sr1", label: "System is slow", category: "performance", icon: "🐌", enabled: true, common: true },
+  { id: "sr2", label: "App is slow or crashing", category: "app-issue", icon: "💥", enabled: true, common: true },
+  { id: "sr3", label: "Unable to access SaaS/cloud app or site", category: "access", icon: "🌐", enabled: true, common: true },
+  { id: "sr4", label: "VPN/Network connectivity issues", category: "network", icon: "📡", enabled: true, common: true },
+  { id: "sr5", label: "Printer not working", category: "hardware", icon: "🖨️", enabled: true, common: true },
+  { id: "sr6", label: "Can't login / password issue", category: "access", icon: "🔑", enabled: true, common: true },
+  { id: "sr7", label: "Blue screen / system crash", category: "performance", icon: "🔵", enabled: true, common: false },
+  { id: "sr8", label: "Software installation request", category: "app-issue", icon: "📦", enabled: true, common: false },
+  { id: "sr9", label: "Email not syncing", category: "app-issue", icon: "📧", enabled: true, common: false },
+  { id: "sr10", label: "Monitor/display issue", category: "hardware", icon: "🖥️", enabled: true, common: false },
+  { id: "sr11", label: "Audio/microphone not working", category: "hardware", icon: "🎤", enabled: false, common: false },
+  { id: "sr12", label: "USB device not recognized", category: "hardware", icon: "🔌", enabled: false, common: false },
+  { id: "sr13", label: "File access / permissions issue", category: "access", icon: "📂", enabled: true, common: false },
+  { id: "sr14", label: "Security alert on my device", category: "security", icon: "🛡️", enabled: true, common: false },
+  { id: "sr15", label: "Other", category: "other", icon: "💬", enabled: true, common: false },
+];
+
+// App paths by OS for troubleshooting
+const appPaths: Record<string, { win?: string; mac?: string }> = {
+  "VS Code": { win: "C:\\Users\\%USER%\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe", mac: "/Applications/Visual Studio Code.app" },
+  "Chrome": { win: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", mac: "/Applications/Google Chrome.app" },
+  "Slack": { win: "C:\\Users\\%USER%\\AppData\\Local\\slack\\slack.exe", mac: "/Applications/Slack.app" },
+  "Docker Desktop": { win: "C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe", mac: "/Applications/Docker.app" },
+  "Photoshop": { win: "C:\\Program Files\\Adobe\\Adobe Photoshop 2025\\Photoshop.exe", mac: "/Applications/Adobe Photoshop 2025/Adobe Photoshop 2025.app" },
+  "Figma": { win: "C:\\Users\\%USER%\\AppData\\Local\\Figma\\Figma.exe", mac: "/Applications/Figma.app" },
+  "Excel": { win: "C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE", mac: "/Applications/Microsoft Excel.app" },
+  "QuickBooks": { win: "C:\\Program Files (x86)\\Intuit\\QuickBooks 2024\\QBW32.EXE" },
+  "Postman": { win: "C:\\Users\\%USER%\\AppData\\Local\\Postman\\Postman.exe", mac: "/Applications/Postman.app" },
+  "iTerm2": { mac: "/Applications/iTerm.app" },
+  "Node.js": { win: "C:\\Program Files\\nodejs\\node.exe", mac: "/usr/local/bin/node" },
+  "Git": { win: "C:\\Program Files\\Git\\bin\\git.exe", mac: "/usr/bin/git" },
+  "Illustrator": { win: "C:\\Program Files\\Adobe\\Adobe Illustrator 2025\\Support Files\\Contents\\Windows\\Illustrator.exe", mac: "/Applications/Adobe Illustrator 2025/Adobe Illustrator.app" },
+  "Adobe Acrobat": { win: "C:\\Program Files\\Adobe\\Acrobat DC\\Acrobat\\Acrobat.exe", mac: "/Applications/Adobe Acrobat DC/Adobe Acrobat.app" },
+  "TablePlus": { mac: "/Applications/TablePlus.app" },
+  "Homebrew": { mac: "/opt/homebrew/bin/brew" },
+  "Canva": { win: "C:\\Users\\%USER%\\AppData\\Local\\Programs\\Canva\\Canva.exe", mac: "/Applications/Canva.app" },
+};
+
+// Remediation groups assignable to host groups
+const mockRemediationGroups = [
+  { id: "rg1", name: "Standard IT Maintenance", os: "all", enabled: true, remediations: ["Disk Cleanup", "Network Reset", "Time Sync", "Process Management", "Service Management"], hostGroups: ["Engineering Workstations", "All Devices"] },
+  { id: "rg2", name: "Windows Security Hardening", os: "windows", enabled: true, remediations: ["Group Policy Refresh", "System File Repair", "Windows Update Reset", "WMI Repair"], hostGroups: ["Engineering Workstations", "Finance Desktops"] },
+  { id: "rg3", name: "macOS Compliance", os: "macos", enabled: true, remediations: ["FileVault Verification", "TCC Permission Reset", "Spotlight Re-index", "DNS Flush"], hostGroups: ["Mac Fleet"] },
+  { id: "rg4", name: "Developer Workstations", os: "all", enabled: false, remediations: ["Docker Reset", "Node Cache Clear", "Git Credential Refresh", "Homebrew Update"], hostGroups: ["Engineering Workstations"] },
+  { id: "rg5", name: "Print & Peripheral Fix", os: "windows", enabled: true, remediations: ["Clear Print Spooler", "USB Driver Reset", "Explorer Restart"], hostGroups: ["Finance Desktops"] },
+];
+
 // ─── Utility Functions ───────────────────────────────────────────────────────
 
 function formatUptime(seconds: number) {
@@ -450,6 +509,16 @@ export default function DemoPage() {
   const [employeeViewMode, setEmployeeViewMode] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [userSearch, setUserSearch] = useState("");
+  // IT Support state
+  const [itSubTab, setItSubTab] = useState<"queue" | "tickets" | "submit" | "config">("queue");
+  const [selectedTicketDevice, setSelectedTicketDevice] = useState<string | null>(null);
+  const [selectedTicketApp, setSelectedTicketApp] = useState<string | null>(null);
+  const [ticketDescription, setTicketDescription] = useState("");
+  const [selectedStockReason, setSelectedStockReason] = useState<string | null>(null);
+  const [stockReasons, setStockReasons] = useState(mockStockReasons);
+  const [remediationGroups, setRemediationGroups] = useState(mockRemediationGroups);
+  const [editingNewReason, setEditingNewReason] = useState(false);
+  const [newReasonLabel, setNewReasonLabel] = useState("");
 
   const onlineCount = mockDevices.filter((d) => d.status === "ONLINE").length;
   const totalCves = mockDevices.reduce((s, d) => s + d.openCves, 0);
@@ -2410,15 +2479,25 @@ export default function DemoPage() {
           )}
 
           {/* ── IT SUPPORT ─────────────────────────────────────────────── */}
-          {activeSection === "it-support" && (
+          {activeSection === "it-support" && (() => {
+            const selectedDevice = selectedTicketDevice ? mockDevices.find(d => d.hostname === selectedTicketDevice) : null;
+            const deviceApps = selectedDevice?.installedSoftware || [];
+            const isWindows = selectedDevice?.platform === "win32";
+            const isMac = selectedDevice?.platform === "darwin";
+            const osLabel = isWindows ? "Windows" : isMac ? "macOS" : "Unknown";
+            const osFilteredRemediations = (os: string) => os === "all" || (os === "windows" && isWindows) || (os === "macos" && isMac);
+
+            return (
             <div className="space-y-6">
-              <div>
-                <h1 className="text-2xl font-bold flex items-center gap-2">
-                  <Wrench className="h-6 w-6" /> IT Support &amp; Remediation
-                </h1>
-                <p className="text-muted-foreground text-sm">
-                  Resolve digital friction, enforce compliance, and maintain fleet health — remotely and at scale.
-                </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold flex items-center gap-2">
+                    <Wrench className="h-6 w-6" /> IT Support &amp; Remediation
+                  </h1>
+                  <p className="text-muted-foreground text-sm">
+                    Resolve digital friction, enforce compliance, and maintain fleet health — remotely and at scale.
+                  </p>
+                </div>
               </div>
 
               {/* ── KPI Stats ────────────────────────────────────────────── */}
@@ -2426,7 +2505,7 @@ export default function DemoPage() {
                 {[
                   { label: "Remediations Today", value: "47", icon: Wrench, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20" },
                   { label: "Auto-Resolved", value: "34", icon: Zap, color: "text-green-600", bg: "bg-green-50 dark:bg-green-900/20" },
-                  { label: "Pending Approval", value: "8", icon: Clock, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-900/20" },
+                  { label: "Open Tickets", value: String(mockTickets.filter(t => t.status !== "resolved").length), icon: ClipboardList, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-900/20" },
                   { label: "Compliance Score", value: "96%", icon: ShieldCheck, color: "text-indigo-600", bg: "bg-indigo-50 dark:bg-indigo-900/20" },
                   { label: "Avg Resolution", value: "< 2m", icon: Timer, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-900/20" },
                 ].map((stat) => (
@@ -2440,138 +2519,187 @@ export default function DemoPage() {
                 ))}
               </div>
 
-              {/* ── Advanced Capabilities ────────────────────────────────── */}
+              {/* ── Sub-Tab Navigation ──────────────────────────────────── */}
+              <div className="flex gap-1 bg-muted/50 p-1 rounded-lg w-fit">
+                {([
+                  { id: "queue" as const, label: "Remediation Queue", icon: Activity },
+                  { id: "tickets" as const, label: "Support Tickets", icon: ClipboardList },
+                  { id: "submit" as const, label: "Submit Ticket", icon: UserPlus },
+                  { id: "config" as const, label: "Configuration", icon: Settings },
+                ] as const).map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setItSubTab(tab.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${itSubTab === tab.id ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    <tab.icon className="h-3.5 w-3.5" />{tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* ══════════════════════════════════════════════════════════ */}
+              {/* ── TAB: REMEDIATION QUEUE ──────────────────────────────── */}
+              {/* ══════════════════════════════════════════════════════════ */}
+              {itSubTab === "queue" && (<>
+
+              {/* Advanced Capabilities */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-amber-500" /> Advanced Capabilities
-                  </CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Zap className="h-5 w-5 text-amber-500" /> Advanced Capabilities</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {[
-                      {
-                        title: "Offline Remediation",
-                        icon: WifiOff,
-                        color: "text-blue-600",
-                        bg: "bg-blue-50 dark:bg-blue-950/30",
-                        desc: "Execute security and maintenance scripts even when devices are disconnected from VPN or corporate network. Commands queue and execute on reconnect.",
-                        status: "Active",
-                        statusColor: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-                      },
-                      {
-                        title: "Compliance Drift Monitoring",
-                        icon: ShieldAlert,
-                        color: "text-red-600",
-                        bg: "bg-red-50 dark:bg-red-950/30",
-                        desc: "Instant detection and automated correction of unauthorized registry changes, file modifications, or disabled security tools.",
-                        status: "3 Drifts Detected",
-                        statusColor: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-                      },
-                      {
-                        title: "Zero-Day Vulnerability Patching",
-                        icon: Bug,
-                        color: "text-orange-600",
-                        bg: "bg-orange-50 dark:bg-orange-950/30",
-                        desc: "Rapid deployment of patches or configuration changes across the entire fleet within minutes of a threat announcement.",
-                        status: "Ready",
-                        statusColor: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-                      },
-                      {
-                        title: "Resource Reclamation",
-                        icon: Recycle,
-                        color: "text-teal-600",
-                        bg: "bg-teal-50 dark:bg-teal-950/30",
-                        desc: "Automated uninstallation of unused software licenses and killing of zombie processes to reclaim memory, CPU, and disk space.",
-                        status: "12 Licenses Freed",
-                        statusColor: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200",
-                      },
-                      {
-                        title: "Ransomware Rollback",
-                        icon: RotateCcw,
-                        color: "text-purple-600",
-                        bg: "bg-purple-50 dark:bg-purple-950/30",
-                        desc: "Detect anomalous file encryption patterns and automatically revert to a previous system state using VSS snapshots and Time Machine.",
-                        status: "Monitoring",
-                        statusColor: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-                      },
-                      {
-                        title: "Sustainability & Carbon Reporting",
-                        icon: Leaf,
-                        color: "text-green-600",
-                        bg: "bg-green-50 dark:bg-green-950/30",
-                        desc: "Track power consumption and device age to optimize refresh cycles and reduce environmental footprint with carbon-equivalent metrics.",
-                        status: "38 tCO\u2082 Saved",
-                        statusColor: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-                      },
-                    ].map((cap) => (
-                      <div key={cap.title} className={`rounded-xl border p-4 ${cap.bg}`}>
+                      { title: "Offline Remediation", icon: WifiOff, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30", desc: "Execute scripts even when disconnected. Commands queue and execute on reconnect.", status: "Active", sc: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+                      { title: "Compliance Drift Monitoring", icon: ShieldAlert, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30", desc: "Detect and auto-correct unauthorized registry changes, file modifications, or disabled security tools.", status: "3 Drifts Detected", sc: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+                      { title: "Zero-Day Patching", icon: Bug, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950/30", desc: "Rapid patch deployment across the entire fleet within minutes of a threat announcement.", status: "Ready", sc: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+                      { title: "Resource Reclamation", icon: Recycle, color: "text-teal-600", bg: "bg-teal-50 dark:bg-teal-950/30", desc: "Auto-uninstall unused licenses and kill zombie processes to reclaim resources.", status: "12 Freed", sc: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200" },
+                      { title: "Ransomware Rollback", icon: RotateCcw, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950/30", desc: "Detect anomalous encryption and auto-revert via VSS / Time Machine.", status: "Monitoring", sc: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+                      { title: "Carbon Reporting", icon: Leaf, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30", desc: "Track power consumption and device age to optimize refresh cycles.", status: "38 tCO\u2082", sc: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+                    ].map((c) => (
+                      <div key={c.title} className={`rounded-xl border p-4 ${c.bg}`}>
                         <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <cap.icon className={`h-5 w-5 ${cap.color}`} />
-                            <span className="font-semibold text-sm">{cap.title}</span>
-                          </div>
-                          <Badge className={`text-[10px] ${cap.statusColor}`}>{cap.status}</Badge>
+                          <div className="flex items-center gap-2"><c.icon className={`h-5 w-5 ${c.color}`} /><span className="font-semibold text-sm">{c.title}</span></div>
+                          <Badge className={`text-[10px] ${c.sc}`}>{c.status}</Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">{cap.desc}</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{c.desc}</p>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* ── Live Remediation Queue ───────────────────────────────── */}
+              {/* Device Selector for Targeted Remediations */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-green-500" /> Live Remediation Queue
-                  </CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Monitor className="h-5 w-5 text-indigo-500" /> Targeted Device Remediation</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Select a device to see OS-specific remediations:</label>
+                    <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
+                      {mockDevices.map((dev) => (
+                        <button key={dev.id} onClick={() => setSelectedTicketDevice(selectedTicketDevice === dev.hostname ? null : dev.hostname)}
+                          className={`p-3 rounded-lg border text-left transition-all ${selectedTicketDevice === dev.hostname ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 ring-1 ring-indigo-500" : "hover:bg-muted/30"}`}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className={`w-2 h-2 rounded-full ${dev.status === "ONLINE" ? "bg-green-500" : "bg-red-400"}`} />
+                            <span className="text-sm font-medium truncate">{dev.hostname}</span>
+                          </div>
+                          <div className="text-[11px] text-muted-foreground">{dev.user.name}</div>
+                          <div className="text-[11px] text-muted-foreground">{dev.platform === "win32" ? "🪟 Windows" : "🍎 macOS"} &bull; {dev.ipAddress}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {selectedDevice && (
+                    <div className="space-y-4 pt-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Badge variant="outline">{isWindows ? "🪟 Windows" : "🍎 macOS"}</Badge>
+                        <span className="font-medium">{selectedDevice.hostname}</span>
+                        <span className="text-muted-foreground">({selectedDevice.user.name})</span>
+                        <span className="text-muted-foreground">&bull; {selectedDevice.osVersion}</span>
+                      </div>
+
+                      {/* OS-Specific Quick Actions */}
+                      <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                        {/* Cross-platform always shown */}
+                        {[
+                          { title: "Kill Hung Process", icon: CircleStop, code: isWindows ? "Get-Process | Where {$_.Responding -eq $false} | Stop-Process -Force" : "kill -9 $(ps aux | awk 'NR>1 && $8~/Z/{print $2}')" },
+                          { title: "Flush DNS", icon: Wifi, code: isWindows ? "ipconfig /flushdns" : "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder" },
+                          { title: "Disk Cleanup", icon: Trash2, code: isWindows ? "Remove-Item -Path \"$env:TEMP\\*\" -Recurse -Force -EA SilentlyContinue" : "rm -rf ~/Library/Caches/* ~/Library/Logs/*" },
+                        ].map((a) => (
+                          <div key={a.title} className="rounded-lg border overflow-hidden">
+                            <div className="flex items-center justify-between p-2.5 bg-muted/30">
+                              <div className="flex items-center gap-2"><a.icon className="h-4 w-4 text-blue-600" /><span className="text-sm font-medium">{a.title}</span></div>
+                              <Button size="sm" variant="outline" className="text-[11px] h-7"><Play className="h-3 w-3 mr-1" />Run</Button>
+                            </div>
+                            <div className="bg-gray-950 text-green-400 p-2 font-mono text-[11px] overflow-x-auto"><pre className="whitespace-pre-wrap">{a.code}</pre></div>
+                          </div>
+                        ))}
+                        {/* Windows-only */}
+                        {isWindows && [
+                          { title: "SFC / DISM Repair", icon: HardDrive, code: "sfc /scannow\nDISM /Online /Cleanup-Image /RestoreHealth" },
+                          { title: "GP Update", icon: RefreshCw, code: "gpupdate /force" },
+                          { title: "Print Spooler Reset", icon: PrinterIcon, code: "Stop-Service Spooler -Force\nRemove-Item \"$env:SystemRoot\\System32\\spool\\PRINTERS\\*\" -Force\nStart-Service Spooler" },
+                          { title: "Explorer Restart", icon: Monitor, code: "Stop-Process -Name explorer -Force; Start-Process explorer" },
+                          { title: "Windows Update Reset", icon: Download, code: "Stop-Service wuauserv -Force\nRemove-Item \"C:\\Windows\\SoftwareDistribution\\*\" -Recurse -Force\nStart-Service wuauserv" },
+                        ].map((a) => (
+                          <div key={a.title} className="rounded-lg border overflow-hidden">
+                            <div className="flex items-center justify-between p-2.5 bg-muted/30">
+                              <div className="flex items-center gap-2"><a.icon className="h-4 w-4 text-cyan-600" /><span className="text-sm font-medium">{a.title}</span></div>
+                              <Button size="sm" variant="outline" className="text-[11px] h-7"><Play className="h-3 w-3 mr-1" />Run</Button>
+                            </div>
+                            <div className="bg-gray-950 text-green-400 p-2 font-mono text-[11px] overflow-x-auto"><pre className="whitespace-pre-wrap">{a.code}</pre></div>
+                          </div>
+                        ))}
+                        {/* macOS-only */}
+                        {isMac && [
+                          { title: "Reset TCC Permissions", icon: Lock, code: "tccutil reset All com.tinyspeck.slackmacgap" },
+                          { title: "Spotlight Re-index", icon: Search, code: "mdutil -i on /\nmdutil -E /" },
+                          { title: "FileVault Check", icon: Lock, code: "fdesetup status" },
+                          { title: "Dock/Finder Restart", icon: RefreshCw, code: "killall Finder; killall Dock" },
+                          { title: "SystemUIServer", icon: Monitor, code: "killall SystemUIServer" },
+                        ].map((a) => (
+                          <div key={a.title} className="rounded-lg border overflow-hidden">
+                            <div className="flex items-center justify-between p-2.5 bg-muted/30">
+                              <div className="flex items-center gap-2"><a.icon className="h-4 w-4 text-gray-500" /><span className="text-sm font-medium">{a.title}</span></div>
+                              <Button size="sm" variant="outline" className="text-[11px] h-7"><Play className="h-3 w-3 mr-1" />Run</Button>
+                            </div>
+                            <div className="bg-gray-950 text-green-400 p-2 font-mono text-[11px] overflow-x-auto"><pre className="whitespace-pre-wrap">{a.code}</pre></div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Security Remediations for selected device */}
+                      <div className="grid gap-2 md:grid-cols-2">
+                        {[
+                          { title: "Certificate Injection", icon: CertIcon, desc: "Push missing certs to system store", status: "2 pending", sc: "text-amber-600" },
+                          { title: "Agent Health Recovery", icon: ShieldCheck, desc: "Restart EDR/AV agent on this device", status: selectedDevice.antivirusName + " healthy", sc: "text-green-600" },
+                          { title: "Local Admin Removal", icon: ShieldOff, desc: "Strip unauthorized admin privileges", status: "Compliant", sc: "text-green-600" },
+                          { title: "Unauthorized App Removal", icon: XCircle, desc: "Remove blacklisted software", status: "No violations", sc: "text-green-600" },
+                        ].map((r) => (
+                          <div key={r.title} className="flex items-start gap-3 p-3 rounded-lg border">
+                            <r.icon className="h-4 w-4 text-red-500 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium">{r.title}</div>
+                              <div className="text-xs text-muted-foreground">{r.desc}</div>
+                              <div className={`text-xs font-medium mt-1 ${r.sc}`}>{r.status}</div>
+                            </div>
+                            <Button size="sm" variant="outline" className="text-xs shrink-0">Run</Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Remediation Queue */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Activity className="h-5 w-5 text-green-500" /> Live Remediation Queue</CardTitle></CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b text-muted-foreground text-xs uppercase tracking-wider">
-                          <th className="text-left pb-2 font-medium">Device</th>
-                          <th className="text-left pb-2 font-medium">Remediation</th>
-                          <th className="text-left pb-2 font-medium">Type</th>
-                          <th className="text-left pb-2 font-medium">Status</th>
-                          <th className="text-left pb-2 font-medium">Triggered</th>
-                          <th className="text-right pb-2 font-medium">Action</th>
-                        </tr>
-                      </thead>
+                      <thead><tr className="border-b text-muted-foreground text-xs uppercase tracking-wider">
+                        <th className="text-left pb-2 font-medium">Device</th><th className="text-left pb-2 font-medium">Remediation</th><th className="text-left pb-2 font-medium">Type</th><th className="text-left pb-2 font-medium">Status</th><th className="text-left pb-2 font-medium">Triggered</th><th className="text-right pb-2 font-medium">Action</th>
+                      </tr></thead>
                       <tbody className="divide-y">
                         {[
-                          { device: "DESKTOP-JMILLER", remediation: "Clear Print Spooler", type: "Windows", status: "completed", time: "2m ago", auto: true },
-                          { device: "LAPTOP-SCHEN", remediation: "Flush DNS Cache", type: "macOS", status: "completed", time: "5m ago", auto: true },
-                          { device: "DESKTOP-JMILLER", remediation: "System File Repair (SFC)", type: "Windows", status: "running", time: "8m ago", auto: false },
-                          { device: "WS-TGARCIA", remediation: "Disk Cleanup (Temp Files)", type: "macOS", status: "completed", time: "12m ago", auto: true },
-                          { device: "MACBOOK-APATEL", remediation: "Spotlight Re-index", type: "macOS", status: "running", time: "15m ago", auto: false },
-                          { device: "DESKTOP-JMILLER", remediation: "Group Policy Refresh", type: "Windows", status: "queued", time: "1m ago", auto: true },
-                          { device: "MACBOOK-APATEL", remediation: "Reset TCC Permissions (Slack)", type: "macOS", status: "completed", time: "22m ago", auto: false },
-                          { device: "WS-TGARCIA", remediation: "Kill Zombie Processes (3)", type: "Cross-Platform", status: "completed", time: "30m ago", auto: true },
+                          { device: "DESKTOP-JMILLER", rem: "Clear Print Spooler", type: "Windows", status: "completed", time: "2m ago", auto: true },
+                          { device: "LAPTOP-SCHEN", rem: "Flush DNS Cache", type: "Windows", status: "completed", time: "5m ago", auto: true },
+                          { device: "DESKTOP-JMILLER", rem: "System File Repair (SFC)", type: "Windows", status: "running", time: "8m ago", auto: false },
+                          { device: "MACBOOK-APATEL", rem: "Spotlight Re-index", type: "macOS", status: "running", time: "15m ago", auto: false },
+                          { device: "DESKTOP-JMILLER", rem: "Group Policy Refresh", type: "Windows", status: "queued", time: "1m ago", auto: true },
+                          { device: "WS-TGARCIA", rem: "Kill Zombie Processes (3)", type: "Cross-Platform", status: "completed", time: "30m ago", auto: true },
                         ].map((item, i) => (
                           <tr key={i} className="hover:bg-muted/30">
                             <td className="py-2.5 font-medium">{item.device}</td>
-                            <td className="py-2.5">{item.remediation}</td>
-                            <td className="py-2.5">
-                              <Badge variant="outline" className="text-[10px]">
-                                {item.type === "Windows" ? "🪟" : item.type === "macOS" ? "🍎" : "🌐"} {item.type}
-                              </Badge>
-                            </td>
+                            <td className="py-2.5">{item.rem}</td>
+                            <td className="py-2.5"><Badge variant="outline" className="text-[10px]">{item.type === "Windows" ? "🪟" : item.type === "macOS" ? "🍎" : "🌐"} {item.type}</Badge></td>
                             <td className="py-2.5">
                               {item.status === "completed" && <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-[10px]"><CheckCircle className="h-3 w-3 mr-1" />Complete</Badge>}
                               {item.status === "running" && <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-[10px]"><RefreshCw className="h-3 w-3 mr-1 animate-spin" />Running</Badge>}
                               {item.status === "queued" && <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 text-[10px]"><Clock className="h-3 w-3 mr-1" />Queued</Badge>}
                             </td>
                             <td className="py-2.5 text-muted-foreground text-xs">{item.time}</td>
-                            <td className="py-2.5 text-right">
-                              {item.auto ? (
-                                <Badge variant="outline" className="text-[10px] text-green-600 border-green-300"><Zap className="h-3 w-3 mr-1" />Auto</Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-[10px]">Manual</Badge>
-                              )}
-                            </td>
+                            <td className="py-2.5 text-right">{item.auto ? <Badge variant="outline" className="text-[10px] text-green-600 border-green-300"><Zap className="h-3 w-3 mr-1" />Auto</Badge> : <Badge variant="outline" className="text-[10px]">Manual</Badge>}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -2580,280 +2708,9 @@ export default function DemoPage() {
                 </CardContent>
               </Card>
 
-              {/* ── Cross-Platform Remediations ─────────────────────────── */}
+              {/* Remediation History */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Globe className="h-5 w-5 text-blue-500" /> General / Cross-Platform Remediations
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                    {[
-                      { title: "Process Management", icon: CircleStop, desc: "Terminate hung processes or those exceeding CPU/RAM thresholds", action: "Kill Process" },
-                      { title: "Disk Cleanup", icon: Trash2, desc: "Delete temp files, clear browser caches, and empty trash", action: "Run Cleanup" },
-                      { title: "Network Reset", icon: Wifi, desc: "Flush DNS cache and renew DHCP lease to resolve connectivity drops", action: "Reset Network" },
-                      { title: "Service Management", icon: FolderCog, desc: "Restart core background services (Print Spooler, MDM agents, etc.)", action: "Restart Service" },
-                      { title: "Time Sync (NTP)", icon: Clock, desc: "Force NTP sync to prevent SSO or certificate auth failures", action: "Sync Time" },
-                      { title: "Reboot Orchestration", icon: RefreshCw, desc: "Trigger restart with user-facing countdown and snooze options", action: "Schedule Reboot" },
-                    ].map((rem) => (
-                      <div key={rem.title} className="flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/30 transition-colors">
-                        <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                          <rem.icon className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium">{rem.title}</div>
-                          <div className="text-xs text-muted-foreground mt-0.5">{rem.desc}</div>
-                        </div>
-                        <Button size="sm" variant="outline" className="text-xs shrink-0">{rem.action}</Button>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* ── Windows Remediations ─────────────────────────────────── */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Monitor className="h-5 w-5 text-cyan-500" /> Windows Remediations <Badge variant="outline" className="text-[10px]">PowerShell</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {[
-                    {
-                      title: "Clear Print Spooler",
-                      desc: "Stops the service, purges the print queue, and restarts the service.",
-                      icon: PrinterIcon,
-                      code: `Stop-Service -Name Spooler -Force\nRemove-Item -Path "$env:SystemRoot\\System32\\spool\\PRINTERS\\*" -Force\nStart-Service -Name Spooler`,
-                      risk: "low",
-                    },
-                    {
-                      title: "System File Repair",
-                      desc: "Checks for and repairs corrupted OS components.",
-                      icon: HardDrive,
-                      code: `sfc /scannow\nDISM /Online /Cleanup-Image /RestoreHealth`,
-                      risk: "medium",
-                    },
-                    {
-                      title: "Network Reset",
-                      desc: "Flushes DNS cache and renews the DHCP lease.",
-                      icon: Wifi,
-                      code: `ipconfig /flushdns\nipconfig /release\nipconfig /renew`,
-                      risk: "low",
-                    },
-                    {
-                      title: "Force Group Policy Refresh",
-                      desc: "Ensures the machine is synced with the latest domain configurations.",
-                      icon: RefreshCw,
-                      code: `gpupdate /force`,
-                      risk: "low",
-                    },
-                    {
-                      title: "Explorer Restart",
-                      desc: "Restart explorer.exe to fix taskbar freezes or UI lag.",
-                      icon: Monitor,
-                      code: `Stop-Process -Name explorer -Force\nStart-Process explorer`,
-                      risk: "low",
-                    },
-                    {
-                      title: "Windows Update Reset",
-                      desc: "Clear the SoftwareDistribution folder and restart update services to fix stuck patches.",
-                      icon: Download,
-                      code: `Stop-Service -Name wuauserv -Force\nRemove-Item -Path "C:\\Windows\\SoftwareDistribution\\*" -Recurse -Force\nStart-Service -Name wuauserv`,
-                      risk: "medium",
-                    },
-                    {
-                      title: "WMI Repository Repair",
-                      desc: "Rebuild the WMI database to fix reporting and management tool errors.",
-                      icon: HardDriveDownload,
-                      code: `winmgmt /salvagerepository\nwinmgmt /verifyrepository`,
-                      risk: "high",
-                    },
-                    {
-                      title: "Disk Cleanup (Temp Files)",
-                      desc: "Clears user and system temporary files.",
-                      icon: Trash2,
-                      code: `$TempFolders = @("$env:TEMP", "C:\\Windows\\Temp")\nforeach ($Folder in $TempFolders) {\n    Get-ChildItem -Path $Folder -Recurse |\n    Remove-Item -Force -Recurse -ErrorAction SilentlyContinue\n}`,
-                      risk: "low",
-                    },
-                  ].map((rem) => (
-                    <div key={rem.title} className="rounded-lg border overflow-hidden">
-                      <div className="flex items-center justify-between p-3 bg-muted/30">
-                        <div className="flex items-center gap-3">
-                          <rem.icon className="h-4 w-4 text-cyan-600" />
-                          <div>
-                            <div className="text-sm font-medium">{rem.title}</div>
-                            <div className="text-xs text-muted-foreground">{rem.desc}</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className={`text-[10px] ${rem.risk === "low" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : rem.risk === "medium" ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"}`}>
-                            {rem.risk === "low" ? "Low Risk" : rem.risk === "medium" ? "Medium Risk" : "High Risk"}
-                          </Badge>
-                          <Button size="sm" variant="outline" className="text-xs"><Play className="h-3 w-3 mr-1" />Execute</Button>
-                        </div>
-                      </div>
-                      <div className="bg-gray-950 text-green-400 p-3 font-mono text-xs overflow-x-auto">
-                        <pre className="whitespace-pre-wrap">{rem.code}</pre>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* ── macOS Remediations ───────────────────────────────────── */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Laptop className="h-5 w-5 text-gray-500" /> macOS Remediations <Badge variant="outline" className="text-[10px]">Zsh</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {[
-                    {
-                      title: "Reset TCC Permissions",
-                      desc: "Resets privacy permissions (Screen Recording, Camera, etc.) for a specific application.",
-                      icon: Lock,
-                      code: `# Example for Slack\ntccutil reset All com.tinyspeck.slackmacgap`,
-                      risk: "medium",
-                    },
-                    {
-                      title: "Spotlight Re-index",
-                      desc: "Forces the system to rebuild the search index.",
-                      icon: Search,
-                      code: `mdutil -i on /\nmdutil -E /`,
-                      risk: "low",
-                    },
-                    {
-                      title: "Restart SystemUIServer",
-                      desc: "Clears glitches in the menu bar and system icons.",
-                      icon: Monitor,
-                      code: `killall SystemUIServer`,
-                      risk: "low",
-                    },
-                    {
-                      title: "Flush DNS",
-                      desc: "Standard command for macOS 12.0 and later.",
-                      icon: Globe,
-                      code: `sudo dscacheutil -flushcache\nsudo killall -HUP mDNSResponder`,
-                      risk: "low",
-                    },
-                    {
-                      title: "FileVault Verification",
-                      desc: "Check encryption status and prompt user to enable if compliance is lost.",
-                      icon: Lock,
-                      code: `fdesetup status\n# If not enabled:\n# sudo fdesetup enable`,
-                      risk: "low",
-                    },
-                    {
-                      title: "Dock/Finder Restart",
-                      desc: "Refresh the UI layer to resolve graphical artifacts or frozen folders.",
-                      icon: RefreshCw,
-                      code: `killall Finder\nkillall Dock`,
-                      risk: "low",
-                    },
-                    {
-                      title: "LaunchDaemon Management",
-                      desc: "Re-load LaunchDaemons or LaunchAgents that have crashed or stopped.",
-                      icon: FolderCog,
-                      code: `# List loaded agents\nlaunchctl list | grep com.mydex\n# Reload a crashed agent\nlaunchctl unload /Library/LaunchDaemons/com.mydex.agent.plist\nlaunchctl load /Library/LaunchDaemons/com.mydex.agent.plist`,
-                      risk: "medium",
-                    },
-                    {
-                      title: "Disk Cleanup (Caches & Logs)",
-                      desc: "Removes user-level cache and log files.",
-                      icon: Trash2,
-                      code: `rm -rf ~/Library/Caches/*\nrm -rf ~/Library/Logs/*`,
-                      risk: "low",
-                    },
-                  ].map((rem) => (
-                    <div key={rem.title} className="rounded-lg border overflow-hidden">
-                      <div className="flex items-center justify-between p-3 bg-muted/30">
-                        <div className="flex items-center gap-3">
-                          <rem.icon className="h-4 w-4 text-gray-500" />
-                          <div>
-                            <div className="text-sm font-medium">{rem.title}</div>
-                            <div className="text-xs text-muted-foreground">{rem.desc}</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className={`text-[10px] ${rem.risk === "low" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"}`}>
-                            {rem.risk === "low" ? "Low Risk" : "Medium Risk"}
-                          </Badge>
-                          <Button size="sm" variant="outline" className="text-xs"><Play className="h-3 w-3 mr-1" />Execute</Button>
-                        </div>
-                      </div>
-                      <div className="bg-gray-950 text-green-400 p-3 font-mono text-xs overflow-x-auto">
-                        <pre className="whitespace-pre-wrap">{rem.code}</pre>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* ── Security & Compliance Remediations ──────────────────── */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5 text-red-500" /> Security &amp; Compliance Remediations
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {[
-                      {
-                        title: "Certificate Injection",
-                        desc: "Push missing root or intermediate certificates to the system keychain/store.",
-                        icon: CertIcon,
-                        status: "2 certs pending",
-                        statusColor: "text-amber-600",
-                      },
-                      {
-                        title: "Agent Health Recovery",
-                        desc: "Reinstall or restart the EDR/AV agent if it stops reporting to the console.",
-                        icon: ShieldCheck,
-                        status: "All agents healthy",
-                        statusColor: "text-green-600",
-                      },
-                      {
-                        title: "Local Admin Removal",
-                        desc: "Automatically strip administrative privileges from unauthorized local users.",
-                        icon: ShieldOff,
-                        status: "1 unauthorized admin found",
-                        statusColor: "text-red-600",
-                      },
-                      {
-                        title: "Unauthorized App Removal",
-                        desc: "Uninstall blacklisted software or browser extensions identified by the sensor.",
-                        icon: XCircle,
-                        status: "3 apps flagged",
-                        statusColor: "text-red-600",
-                      },
-                    ].map((rem) => (
-                      <div key={rem.title} className="flex items-start gap-3 p-4 rounded-lg border hover:bg-muted/30 transition-colors">
-                        <div className="p-2 rounded-lg bg-red-50 dark:bg-red-900/20">
-                          <rem.icon className="h-4 w-4 text-red-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium">{rem.title}</div>
-                          <div className="text-xs text-muted-foreground mt-0.5">{rem.desc}</div>
-                          <div className={`text-xs font-medium mt-1.5 ${rem.statusColor}`}>{rem.status}</div>
-                        </div>
-                        <Button size="sm" variant="outline" className="text-xs shrink-0">Remediate</Button>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* ── Remediation History / Audit ──────────────────────────── */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-indigo-500" /> Remediation History
-                  </CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><FileText className="h-5 w-5 text-indigo-500" /> Remediation History</CardTitle></CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     {[
@@ -2862,29 +2719,324 @@ export default function DemoPage() {
                       { time: "Today 14:15", device: "DESKTOP-JMILLER", action: "SFC scan started", user: "admin@acme.com", result: "running" },
                       { time: "Today 13:55", device: "WS-TGARCIA", action: "Temp files cleaned (2.4 GB freed)", user: "Auto-Trigger", result: "success" },
                       { time: "Today 13:40", device: "MACBOOK-APATEL", action: "TCC permissions reset for Slack", user: "admin@acme.com", result: "success" },
-                      { time: "Today 12:10", device: "WS-TGARCIA", action: "3 zombie processes terminated", user: "Auto-Trigger", result: "success" },
                       { time: "Today 11:45", device: "DESKTOP-JMILLER", action: "Group Policy refreshed", user: "Auto-Trigger", result: "success" },
-                      { time: "Today 10:30", device: "MACBOOK-APATEL", action: "FileVault verified — compliant", user: "Compliance Monitor", result: "success" },
-                      { time: "Yesterday 16:22", device: "LAPTOP-SCHEN", action: "Unauthorized admin 'temp_admin' removed", user: "Compliance Monitor", result: "success" },
+                      { time: "Yesterday 16:22", device: "LAPTOP-SCHEN", action: "Unauthorized admin removed", user: "Compliance Monitor", result: "success" },
                       { time: "Yesterday 15:00", device: "DESKTOP-JMILLER", action: "Windows Update services reset", user: "admin@acme.com", result: "success" },
                     ].map((entry, i) => (
                       <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted/30 text-sm">
                         <div className="w-24 shrink-0 text-xs text-muted-foreground">{entry.time}</div>
-                        <div className="w-40 shrink-0 font-medium text-xs">{entry.device}</div>
+                        <div className="w-36 shrink-0 font-medium text-xs">{entry.device}</div>
                         <div className="flex-1 min-w-0 truncate">{entry.action}</div>
-                        <div className="text-xs text-muted-foreground w-32 shrink-0 truncate">{entry.user}</div>
-                        {entry.result === "success" ? (
-                          <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
-                        ) : (
-                          <RefreshCw className="h-4 w-4 text-blue-500 shrink-0 animate-spin" />
-                        )}
+                        <div className="text-xs text-muted-foreground w-28 shrink-0 truncate">{entry.user}</div>
+                        {entry.result === "success" ? <CheckCircle className="h-4 w-4 text-green-500 shrink-0" /> : <RefreshCw className="h-4 w-4 text-blue-500 shrink-0 animate-spin" />}
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
+              </>)}
+
+              {/* ══════════════════════════════════════════════════════════ */}
+              {/* ── TAB: SUPPORT TICKETS ────────────────────────────────── */}
+              {/* ══════════════════════════════════════════════════════════ */}
+              {itSubTab === "tickets" && (<>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2"><ClipboardList className="h-5 w-5 text-amber-500" /> Active Support Tickets</CardTitle>
+                    <div className="flex gap-2">
+                      <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs">{mockTickets.filter(t => t.status === "open").length} Open</Badge>
+                      <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs">{mockTickets.filter(t => t.status === "in-progress").length} In Progress</Badge>
+                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">{mockTickets.filter(t => t.status === "resolved").length} Resolved</Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {mockTickets.map((ticket) => {
+                      const dev = mockDevices.find(d => d.hostname === ticket.device);
+                      return (
+                        <div key={ticket.id} className="rounded-lg border overflow-hidden">
+                          <div className="flex items-center justify-between p-3 hover:bg-muted/20">
+                            <div className="flex items-center gap-3">
+                              <div className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${ticket.status === "open" ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" : ticket.status === "in-progress" ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"}`}>{ticket.id}</div>
+                              <div>
+                                <div className="text-sm font-medium">{ticket.subject}</div>
+                                <div className="text-xs text-muted-foreground">{ticket.user} &bull; {ticket.device} &bull; {dev?.platform === "win32" ? "🪟" : "🍎"} {formatTimeAgo(ticket.created)}</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className={`text-[10px] ${ticket.priority === "high" ? "border-red-300 text-red-600" : ticket.priority === "medium" ? "border-amber-300 text-amber-600" : "border-gray-300 text-gray-600"}`}>
+                                {ticket.priority}
+                              </Badge>
+                              <Badge variant="outline" className="text-[10px]">{ticket.stockReason}</Badge>
+                              {ticket.assignedTo !== "IT Support" && <span className="text-xs text-muted-foreground">Assigned: {ticket.assignedTo}</span>}
+                            </div>
+                          </div>
+                          {/* Network info if available */}
+                          {ticket.networkInfo && (
+                            <div className="px-3 pb-3 border-t bg-muted/10">
+                              <div className="text-xs font-medium text-muted-foreground mt-2 mb-1">Network Information (auto-captured)</div>
+                              <div className="grid grid-cols-3 md:grid-cols-6 gap-2 text-xs">
+                                <div><span className="text-muted-foreground">IP:</span> {ticket.networkInfo.ip}</div>
+                                <div><span className="text-muted-foreground">DNS:</span> {ticket.networkInfo.dns}</div>
+                                <div><span className="text-muted-foreground">Gateway:</span> {ticket.networkInfo.gateway}</div>
+                                <div><span className="text-muted-foreground">SSID:</span> {ticket.networkInfo.ssid}</div>
+                                <div><span className="text-muted-foreground">Signal:</span> {ticket.networkInfo.signal}</div>
+                                <div><span className="text-muted-foreground">Latency:</span> <span className={parseInt(ticket.networkInfo.latency) > 100 ? "text-red-600 font-medium" : ""}>{ticket.networkInfo.latency}</span></div>
+                              </div>
+                            </div>
+                          )}
+                          {/* App info if available */}
+                          {ticket.appName && dev && (
+                            <div className="px-3 pb-3 border-t bg-muted/10">
+                              <div className="text-xs font-medium text-muted-foreground mt-2 mb-1">Application Details</div>
+                              <div className="flex items-center gap-4 text-xs">
+                                <div><span className="text-muted-foreground">App:</span> <span className="font-medium">{ticket.appName}</span></div>
+                                <div><span className="text-muted-foreground">Version:</span> {dev.installedSoftware.find(s => s.name === ticket.appName)?.version || "Unknown"}</div>
+                                <div className="text-muted-foreground truncate max-w-xs">Path: {(dev.platform === "win32" ? appPaths[ticket.appName]?.win : appPaths[ticket.appName]?.mac) || "Unknown"}</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+              </>)}
+
+              {/* ══════════════════════════════════════════════════════════ */}
+              {/* ── TAB: SUBMIT TICKET (User-Facing) ───────────────────── */}
+              {/* ══════════════════════════════════════════════════════════ */}
+              {itSubTab === "submit" && (<>
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><UserPlus className="h-5 w-5 text-blue-500" /> Submit a Support Ticket</CardTitle></CardHeader>
+                <CardContent className="space-y-5">
+
+                  {/* Step 1: Select device */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">1. Select your device</label>
+                    <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
+                      {mockDevices.map((dev) => (
+                        <button key={dev.id} onClick={() => { setSelectedTicketDevice(selectedTicketDevice === dev.hostname ? null : dev.hostname); setSelectedTicketApp(null); }}
+                          className={`p-3 rounded-lg border text-left transition-all ${selectedTicketDevice === dev.hostname ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 ring-1 ring-blue-500" : "hover:bg-muted/30"}`}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className={`w-2 h-2 rounded-full ${dev.status === "ONLINE" ? "bg-green-500" : "bg-red-400"}`} />
+                            <span className="text-sm font-medium">{dev.hostname}</span>
+                          </div>
+                          <div className="text-[11px] text-muted-foreground">{dev.platform === "win32" ? "🪟 " : "🍎 "}{dev.osVersion}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Step 2: Quick reason (stock responses) */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">2. What&apos;s the issue?</label>
+                    <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                      {stockReasons.filter(r => r.enabled).map((reason) => (
+                        <button key={reason.id} onClick={() => setSelectedStockReason(selectedStockReason === reason.id ? null : reason.id)}
+                          className={`flex items-center gap-2.5 p-3 rounded-lg border text-left transition-all text-sm ${selectedStockReason === reason.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 ring-1 ring-blue-500" : "hover:bg-muted/30"}`}>
+                          <span className="text-lg">{reason.icon}</span>
+                          <span>{reason.label}</span>
+                          {reason.common && <Badge className="ml-auto text-[9px] bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">Common</Badge>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Step 3: App selector (if app-related) */}
+                  {selectedDevice && (selectedStockReason === "sr2" || selectedStockReason === "sr3") && (
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">3. Which application? <span className="text-muted-foreground font-normal">(installed on {selectedDevice.hostname})</span></label>
+                      <div className="grid gap-2 md:grid-cols-3 lg:grid-cols-4">
+                        {deviceApps.map((app) => {
+                          const path = isWindows ? appPaths[app.name]?.win : appPaths[app.name]?.mac;
+                          return (
+                            <button key={app.name} onClick={() => setSelectedTicketApp(selectedTicketApp === app.name ? null : app.name)}
+                              className={`p-2.5 rounded-lg border text-left transition-all ${selectedTicketApp === app.name ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 ring-1 ring-blue-500" : "hover:bg-muted/30"}`}>
+                              <div className="text-sm font-medium">{app.name}</div>
+                              <div className="text-[10px] text-muted-foreground">v{app.version}</div>
+                              {path && <div className="text-[10px] text-muted-foreground mt-0.5 font-mono truncate">{path}</div>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Network info auto-captured for network issues */}
+                  {selectedDevice && (selectedStockReason === "sr3" || selectedStockReason === "sr4") && (
+                    <div className="rounded-lg border bg-muted/20 p-4">
+                      <div className="text-sm font-medium mb-2 flex items-center gap-2"><Wifi className="h-4 w-4 text-blue-500" /> Network Information <Badge className="text-[9px] bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Auto-captured</Badge></div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        <div><span className="text-muted-foreground text-xs">IP Address</span><div className="font-medium">{selectedDevice.ipAddress}</div></div>
+                        <div><span className="text-muted-foreground text-xs">DNS Server</span><div className="font-medium">8.8.8.8</div></div>
+                        <div><span className="text-muted-foreground text-xs">Gateway</span><div className="font-medium">192.168.1.1</div></div>
+                        <div><span className="text-muted-foreground text-xs">Wi-Fi SSID</span><div className="font-medium">AcmeCorp-5G</div></div>
+                        <div><span className="text-muted-foreground text-xs">Signal Strength</span><div className="font-medium">85%</div></div>
+                        <div><span className="text-muted-foreground text-xs">Latency</span><div className="font-medium">12ms</div></div>
+                        <div><span className="text-muted-foreground text-xs">MAC Address</span><div className="font-medium font-mono text-xs">A4:83:E7:2F:9B:C1</div></div>
+                        <div><span className="text-muted-foreground text-xs">Adapter</span><div className="font-medium">{isWindows ? "Intel Wi-Fi 6E AX211" : "Wi-Fi (en0)"}</div></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 4: Description */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">{selectedStockReason === "sr2" || selectedStockReason === "sr3" ? "4" : "3"}. Additional details <span className="text-muted-foreground font-normal">(optional)</span></label>
+                    <textarea value={ticketDescription} onChange={(e) => setTicketDescription(e.target.value)} placeholder="Describe the issue in more detail..." className="w-full h-24 rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+
+                  {/* Submit */}
+                  <div className="flex items-center justify-between pt-2">
+                    <div className="text-xs text-muted-foreground">
+                      {selectedTicketDevice && <span className="mr-3">Device: <strong>{selectedTicketDevice}</strong></span>}
+                      {selectedStockReason && <span className="mr-3">Issue: <strong>{stockReasons.find(r => r.id === selectedStockReason)?.label}</strong></span>}
+                      {selectedTicketApp && <span>App: <strong>{selectedTicketApp}</strong></span>}
+                    </div>
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white"><ClipboardList className="h-4 w-4 mr-2" />Submit Ticket</Button>
+                  </div>
+                </CardContent>
+              </Card>
+              </>)}
+
+              {/* ══════════════════════════════════════════════════════════ */}
+              {/* ── TAB: CONFIGURATION ──────────────────────────────────── */}
+              {/* ══════════════════════════════════════════════════════════ */}
+              {itSubTab === "config" && (<>
+
+              {/* Stock Response Management */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2"><ClipboardList className="h-5 w-5 text-blue-500" /> Stock Ticket Reasons</CardTitle>
+                    <Button size="sm" variant="outline" onClick={() => setEditingNewReason(true)}><UserPlus className="h-3.5 w-3.5 mr-1" />Add Reason</Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {editingNewReason && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg border border-blue-300 bg-blue-50 dark:bg-blue-950/30">
+                      <span className="text-lg">💬</span>
+                      <Input value={newReasonLabel} onChange={(e) => setNewReasonLabel(e.target.value)} placeholder="Enter new reason label..." className="flex-1 h-8 text-sm" />
+                      <Button size="sm" onClick={() => { if (newReasonLabel.trim()) { setStockReasons([...stockReasons, { id: `sr${stockReasons.length + 1}`, label: newReasonLabel.trim(), category: "other", icon: "💬", enabled: true, common: false }]); setNewReasonLabel(""); setEditingNewReason(false); } }}>Save</Button>
+                      <Button size="sm" variant="outline" onClick={() => { setEditingNewReason(false); setNewReasonLabel(""); }}>Cancel</Button>
+                    </div>
+                  )}
+                  {stockReasons.map((reason) => (
+                    <div key={reason.id} className={`flex items-center justify-between p-3 rounded-lg border ${!reason.enabled ? "opacity-50" : ""}`}>
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">{reason.icon}</span>
+                        <div>
+                          <div className="text-sm font-medium">{reason.label}</div>
+                          <div className="text-xs text-muted-foreground">Category: {reason.category} {reason.common && " • Common"}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setStockReasons(stockReasons.map(r => r.id === reason.id ? { ...r, enabled: !r.enabled } : r))}
+                          className={`relative w-10 h-5 rounded-full transition-colors ${reason.enabled ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`}>
+                          <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${reason.enabled ? "translate-x-5" : ""}`} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Remediation Group Configuration */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2"><Server className="h-5 w-5 text-purple-500" /> Remediation Groups &amp; Host Group Assignment</CardTitle>
+                    <Button size="sm" variant="outline"><UserPlus className="h-3.5 w-3.5 mr-1" />Create Group</Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-xs text-muted-foreground">Assign sets of remediations to host groups. Toggle groups on/off to enable or disable for the assigned devices. Build custom remediation sets per OS.</p>
+                  {remediationGroups.map((group) => (
+                    <div key={group.id} className={`rounded-lg border overflow-hidden ${!group.enabled ? "opacity-60" : ""}`}>
+                      <div className="flex items-center justify-between p-3 bg-muted/30">
+                        <div className="flex items-center gap-3">
+                          <button onClick={() => setRemediationGroups(remediationGroups.map(g => g.id === group.id ? { ...g, enabled: !g.enabled } : g))}
+                            className={`relative w-10 h-5 rounded-full transition-colors ${group.enabled ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`}>
+                            <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${group.enabled ? "translate-x-5" : ""}`} />
+                          </button>
+                          <div>
+                            <div className="text-sm font-medium">{group.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              <Badge variant="outline" className="text-[10px] mr-1">{group.os === "all" ? "🌐 All OS" : group.os === "windows" ? "🪟 Windows" : "🍎 macOS"}</Badge>
+                              {group.hostGroups.map(hg => <Badge key={hg} variant="outline" className="text-[10px] mr-1">{hg}</Badge>)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">{group.remediations.length} remediations</span>
+                          <Button size="sm" variant="outline" className="text-xs">Edit</Button>
+                        </div>
+                      </div>
+                      <div className="px-3 py-2 flex flex-wrap gap-1.5">
+                        {group.remediations.map((r) => (
+                          <Badge key={r} variant="outline" className="text-[10px]">{r}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Custom Remediation Builder */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Terminal className="h-5 w-5 text-green-500" /> Custom Remediation Builder</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-xs text-muted-foreground">Create custom remediation scripts and assign them to remediation groups or host groups. Specify OS target and risk level.</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-medium mb-1 block">Remediation Name</label>
+                        <Input placeholder="e.g., Reset Docker Service" className="h-8 text-sm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium mb-1 block">Target OS</label>
+                        <div className="flex gap-2">
+                          {["All", "Windows", "macOS"].map(os => (
+                            <button key={os} className="px-3 py-1 rounded border text-xs hover:bg-muted/30 transition-colors">{os === "All" ? "🌐" : os === "Windows" ? "🪟" : "🍎"} {os}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium mb-1 block">Risk Level</label>
+                        <div className="flex gap-2">
+                          {[{ l: "Low", c: "bg-green-100 text-green-800" }, { l: "Medium", c: "bg-amber-100 text-amber-800" }, { l: "High", c: "bg-red-100 text-red-800" }].map(r => (
+                            <button key={r.l} className={`px-3 py-1 rounded text-xs ${r.c}`}>{r.l}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium mb-1 block">Assign to Host Groups</label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {["Engineering Workstations", "Finance Desktops", "Mac Fleet", "All Devices"].map(hg => (
+                            <Badge key={hg} variant="outline" className="text-[10px] cursor-pointer hover:bg-muted/30">{hg}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium mb-1 block">Script (PowerShell / Zsh)</label>
+                      <div className="bg-gray-950 rounded-lg p-3 h-48">
+                        <textarea className="w-full h-full bg-transparent text-green-400 font-mono text-xs resize-none focus:outline-none" placeholder="# Enter your remediation script here..." />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" size="sm">Test on Device</Button>
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">Save Remediation</Button>
+                  </div>
+                </CardContent>
+              </Card>
+              </>)}
             </div>
-          )}
+          ); })()}
 
         </div>
       </main>
