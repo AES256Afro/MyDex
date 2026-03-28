@@ -15,6 +15,7 @@ import {
   Sparkles, BatteryCharging, Volume2, Bluetooth, MousePointer,
   Keyboard, Eye, Shield, LifeBuoy, Loader2, AlertTriangle, X,
   ScrollText, ChevronDown, ChevronUp, MessageCircle, Send, ArrowLeft,
+  Star, BarChart3, TrendingUp, AlertOctagon,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -56,12 +57,33 @@ interface TicketData {
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string;
+  slaResponseDue?: string;
+  slaResolutionDue?: string;
+  slaResponseBreached?: boolean;
+  slaResolutionBreached?: boolean;
+  firstResponseAt?: string;
+  satisfactionRating?: number | null;
   submitter: { id: string; name: string; email: string; image?: string };
   assignee?: { id: string; name: string; email: string } | null;
   device?: { id: string; hostname: string; platform: string } | null;
   deviceInfo?: Record<string, unknown> | null;
   messages?: { user: { name: string }; createdAt: string }[];
   _count?: { messages: number };
+}
+
+interface AgentMetric {
+  id: string; name: string; email: string;
+  totalAssigned: number; resolved: number; closed: number;
+  avgResponseMinutes: number | null; avgResolutionMinutes: number | null;
+  avgSatisfaction: number | null; totalRatings: number;
+  slaBreaches: number; resolutionRate: number;
+}
+
+interface OrgMetrics {
+  totalTickets: number; resolvedTickets: number; activeTickets: number;
+  breachedTickets: number; avgSatisfaction: number | null; totalRatings: number;
+  overdueResponse: number; overdueResolution: number;
+  slaTargets: Record<string, { responseMinutes: number; resolutionMinutes: number }>;
 }
 
 interface TicketMessageData {
@@ -119,7 +141,7 @@ const defaultRemediationGroups = [
 
 export default function ITSupportPage() {
   const { data: session } = useSession();
-  const [activeTab, setActiveTab] = useState<"queue" | "tickets" | "submit" | "selfservice" | "config">("queue");
+  const [activeTab, setActiveTab] = useState<"queue" | "tickets" | "submit" | "selfservice" | "metrics" | "config">("queue");
   const [selfServiceFilter, setSelfServiceFilter] = useState<"all" | "performance" | "network" | "display" | "apps" | "security" | "peripherals">("all");
   const [ranRemediations, setRanRemediations] = useState<Set<string>>(new Set());
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
@@ -145,6 +167,9 @@ export default function ITSupportPage() {
   const [isInternalNote, setIsInternalNote] = useState(false);
   const [ticketFilter, setTicketFilter] = useState<"all" | "active" | "mine">("active");
   const [submittingTicket, setSubmittingTicket] = useState(false);
+  const [orgMetrics, setOrgMetrics] = useState<OrgMetrics | null>(null);
+  const [agentMetrics, setAgentMetrics] = useState<AgentMetric[]>([]);
+  const [metricsLoading, setMetricsLoading] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -417,6 +442,51 @@ export default function ITSupportPage() {
     } catch { /* ignore */ }
   };
 
+  // Fetch metrics
+  const fetchMetrics = useCallback(async () => {
+    setMetricsLoading(true);
+    try {
+      const res = await fetch("/api/v1/tickets?metrics=true");
+      if (res.ok) {
+        const data = await res.json();
+        setOrgMetrics(data.metrics || null);
+        setAgentMetrics(data.agentMetrics || []);
+      }
+    } catch { /* ignore */ } finally {
+      setMetricsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "metrics") fetchMetrics();
+  }, [activeTab, fetchMetrics]);
+
+  // SLA helper: time remaining or overdue
+  const getSlaStatus = (dueDate?: string, breached?: boolean) => {
+    if (!dueDate) return null;
+    const now = Date.now();
+    const due = new Date(dueDate).getTime();
+    const diff = due - now;
+    if (breached || diff < 0) {
+      const overdue = Math.abs(diff);
+      const hours = Math.floor(overdue / 3600000);
+      const mins = Math.floor((overdue % 3600000) / 60000);
+      return { overdue: true, text: hours > 0 ? `${hours}h ${mins}m overdue` : `${mins}m overdue`, color: "text-red-600" };
+    }
+    const hours = Math.floor(diff / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    const urgent = diff < 3600000; // less than 1 hour
+    return { overdue: false, text: hours > 0 ? `${hours}h ${mins}m left` : `${mins}m left`, color: urgent ? "text-orange-600" : "text-green-600" };
+  };
+
+  const formatMinutes = (mins: number | null) => {
+    if (mins === null) return "--";
+    if (mins < 60) return `${mins}m`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  };
+
   useEffect(() => {
     if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
   }, [ticketMessages]);
@@ -459,6 +529,7 @@ export default function ITSupportPage() {
           { id: "tickets" as const, label: "Support Tickets", icon: ClipboardList },
           { id: "submit" as const, label: "Submit Ticket", icon: UserPlus },
           { id: "selfservice" as const, label: "Self-Service Fix", icon: LifeBuoy },
+          { id: "metrics" as const, label: "Metrics", icon: BarChart3 },
           { id: "config" as const, label: "Configuration", icon: Settings },
         ]).map((tab) => (
           <button
@@ -685,6 +756,36 @@ export default function ITSupportPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* SLA Timer Bar */}
+                  {["OPEN", "IN_PROGRESS", "WAITING_ON_USER", "WAITING_ON_IT"].includes(ticket.status) && (
+                    <div className="flex gap-3">
+                      {!ticket.firstResponseAt && (() => {
+                        const sla = getSlaStatus(ticket.slaResponseDue, ticket.slaResponseBreached);
+                        return sla ? (
+                          <div className={`flex-1 rounded-lg border p-2 ${sla.overdue ? "border-red-300 bg-red-50 dark:bg-red-950/20" : "border-green-300 bg-green-50 dark:bg-green-950/20"}`}>
+                            <div className="text-[10px] text-muted-foreground">First Response SLA</div>
+                            <div className={`text-sm font-bold ${sla.color}`}>{sla.text}</div>
+                          </div>
+                        ) : null;
+                      })()}
+                      {(() => {
+                        const sla = getSlaStatus(ticket.slaResolutionDue, ticket.slaResolutionBreached);
+                        return sla ? (
+                          <div className={`flex-1 rounded-lg border p-2 ${sla.overdue ? "border-red-300 bg-red-50 dark:bg-red-950/20" : "border-blue-300 bg-blue-50 dark:bg-blue-950/20"}`}>
+                            <div className="text-[10px] text-muted-foreground">Resolution SLA</div>
+                            <div className={`text-sm font-bold ${sla.color}`}>{sla.text}</div>
+                          </div>
+                        ) : null;
+                      })()}
+                      {ticket.firstResponseAt && (
+                        <div className="flex-1 rounded-lg border p-2 border-green-300 bg-green-50 dark:bg-green-950/20">
+                          <div className="text-[10px] text-muted-foreground">First Response</div>
+                          <div className="text-sm font-bold text-green-600">{formatMinutes(Math.round((new Date(ticket.firstResponseAt).getTime() - new Date(ticket.createdAt).getTime()) / 60000))}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Ticket info row */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {ticket.reason && <div className="rounded-lg border p-2"><div className="text-[10px] text-muted-foreground">Issue</div><div className="text-sm font-medium">{ticket.reason}</div></div>}
@@ -812,8 +913,22 @@ export default function ITSupportPage() {
                                 <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" />{ticket._count.messages}</span>
                               )}
                               {ticket.assignee && <span className="text-blue-600">Assigned: {ticket.assignee.name}</span>}
+                              {ticket.satisfactionRating && (
+                                <span className="flex items-center gap-0.5">{[1,2,3,4,5].map(s => <Star key={s} className={`h-2.5 w-2.5 ${s <= ticket.satisfactionRating! ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />)}</span>
+                              )}
                             </div>
                           </div>
+                          {/* SLA indicator */}
+                          {["OPEN", "IN_PROGRESS", "WAITING_ON_USER", "WAITING_ON_IT"].includes(ticket.status) && (() => {
+                            const responseSla = !ticket.firstResponseAt ? getSlaStatus(ticket.slaResponseDue, ticket.slaResponseBreached) : null;
+                            const resolutionSla = getSlaStatus(ticket.slaResolutionDue, ticket.slaResolutionBreached);
+                            const sla = responseSla || resolutionSla;
+                            return sla ? (
+                              <div className={`text-[10px] font-medium shrink-0 ${sla.color}`}>
+                                {responseSla ? <><AlertOctagon className="h-3 w-3 inline mr-0.5" />Respond: {sla.text}</> : <>Resolve: {sla.text}</>}
+                              </div>
+                            ) : null;
+                          })()}
                           <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                         </button>
                       );
@@ -1123,6 +1238,141 @@ export default function ITSupportPage() {
           </>
         );
       })()}
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* TAB: METRICS                                                  */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {activeTab === "metrics" && (
+        <>
+          {metricsLoading ? (
+            <div className="text-center py-12"><Loader2 className="h-6 w-6 mx-auto animate-spin text-muted-foreground" /></div>
+          ) : (
+            <>
+              {/* Org-wide KPIs */}
+              <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-8">
+                {[
+                  { label: "Total Tickets", value: String(orgMetrics?.totalTickets || 0), icon: ClipboardList, color: "text-blue-600" },
+                  { label: "Resolved", value: String(orgMetrics?.resolvedTickets || 0), icon: CheckCircle, color: "text-green-600" },
+                  { label: "Active", value: String(orgMetrics?.activeTickets || 0), icon: Activity, color: "text-amber-600" },
+                  { label: "SLA Breaches", value: String(orgMetrics?.breachedTickets || 0), icon: AlertOctagon, color: orgMetrics?.breachedTickets ? "text-red-600" : "text-green-600" },
+                  { label: "Overdue Response", value: String(orgMetrics?.overdueResponse || 0), icon: Clock, color: orgMetrics?.overdueResponse ? "text-red-600" : "text-green-600" },
+                  { label: "Overdue Resolution", value: String(orgMetrics?.overdueResolution || 0), icon: Timer, color: orgMetrics?.overdueResolution ? "text-red-600" : "text-green-600" },
+                  { label: "Avg Satisfaction", value: orgMetrics?.avgSatisfaction ? `${orgMetrics.avgSatisfaction}/5` : "--", icon: Star, color: "text-yellow-600" },
+                  { label: "Total Ratings", value: String(orgMetrics?.totalRatings || 0), icon: TrendingUp, color: "text-purple-600" },
+                ].map(s => (
+                  <Card key={s.label}>
+                    <CardContent className="pt-4 pb-3 text-center">
+                      <s.icon className={`h-4 w-4 mx-auto mb-1 ${s.color}`} />
+                      <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
+                      <div className="text-[10px] text-muted-foreground">{s.label}</div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* SLA Targets Reference */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2"><Clock className="h-5 w-5 text-blue-500" /> SLA Targets (ITIL/HDI Standard)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 md:grid-cols-4">
+                    {[
+                      { priority: "URGENT", response: "15 min", resolution: "4 hours", color: "border-red-300 bg-red-50 dark:bg-red-950/20" },
+                      { priority: "HIGH", response: "1 hour", resolution: "8 hours", color: "border-orange-300 bg-orange-50 dark:bg-orange-950/20" },
+                      { priority: "MEDIUM", response: "4 hours", resolution: "24 hours", color: "border-blue-300 bg-blue-50 dark:bg-blue-950/20" },
+                      { priority: "LOW", response: "8 hours", resolution: "48 hours", color: "border-gray-300 bg-gray-50 dark:bg-gray-950/20" },
+                    ].map(sla => (
+                      <div key={sla.priority} className={`rounded-lg border p-3 ${sla.color}`}>
+                        <div className="text-sm font-bold mb-2">{sla.priority}</div>
+                        <div className="text-xs space-y-1">
+                          <div className="flex justify-between"><span className="text-muted-foreground">First Response</span><span className="font-medium">{sla.response}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Resolution</span><span className="font-medium">{sla.resolution}</span></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Agent Performance Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2"><BarChart3 className="h-5 w-5 text-indigo-500" /> IT Staff Performance</CardTitle>
+                  <p className="text-xs text-muted-foreground">Individual metrics for each IT support agent. Based on assigned and resolved tickets.</p>
+                </CardHeader>
+                <CardContent>
+                  {agentMetrics.length === 0 ? (
+                    <div className="text-center py-8 text-sm text-muted-foreground">
+                      No agent data yet. Assign tickets to IT staff to start tracking performance.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-left text-xs text-muted-foreground">
+                            <th className="pb-2 pr-4">Agent</th>
+                            <th className="pb-2 px-2 text-center">Assigned</th>
+                            <th className="pb-2 px-2 text-center">Resolved</th>
+                            <th className="pb-2 px-2 text-center">Resolution Rate</th>
+                            <th className="pb-2 px-2 text-center">Avg Response</th>
+                            <th className="pb-2 px-2 text-center">Avg Resolution</th>
+                            <th className="pb-2 px-2 text-center">SLA Breaches</th>
+                            <th className="pb-2 px-2 text-center">Satisfaction</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {agentMetrics.map(agent => (
+                            <tr key={agent.id} className="border-b hover:bg-muted/20">
+                              <td className="py-3 pr-4">
+                                <div className="font-medium">{agent.name}</div>
+                                <div className="text-[10px] text-muted-foreground">{agent.email}</div>
+                              </td>
+                              <td className="px-2 text-center font-medium">{agent.totalAssigned}</td>
+                              <td className="px-2 text-center font-medium text-green-600">{agent.resolved}</td>
+                              <td className="px-2 text-center">
+                                <Badge className={`text-[10px] ${agent.resolutionRate >= 80 ? "bg-green-100 text-green-800" : agent.resolutionRate >= 50 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}`}>
+                                  {agent.resolutionRate}%
+                                </Badge>
+                              </td>
+                              <td className="px-2 text-center">
+                                <span className={agent.avgResponseMinutes !== null && agent.avgResponseMinutes > 240 ? "text-red-600 font-medium" : ""}>
+                                  {formatMinutes(agent.avgResponseMinutes)}
+                                </span>
+                              </td>
+                              <td className="px-2 text-center">
+                                <span className={agent.avgResolutionMinutes !== null && agent.avgResolutionMinutes > 1440 ? "text-red-600 font-medium" : ""}>
+                                  {formatMinutes(agent.avgResolutionMinutes)}
+                                </span>
+                              </td>
+                              <td className="px-2 text-center">
+                                <span className={agent.slaBreaches > 0 ? "text-red-600 font-medium" : "text-green-600"}>
+                                  {agent.slaBreaches}
+                                </span>
+                              </td>
+                              <td className="px-2 text-center">
+                                {agent.avgSatisfaction ? (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <span className="font-medium">{agent.avgSatisfaction}</span>
+                                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                    <span className="text-[10px] text-muted-foreground">({agent.totalRatings})</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">--</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </>
+      )}
 
       {/* TAB: CONFIGURATION                                         */}
       {/* ═══════════════════════════════════════════════════════════ */}
