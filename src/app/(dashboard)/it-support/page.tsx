@@ -165,8 +165,10 @@ export default function ITSupportPage() {
   const [newMessage, setNewMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isInternalNote, setIsInternalNote] = useState(false);
-  const [ticketFilter, setTicketFilter] = useState<"all" | "active" | "mine">("active");
+  const [ticketFilter, setTicketFilter] = useState<"all" | "active" | "mine">("all");
   const [submittingTicket, setSubmittingTicket] = useState(false);
+  const [assignTo, setAssignTo] = useState<string>("");
+  const [orgUsers, setOrgUsers] = useState<{ id: string; name: string; email: string; role: string }[]>([]);
   const [orgMetrics, setOrgMetrics] = useState<OrgMetrics | null>(null);
   const [agentMetrics, setAgentMetrics] = useState<AgentMetric[]>([]);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -190,6 +192,20 @@ export default function ITSupportPage() {
       }
     }
     fetchDevices();
+
+    // Fetch org users for assignment dropdown
+    async function fetchOrgUsers() {
+      try {
+        const res = await fetch("/api/v1/employees");
+        if (res.ok) {
+          const data = await res.json();
+          setOrgUsers((data.employees || data || []).map((u: { id: string; name: string; email: string; role: string }) => ({
+            id: u.id, name: u.name, email: u.email, role: u.role,
+          })));
+        }
+      } catch { /* ignore */ }
+    }
+    fetchOrgUsers();
   }, []);
 
   const device = selectedDevice ? devices.find(d => d.hostname === selectedDevice) : null;
@@ -370,12 +386,14 @@ export default function ITSupportPage() {
           description: fullDescription,
           deviceId: dev?.id,
           deviceInfo: dev ? { hostname: dev.hostname, platform: dev.platform, ipAddress: dev.ipAddress } : undefined,
+          assignedTo: assignTo || undefined,
         }),
       });
       if (res.ok) {
         setSelectedReason(null);
         setSelectedApp(null);
         setTicketDescription("");
+        setAssignTo("");
         setActiveTab("tickets");
         fetchTickets();
       } else {
@@ -863,80 +881,139 @@ export default function ITSupportPage() {
               </Card>
             );
           })() : (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2"><ClipboardList className="h-5 w-5 text-amber-500" /> Support Tickets</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1 bg-muted/50 p-0.5 rounded-md">
-                      {([{ id: "active" as const, label: "Active" }, { id: "all" as const, label: "All" }, { id: "mine" as const, label: "My Tickets" }]).map(f => (
-                        <button key={f.id} onClick={() => setTicketFilter(f.id)}
-                          className={`text-xs px-2 py-1 rounded ${ticketFilter === f.id ? "bg-background shadow font-medium" : "text-muted-foreground hover:text-foreground"}`}>{f.label}</button>
-                      ))}
+            (() => {
+              const statusColors: Record<string, string> = { OPEN: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200", IN_PROGRESS: "bg-amber-100 text-amber-800", WAITING_ON_USER: "bg-orange-100 text-orange-800", WAITING_ON_IT: "bg-purple-100 text-purple-800", RESOLVED: "bg-green-100 text-green-800", CLOSED: "bg-gray-100 text-gray-800" };
+              const priorityColors: Record<string, string> = { LOW: "", MEDIUM: "", HIGH: "border-orange-300", URGENT: "border-red-400 bg-red-50/30 dark:bg-red-950/20" };
+              const openTickets = tickets.filter(t => !["RESOLVED", "CLOSED"].includes(t.status));
+              const resolvedTickets = tickets.filter(t => t.status === "RESOLVED");
+              const closedTickets = tickets.filter(t => t.status === "CLOSED");
+
+              const renderTicket = (ticket: TicketData) => (
+                <button key={ticket.id} onClick={() => { setViewingTicket(ticket.id); fetchMessages(ticket.id); }}
+                  className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left hover:bg-muted/30 transition-colors ${priorityColors[ticket.priority] || ""}`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium truncate">{ticket.subject}</span>
+                      <Badge className={`text-[10px] shrink-0 ${statusColors[ticket.status] || ""}`}>{ticket.status.replace(/_/g, " ")}</Badge>
+                      {ticket.priority === "HIGH" && <Badge className="text-[10px] bg-orange-100 text-orange-700 shrink-0">HIGH</Badge>}
+                      {ticket.priority === "URGENT" && <Badge className="text-[10px] bg-red-100 text-red-700 shrink-0">URGENT</Badge>}
                     </div>
-                    <Button size="sm" onClick={() => setActiveTab("submit")}><UserPlus className="h-3.5 w-3.5 mr-1.5" /> New Ticket</Button>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                      <span>{ticket.submitter.name}</span>
+                      {ticket.device && <span>{ticket.device.hostname}</span>}
+                      <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
+                      {ticket._count && ticket._count.messages > 0 && (
+                        <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" />{ticket._count.messages}</span>
+                      )}
+                      {ticket.assignee && <span className="text-blue-600">Assigned: {ticket.assignee.name}</span>}
+                      {ticket.satisfactionRating && (
+                        <span className="flex items-center gap-0.5">{[1,2,3,4,5].map(s => <Star key={s} className={`h-2.5 w-2.5 ${s <= ticket.satisfactionRating! ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />)}</span>
+                      )}
+                    </div>
                   </div>
+                  {/* SLA indicator */}
+                  {["OPEN", "IN_PROGRESS", "WAITING_ON_USER", "WAITING_ON_IT"].includes(ticket.status) && (() => {
+                    const responseSla = !ticket.firstResponseAt ? getSlaStatus(ticket.slaResponseDue, ticket.slaResponseBreached) : null;
+                    const resolutionSla = getSlaStatus(ticket.slaResolutionDue, ticket.slaResolutionBreached);
+                    const sla = responseSla || resolutionSla;
+                    return sla ? (
+                      <div className={`text-[10px] font-medium shrink-0 ${sla.color}`}>
+                        {responseSla ? <><AlertOctagon className="h-3 w-3 inline mr-0.5" />Respond: {sla.text}</> : <>Resolve: {sla.text}</>}
+                      </div>
+                    ) : null;
+                  })()}
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                </button>
+              );
+
+              return (
+                <div className="space-y-6">
+                  {/* Header with filters */}
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold flex items-center gap-2"><ClipboardList className="h-5 w-5 text-amber-500" /> Support Tickets</h2>
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1 bg-muted/50 p-0.5 rounded-md">
+                        {([{ id: "active" as const, label: "Active" }, { id: "all" as const, label: "All" }, { id: "mine" as const, label: "My Tickets" }]).map(f => (
+                          <button key={f.id} onClick={() => setTicketFilter(f.id)}
+                            className={`text-xs px-2 py-1 rounded ${ticketFilter === f.id ? "bg-background shadow font-medium" : "text-muted-foreground hover:text-foreground"}`}>{f.label}</button>
+                        ))}
+                      </div>
+                      <Button size="sm" onClick={() => setActiveTab("submit")}><UserPlus className="h-3.5 w-3.5 mr-1.5" /> New Ticket</Button>
+                    </div>
+                  </div>
+
+                  {ticketsLoading ? (
+                    <Card><CardContent className="py-8"><div className="text-center"><Loader2 className="h-6 w-6 mx-auto animate-spin text-muted-foreground" /></div></CardContent></Card>
+                  ) : tickets.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-12">
+                        <div className="text-center">
+                          <ClipboardList className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+                          <p className="text-sm font-medium">No support tickets yet</p>
+                          <p className="text-xs text-muted-foreground mt-1">Tickets submitted by users will appear here with device info, network data, and app details.</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <>
+                      {/* Open Tickets */}
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <Activity className="h-4 w-4 text-blue-500" />
+                            Open Tickets
+                            {openTickets.length > 0 && <Badge className="text-[10px] bg-blue-100 text-blue-800">{openTickets.length}</Badge>}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {openTickets.length === 0 ? (
+                            <div className="text-center py-6">
+                              <CheckCircle className="h-8 w-8 mx-auto text-green-400 mb-2" />
+                              <p className="text-sm font-medium text-muted-foreground">No Open Tickets</p>
+                              <p className="text-xs text-muted-foreground mt-1">All tickets are resolved or closed.</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">{openTickets.map(renderTicket)}</div>
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      {/* Resolved Tickets */}
+                      {resolvedTickets.length > 0 && (
+                        <Card>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-base flex items-center gap-2">
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                              Resolved Tickets
+                              <Badge className="text-[10px] bg-green-100 text-green-800">{resolvedTickets.length}</Badge>
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2">{resolvedTickets.map(renderTicket)}</div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Closed Tickets */}
+                      {closedTickets.length > 0 && (
+                        <Card>
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-base flex items-center gap-2">
+                              <XCircle className="h-4 w-4 text-gray-400" />
+                              Closed Tickets
+                              <Badge className="text-[10px] bg-gray-100 text-gray-800">{closedTickets.length}</Badge>
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2">{closedTickets.map(renderTicket)}</div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </>
+                  )}
                 </div>
-              </CardHeader>
-              <CardContent>
-                {ticketsLoading ? (
-                  <div className="text-center py-8"><Loader2 className="h-6 w-6 mx-auto animate-spin text-muted-foreground" /></div>
-                ) : tickets.length === 0 ? (
-                  <div className="text-center py-12">
-                    <ClipboardList className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-                    <p className="text-sm font-medium">No support tickets yet</p>
-                    <p className="text-xs text-muted-foreground mt-1">Tickets submitted by users will appear here with device info, network data, and app details.</p>
-                    <Button size="sm" className="mt-4" onClick={() => setActiveTab("submit")}>
-                      <UserPlus className="h-3.5 w-3.5 mr-1.5" /> Submit First Ticket
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {tickets.map((ticket) => {
-                      const statusColors: Record<string, string> = { OPEN: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200", IN_PROGRESS: "bg-amber-100 text-amber-800", WAITING_ON_USER: "bg-orange-100 text-orange-800", WAITING_ON_IT: "bg-purple-100 text-purple-800", RESOLVED: "bg-green-100 text-green-800", CLOSED: "bg-gray-100 text-gray-800" };
-                      const priorityColors: Record<string, string> = { LOW: "", MEDIUM: "", HIGH: "border-orange-300", URGENT: "border-red-400 bg-red-50/30 dark:bg-red-950/20" };
-                      return (
-                        <button key={ticket.id} onClick={() => { setViewingTicket(ticket.id); fetchMessages(ticket.id); }}
-                          className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left hover:bg-muted/30 transition-colors ${priorityColors[ticket.priority] || ""}`}>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium truncate">{ticket.subject}</span>
-                              <Badge className={`text-[10px] shrink-0 ${statusColors[ticket.status] || ""}`}>{ticket.status.replace(/_/g, " ")}</Badge>
-                              {ticket.priority === "HIGH" && <Badge className="text-[10px] bg-orange-100 text-orange-700 shrink-0">HIGH</Badge>}
-                              {ticket.priority === "URGENT" && <Badge className="text-[10px] bg-red-100 text-red-700 shrink-0">URGENT</Badge>}
-                            </div>
-                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                              <span>{ticket.submitter.name}</span>
-                              {ticket.device && <span>{ticket.device.hostname}</span>}
-                              <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
-                              {ticket._count && ticket._count.messages > 0 && (
-                                <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" />{ticket._count.messages}</span>
-                              )}
-                              {ticket.assignee && <span className="text-blue-600">Assigned: {ticket.assignee.name}</span>}
-                              {ticket.satisfactionRating && (
-                                <span className="flex items-center gap-0.5">{[1,2,3,4,5].map(s => <Star key={s} className={`h-2.5 w-2.5 ${s <= ticket.satisfactionRating! ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />)}</span>
-                              )}
-                            </div>
-                          </div>
-                          {/* SLA indicator */}
-                          {["OPEN", "IN_PROGRESS", "WAITING_ON_USER", "WAITING_ON_IT"].includes(ticket.status) && (() => {
-                            const responseSla = !ticket.firstResponseAt ? getSlaStatus(ticket.slaResponseDue, ticket.slaResponseBreached) : null;
-                            const resolutionSla = getSlaStatus(ticket.slaResolutionDue, ticket.slaResolutionBreached);
-                            const sla = responseSla || resolutionSla;
-                            return sla ? (
-                              <div className={`text-[10px] font-medium shrink-0 ${sla.color}`}>
-                                {responseSla ? <><AlertOctagon className="h-3 w-3 inline mr-0.5" />Respond: {sla.text}</> : <>Resolve: {sla.text}</>}
-                              </div>
-                            ) : null;
-                          })()}
-                          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              );
+            })()
           )}
         </>
       )}
@@ -1023,12 +1100,35 @@ export default function ITSupportPage() {
               <textarea value={ticketDescription} onChange={(e) => setTicketDescription(e.target.value)} placeholder="Describe the issue in more detail..." className="w-full h-24 rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
 
+            {/* Assign to */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Assign to <span className="text-muted-foreground font-normal">(optional)</span></label>
+              <select
+                value={assignTo}
+                onChange={(e) => setAssignTo(e.target.value)}
+                className="w-full max-w-sm h-10 rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Unassigned</option>
+                <optgroup label="IT Staff">
+                  {orgUsers.filter(u => u.role === "ADMIN" || u.role === "SUPER_ADMIN").map(u => (
+                    <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                  ))}
+                </optgroup>
+                <optgroup label="All Users">
+                  {orgUsers.filter(u => u.role !== "ADMIN" && u.role !== "SUPER_ADMIN").map(u => (
+                    <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+
             {/* Submit */}
             <div className="flex items-center justify-between pt-2">
               <div className="text-xs text-muted-foreground">
                 {selectedDevice && <span className="mr-3">Device: <strong>{selectedDevice}</strong></span>}
                 {selectedReason && <span className="mr-3">Issue: <strong>{stockReasons.find(r => r.id === selectedReason)?.label}</strong></span>}
-                {selectedApp && <span>App: <strong>{selectedApp}</strong></span>}
+                {selectedApp && <span className="mr-3">App: <strong>{selectedApp}</strong></span>}
+                {assignTo && <span>Assigned: <strong>{orgUsers.find(u => u.id === assignTo)?.name}</strong></span>}
               </div>
               <Button className="bg-blue-600 hover:bg-blue-700 text-white" disabled={!selectedReason || !selectedDevice || submittingTicket} onClick={submitTicket}>
                 {submittingTicket ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting...</> : <><ClipboardList className="h-4 w-4 mr-2" />Submit Ticket</>}
