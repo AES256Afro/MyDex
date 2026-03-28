@@ -484,6 +484,7 @@ const sectionGroups = [
       { id: "software-inventory", label: "Software Inventory", icon: Package },
       { id: "host-groups", label: "Host Groups", icon: Server },
       { id: "security", label: "Security", icon: Shield },
+      { id: "dlp", label: "DLP Policies", icon: ShieldCheck },
     ],
   },
   {
@@ -495,7 +496,8 @@ const sectionGroups = [
   {
     category: "IT SUPPORT",
     items: [
-      { id: "it-support", label: "IT Support", icon: Wrench },
+      { id: "support", label: "IT Support", icon: LifeBuoy },
+      { id: "it-support", label: "IT Admin Portal", icon: Wrench },
     ],
   },
   {
@@ -539,6 +541,7 @@ export default function DemoPage() {
   const [remediationGroups, setRemediationGroups] = useState(mockRemediationGroups);
   const [editingNewReason, setEditingNewReason] = useState(false);
   const [newReasonLabel, setNewReasonLabel] = useState("");
+  const [supportTab, setSupportTab] = useState<"mydevice" | "selfservice" | "submit" | "tickets">("mydevice");
 
   const onlineCount = mockDevices.filter((d) => d.status === "ONLINE").length;
   const totalCves = mockDevices.reduce((s, d) => s + d.openCves, 0);
@@ -1702,6 +1705,130 @@ export default function DemoPage() {
             </div>
           )}
 
+          {/* ═══ DLP POLICIES ═══ */}
+          {activeSection === "dlp" && (() => {
+            const dlpTemplates = [
+              { name: "Social Security Numbers", icon: FileText, color: "text-red-600", bg: "bg-red-50", category: "PII", severity: "high", desc: "Detects SSN patterns (XXX-XX-XXXX) in documents, emails, and file transfers.", rules: "Pattern: \\b\\d{3}-\\d{2}-\\d{4}\\b\nScope: All outbound transfers\nAction: Block + Alert" },
+              { name: "Credit Card Numbers", icon: Globe, color: "text-amber-600", bg: "bg-amber-50", category: "Financial", severity: "high", desc: "Identifies credit card numbers using Luhn validation across all file types.", rules: "Pattern: \\b(?:\\d{4}[- ]?){3}\\d{4}\\b\nValidation: Luhn checksum\nAction: Block + Alert" },
+              { name: "API Keys & Secrets", icon: KeyRound, color: "text-purple-600", bg: "bg-purple-50", category: "Credentials", severity: "high", desc: "Catches exposed API keys, tokens, and private keys in file transfers and messages.", rules: "Patterns: AKIA[0-9A-Z]{16}, ghp_[a-zA-Z0-9]{36}, sk-[a-zA-Z0-9]{48}\nScope: Code repos, file uploads\nAction: Block + Alert" },
+              { name: "Source Code & IP Theft", icon: HardDrive, color: "text-blue-600", bg: "bg-blue-50", category: "IP Protection", severity: "medium", desc: "Prevents unauthorized transfer of proprietary source code and design documents.", rules: "File types: .py, .ts, .java, .cpp, .figma, .sketch\nScope: External transfers\nAction: Alert + Log" },
+            ];
+
+            const dlpPolicies = [
+              { id: "dlp1", name: "Sensitive Data Exfiltration", status: "Active", desc: "Blocks SSN, credit card, and PII patterns from leaving the organization", created: "2026-02-15", rules: "Patterns: SSN (\\d{3}-\\d{2}-\\d{4}), CC (Luhn-validated 16-digit), Email+Name combos\nChannels: Email attachments, Cloud uploads, USB transfers\nAction: Block transfer, Alert SOC team, Log event" },
+              { id: "dlp2", name: "API Key Leak Prevention", status: "Active", desc: "Detects exposed API keys, tokens, and private keys in file transfers", created: "2026-03-01", rules: "Patterns: AWS keys (AKIA...), GitHub tokens (ghp_...), OpenAI keys (sk-...)\nChannels: Git push, File sharing, Chat messages\nAction: Block transfer, Notify developer, Auto-rotate if possible" },
+            ];
+
+            const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null);
+            const [expandedPolicy, setExpandedPolicy] = useState<string | null>(null);
+
+            return (
+            <div className="space-y-6">
+              {/* Breadcrumbs */}
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <span className="cursor-pointer hover:text-foreground" onClick={() => setActiveSection("dashboard")}>Dashboard</span>
+                <ChevronRight className="h-3 w-3" />
+                <span className="cursor-pointer hover:text-foreground" onClick={() => setActiveSection("security")}>Security</span>
+                <ChevronRight className="h-3 w-3" />
+                <span className="text-foreground font-medium">DLP Policies</span>
+              </div>
+
+              {/* Header */}
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                  <ShieldCheck className="h-6 w-6 text-blue-600" /> DLP Policies
+                </h1>
+                <p className="text-muted-foreground text-sm">Define and manage Data Loss Prevention policies to protect sensitive information from unauthorized access and exfiltration.</p>
+              </div>
+
+              {/* How DLP Works */}
+              <Card className="bg-blue-50/60 border-blue-200">
+                <CardContent className="pt-5 pb-4">
+                  <div className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2"><Info className="h-4 w-4" /> How DLP Policies Work</div>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    {[
+                      { step: "1", title: "Define Rules", desc: "Create pattern-matching rules for sensitive data types like SSNs, credit cards, API keys, and source code." },
+                      { step: "2", title: "Monitor Activity", desc: "Policies continuously scan file transfers, emails, cloud uploads, and messaging channels." },
+                      { step: "3", title: "Alert or Block", desc: "When a match is found, the policy can alert the SOC team, block the transfer, or log the event." },
+                    ].map(s => (
+                      <div key={s.step} className="flex gap-3">
+                        <div className="flex-shrink-0 h-7 w-7 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center">{s.step}</div>
+                        <div>
+                          <div className="text-sm font-semibold text-blue-900">{s.title}</div>
+                          <p className="text-xs text-blue-700/80">{s.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Template Gallery */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Layers className="h-5 w-5 text-purple-500" /> Policy Templates</CardTitle><p className="text-sm text-muted-foreground">Pre-built templates for common data protection scenarios. Click &quot;Use Template&quot; to create a policy.</p></CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {dlpTemplates.map((t, i) => (
+                      <div key={i} className="border rounded-xl p-4 space-y-3 hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2.5 rounded-lg ${t.bg}`}><t.icon className={`h-5 w-5 ${t.color}`} /></div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-semibold">{t.name}</div>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <Badge variant="outline" className="text-[10px] px-1.5">{t.category}</Badge>
+                              <Badge className={`text-[10px] px-1.5 ${t.severity === "high" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>{t.severity}</Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{t.desc}</p>
+                        <button onClick={() => setExpandedTemplate(expandedTemplate === t.name ? null : t.name)} className="text-[11px] text-blue-600 hover:underline flex items-center gap-1">
+                          {expandedTemplate === t.name ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />} Rule Preview
+                        </button>
+                        {expandedTemplate === t.name && (
+                          <pre className="text-[10px] bg-muted/50 p-2 rounded-md whitespace-pre-wrap font-mono">{t.rules}</pre>
+                        )}
+                        <Button size="sm" variant="outline" className="w-full gap-1.5"><Play className="h-3.5 w-3.5" /> Use Template</Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Active Policies */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-green-500" /> Active Policies</CardTitle><p className="text-sm text-muted-foreground">Currently enforced DLP policies across your organization.</p></CardHeader>
+                <CardContent className="space-y-4">
+                  {dlpPolicies.map(p => (
+                    <div key={p.id} className="border rounded-xl p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <ShieldCheck className="h-5 w-5 text-green-500" />
+                          <div>
+                            <div className="text-sm font-semibold">{p.name}</div>
+                            <p className="text-xs text-muted-foreground">{p.desc}</p>
+                          </div>
+                        </div>
+                        <Badge className="bg-green-100 text-green-700">{p.status}</Badge>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">Created: {p.created}</div>
+                      <button onClick={() => setExpandedPolicy(expandedPolicy === p.id ? null : p.id)} className="text-[11px] text-blue-600 hover:underline flex items-center gap-1">
+                        {expandedPolicy === p.id ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />} View rules
+                      </button>
+                      {expandedPolicy === p.id && (
+                        <pre className="text-[10px] bg-muted/50 p-2 rounded-md whitespace-pre-wrap font-mono">{p.rules}</pre>
+                      )}
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" className="text-xs gap-1"><Pause className="h-3 w-3" /> Disable</Button>
+                        <Button size="sm" variant="outline" className="text-xs gap-1"><Settings className="h-3 w-3" /> Edit</Button>
+                        <Button size="sm" variant="outline" className="text-xs gap-1 text-red-600 hover:text-red-700"><Trash2 className="h-3 w-3" /> Delete</Button>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          ); })()}
+
           {/* ═══ SOFTWARE INVENTORY ═══ */}
           {activeSection === "software-inventory" && (
             <div className="space-y-6">
@@ -2665,7 +2792,232 @@ export default function DemoPage() {
             </div>
           )}
 
-          {/* ── IT SUPPORT ─────────────────────────────────────────────── */}
+          {/* ── USER IT SUPPORT ──────────────────────────────────────────── */}
+          {activeSection === "support" && (() => {
+            const myDevice = mockDevices[0];
+            const enabledReasons = stockReasons.filter(r => r.enabled);
+
+            type SelfRemedy = { id: string; title: string; desc: string; icon: React.ElementType; category: string; risk: "safe" | "low" | "medium"; os: "all" | "windows" | "macos"; steps: string[]; time: string };
+            const quickRemediations: SelfRemedy[] = [
+              { id: "sf1", title: "Clear Temporary Files", desc: "Free up disk space by removing cached and temp files", icon: Trash2, category: "performance", risk: "safe", os: "all", steps: ["Closes running temp file handles", "Deletes user-level temp files", "Reports space recovered"], time: "~30s" },
+              { id: "sf2", title: "Close Background Apps", desc: "Shut down heavy background processes eating memory", icon: CircleStop, category: "performance", risk: "safe", os: "all", steps: ["Scans for high-memory background processes", "Shows list before terminating", "Keeps essential services running"], time: "~10s" },
+              { id: "sf3", title: "Restart Explorer / Finder", desc: "Fix frozen desktop, taskbar, or file browser", icon: RefreshCw, category: "performance", risk: "safe", os: "all", steps: ["Gracefully restarts the shell", "Taskbar/Dock refreshes automatically"], time: "~5s" },
+              { id: "sf4", title: "Free Up RAM", desc: "Purge inactive memory and clear system caches", icon: BatteryCharging, category: "performance", risk: "safe", os: "all", steps: ["Flushes standby memory pages", "Clears file system cache"], time: "~15s" },
+              { id: "sf5", title: "Fix Internet Connection", desc: "Reset DNS cache and renew IP address", icon: Wifi, category: "network", risk: "safe", os: "all", steps: ["Flushes DNS resolver cache", "Releases and renews DHCP lease", "Tests connectivity"], time: "~20s" },
+              { id: "sf6", title: "Reset Wi-Fi Adapter", desc: "Turn Wi-Fi off and back on to fix connectivity issues", icon: WifiOff, category: "network", risk: "safe", os: "all", steps: ["Disables the Wi-Fi adapter", "Waits 5 seconds", "Re-enables and reconnects"], time: "~15s" },
+            ];
+
+            return (
+            <div className="space-y-6">
+              {/* Breadcrumbs */}
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <span className="cursor-pointer hover:text-foreground" onClick={() => setActiveSection("dashboard")}>Dashboard</span>
+                <ChevronRight className="h-3 w-3" />
+                <span className="text-foreground font-medium">IT Support</span>
+              </div>
+
+              {/* Header */}
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                  <LifeBuoy className="h-6 w-6 text-emerald-500" /> IT Support
+                </h1>
+                <p className="text-muted-foreground text-sm">View your device, fix common issues, and submit support tickets.</p>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex gap-1 bg-muted/50 p-1 rounded-lg w-fit">
+                {([
+                  { id: "mydevice" as const, label: "My Device", icon: Monitor },
+                  { id: "selfservice" as const, label: "Self-Service Fix", icon: Zap },
+                  { id: "submit" as const, label: "Submit Ticket", icon: ClipboardList },
+                  { id: "tickets" as const, label: "My Tickets", icon: FileText },
+                ] as const).map(tab => (
+                  <button key={tab.id} onClick={() => setSupportTab(tab.id)} className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors", supportTab === tab.id ? "bg-white shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
+                    <tab.icon className="h-4 w-4" />{tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* ── My Device Tab ─────────────────────────── */}
+              {supportTab === "mydevice" && (
+                <div className="space-y-6">
+                  {/* Device Overview */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2"><Monitor className="h-5 w-5 text-blue-500" /> Your Device</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <div className="space-y-1">
+                          <div className="text-xs text-muted-foreground">Hostname</div>
+                          <div className="text-sm font-semibold">{myDevice.hostname}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs text-muted-foreground">Platform</div>
+                          <div className="text-sm font-semibold">{myDevice.platform === "win32" ? "Windows" : "macOS"}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs text-muted-foreground">IP Address</div>
+                          <div className="text-sm font-semibold">{myDevice.ipAddress}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs text-muted-foreground">Status</div>
+                          <Badge className={myDevice.status === "ONLINE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>{myDevice.status}</Badge>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs text-muted-foreground">CPU</div>
+                          <div className="text-sm">{myDevice.cpuName}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs text-muted-foreground">RAM</div>
+                          <div className="text-sm">{myDevice.ramAvailGb.toFixed(1)} / {myDevice.ramTotalGb.toFixed(1)} GB available</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs text-muted-foreground">Uptime</div>
+                          <div className="text-sm">{Math.floor(myDevice.uptimeSeconds / 86400)}d {Math.floor((myDevice.uptimeSeconds % 86400) / 3600)}h</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs text-muted-foreground">Installed Software</div>
+                          <div className="text-sm">{myDevice.installedSoftware?.length ?? 0} apps</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Health Status */}
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <Card className="border-l-4 border-l-green-500">
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center gap-2 mb-1"><Shield className="h-4 w-4 text-green-500" /><span className="text-sm font-semibold">Antivirus</span></div>
+                        <Badge className="bg-green-100 text-green-700 text-xs">{myDevice.antivirusName || "Active"}</Badge>
+                        <p className="text-[10px] text-muted-foreground mt-1">{myDevice.defenderStatus === "enabled" ? "Real-time protection enabled" : "Check status"}</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-l-4 border-l-green-500">
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center gap-2 mb-1"><Flame className="h-4 w-4 text-green-500" /><span className="text-sm font-semibold">Firewall</span></div>
+                        <Badge className="bg-green-100 text-green-700 text-xs">Active</Badge>
+                        <p className="text-[10px] text-muted-foreground mt-1">Domain, Private & Public profiles enabled</p>
+                      </CardContent>
+                    </Card>
+                    <Card className={`border-l-4 ${(myDevice.pendingUpdates?.length ?? 0) > 0 ? "border-l-amber-500" : "border-l-green-500"}`}>
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center gap-2 mb-1"><RefreshCw className="h-4 w-4 text-amber-500" /><span className="text-sm font-semibold">Updates</span></div>
+                        <Badge className={(myDevice.pendingUpdates?.length ?? 0) > 0 ? "bg-amber-100 text-amber-700 text-xs" : "bg-green-100 text-green-700 text-xs"}>{(myDevice.pendingUpdates?.length ?? 0) > 0 ? `${myDevice.pendingUpdates?.length} pending` : "Up to date"}</Badge>
+                        <p className="text-[10px] text-muted-foreground mt-1">Last checked: {myDevice.lastUpdateDate}</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-l-4 border-l-green-500">
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-center gap-2 mb-1"><Activity className="h-4 w-4 text-green-500" /><span className="text-sm font-semibold">Stability</span></div>
+                        <Badge className="bg-green-100 text-green-700 text-xs">Stable</Badge>
+                        <p className="text-[10px] text-muted-foreground mt-1">No crashes in the last 7 days</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <Card>
+                    <CardHeader><CardTitle className="text-lg">Quick Actions</CardTitle></CardHeader>
+                    <CardContent className="flex gap-3">
+                      <Button variant="outline" onClick={() => setSupportTab("selfservice")} className="gap-2"><Zap className="h-4 w-4" /> Fix an Issue</Button>
+                      <Button variant="outline" onClick={() => setSupportTab("submit")} className="gap-2"><ClipboardList className="h-4 w-4" /> Submit a Ticket</Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Remediation History */}
+                  <Card>
+                    <CardHeader><CardTitle className="text-lg flex items-center gap-2"><RotateCcw className="h-5 w-5 text-muted-foreground" /> Remediation History</CardTitle></CardHeader>
+                    <CardContent>
+                      <div className="text-center py-8 text-muted-foreground">
+                        <RotateCcw className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                        <p className="text-sm">No remediations yet</p>
+                        <p className="text-xs">Self-service fixes you run will appear here.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* ── Self-Service Fix Tab ──────────────────── */}
+              {supportTab === "selfservice" && (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {quickRemediations.map(r => (
+                    <Card key={r.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="pt-5 pb-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-emerald-50"><r.icon className="h-5 w-5 text-emerald-600" /></div>
+                          <div>
+                            <div className="text-sm font-semibold">{r.title}</div>
+                            <div className="text-[10px] text-muted-foreground">{r.time} &middot; {r.risk === "safe" ? "Safe" : r.risk === "low" ? "Low risk" : "Medium risk"}</div>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{r.desc}</p>
+                        <div className="space-y-1">
+                          {r.steps.map((s, i) => (
+                            <div key={i} className="text-[10px] flex items-start gap-1.5"><CheckCircle className="h-3 w-3 text-green-400 mt-0.5 shrink-0" /><span>{s}</span></div>
+                          ))}
+                        </div>
+                        <Button size="sm" className="w-full gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"><Play className="h-3.5 w-3.5" /> Run Fix</Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {/* ── Submit Ticket Tab ─────────────────────── */}
+              {supportTab === "submit" && (
+                <Card>
+                  <CardHeader><CardTitle className="text-lg flex items-center gap-2"><ClipboardList className="h-5 w-5 text-blue-500" /> Submit a Support Ticket</CardTitle></CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Auto-detected device */}
+                    <div>
+                      <div className="text-sm font-medium mb-2">Your Device</div>
+                      <Badge variant="outline" className="gap-1.5 py-1.5 px-3"><Monitor className="h-3.5 w-3.5" /> {myDevice.hostname} &mdash; {myDevice.platform === "win32" ? "Windows" : "macOS"}</Badge>
+                    </div>
+
+                    {/* Reason grid */}
+                    <div>
+                      <div className="text-sm font-medium mb-2">What&apos;s the issue?</div>
+                      <div className="grid gap-2 grid-cols-2 md:grid-cols-3">
+                        {enabledReasons.map(r => (
+                          <button key={r.id} onClick={() => setSelectedStockReason(selectedStockReason === r.id ? null : r.id)}
+                            className={cn("text-left p-3 rounded-lg border text-sm transition-colors", selectedStockReason === r.id ? "border-blue-500 bg-blue-50 text-blue-700" : "hover:border-foreground/20")}>
+                            <span className="mr-1.5">{r.icon}</span>{r.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <div className="text-sm font-medium mb-2">Description <span className="text-muted-foreground font-normal">(optional)</span></div>
+                      <textarea className="w-full min-h-[100px] rounded-lg border p-3 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Describe the issue in more detail..." value={ticketDescription} onChange={e => setTicketDescription(e.target.value)} />
+                    </div>
+
+                    <Button className="gap-2" disabled={!selectedStockReason}><Upload className="h-4 w-4" /> Submit Ticket</Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* ── My Tickets Tab ────────────────────────── */}
+              {supportTab === "tickets" && (
+                <Card>
+                  <CardHeader><CardTitle className="text-lg flex items-center gap-2"><FileText className="h-5 w-5 text-muted-foreground" /> My Tickets</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">No tickets yet</p>
+                      <p className="text-xs mb-3">Tickets you submit will appear here.</p>
+                      <Button variant="outline" size="sm" onClick={() => setSupportTab("submit")} className="gap-1.5"><ClipboardList className="h-3.5 w-3.5" /> Submit a Ticket</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ); })()}
+
+          {/* ── IT ADMIN PORTAL ─────────────────────────────────────────────── */}
           {activeSection === "it-support" && (() => {
             const selectedDevice = selectedTicketDevice ? mockDevices.find(d => d.hostname === selectedTicketDevice) : null;
             const deviceApps = selectedDevice?.installedSoftware || [];
