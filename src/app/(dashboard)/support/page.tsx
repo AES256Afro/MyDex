@@ -1256,59 +1256,133 @@ export default function SupportPage() {
               </Card>
             );
           })() : (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2"><ClipboardList className="h-5 w-5 text-amber-500" /> My Tickets</CardTitle>
-                  <Button size="sm" onClick={() => setActiveTab("submit")}><UserPlus className="h-3.5 w-3.5 mr-1.5" /> New Ticket</Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {ticketsLoading ? (
-                  <div className="text-center py-8"><Loader2 className="h-6 w-6 mx-auto animate-spin text-muted-foreground" /></div>
-                ) : tickets.length === 0 ? (
-                  <div className="text-center py-12">
-                    <ClipboardList className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-                    <p className="text-sm font-medium">No tickets yet</p>
-                    <p className="text-xs text-muted-foreground mt-1">Tickets you submit will appear here so you can track their status.</p>
-                    <Button size="sm" className="mt-4" onClick={() => setActiveTab("submit")}>
-                      <UserPlus className="h-3.5 w-3.5 mr-1.5" /> Submit a Ticket
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {tickets.map((ticket) => {
-                      const statusColors: Record<string, string> = { OPEN: "bg-blue-100 text-blue-800", IN_PROGRESS: "bg-amber-100 text-amber-800", WAITING_ON_USER: "bg-orange-100 text-orange-800", WAITING_ON_IT: "bg-purple-100 text-purple-800", RESOLVED: "bg-green-100 text-green-800", CLOSED: "bg-gray-100 text-gray-800" };
-                      return (
-                        <button key={ticket.id} onClick={() => setViewingTicket(ticket.id)}
-                          className="w-full flex items-center gap-3 p-3 rounded-lg border text-left hover:bg-muted/30 transition-colors">
-                          <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xs font-semibold text-blue-700 dark:text-blue-300 shrink-0">
-                            {ticket.submitter.name.split(" ").map(n => n[0]).join("").toUpperCase()}
+            <div className="space-y-6">
+              {ticketsLoading ? (
+                <Card>
+                  <CardContent className="py-8">
+                    <div className="text-center"><Loader2 className="h-6 w-6 mx-auto animate-spin text-muted-foreground" /></div>
+                  </CardContent>
+                </Card>
+              ) : tickets.length === 0 ? (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg flex items-center gap-2"><ClipboardList className="h-5 w-5 text-amber-500" /> My Tickets</CardTitle>
+                      <Button size="sm" onClick={() => setActiveTab("submit")}><UserPlus className="h-3.5 w-3.5 mr-1.5" /> New Ticket</Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-12">
+                      <ClipboardList className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+                      <p className="text-sm font-medium">No tickets yet</p>
+                      <p className="text-xs text-muted-foreground mt-1">Tickets you submit will appear here so you can track their status.</p>
+                      <Button size="sm" className="mt-4" onClick={() => setActiveTab("submit")}>
+                        <UserPlus className="h-3.5 w-3.5 mr-1.5" /> Submit a Ticket
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (() => {
+                const statusColors: Record<string, string> = { OPEN: "bg-blue-100 text-blue-800", IN_PROGRESS: "bg-amber-100 text-amber-800", WAITING_ON_USER: "bg-orange-100 text-orange-800", WAITING_ON_IT: "bg-purple-100 text-purple-800", RESOLVED: "bg-green-100 text-green-800", CLOSED: "bg-gray-100 text-gray-800" };
+                const openTickets = tickets.filter(t => !["RESOLVED", "CLOSED"].includes(t.status));
+                const resolvedTickets = tickets.filter(t => t.status === "RESOLVED");
+                const closedTickets = tickets.filter(t => t.status === "CLOSED");
+
+                const renderTicket = (ticket: TicketData) => (
+                  <button key={ticket.id} onClick={() => setViewingTicket(ticket.id)}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg border text-left hover:bg-muted/30 transition-colors">
+                    <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xs font-semibold text-blue-700 dark:text-blue-300 shrink-0">
+                      {ticket.submitter.name.split(" ").map(n => n[0]).join("").toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium truncate">{ticket.subject}</span>
+                        <Badge className={`text-[10px] shrink-0 ${statusColors[ticket.status] || "bg-gray-100 text-gray-800"}`}>{ticket.status.replace(/_/g, " ")}</Badge>
+                        <Badge variant="outline" className="text-[10px] shrink-0">{ticket.priority}</Badge>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                        <span className="font-medium text-foreground/70">{ticket.submitter.name}</span>
+                        {ticket.device && <span className="flex items-center gap-1"><Monitor className="h-3 w-3" />{ticket.device.hostname}</span>}
+                        <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
+                        {ticket._count && ticket._count.messages > 0 && (
+                          <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" />{ticket._count.messages}</span>
+                        )}
+                        {ticket.assignee && <span className="flex items-center gap-1"><Shield className="h-3 w-3" />{ticket.assignee.name}</span>}
+                        {ticket.satisfactionRating && (
+                          <span className="flex items-center gap-0.5">
+                            {[1,2,3,4,5].map(s => (
+                              <Star key={s} className={`h-3 w-3 ${s <= ticket.satisfactionRating! ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                            ))}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  </button>
+                );
+
+                return (
+                  <>
+                    {/* Open Tickets */}
+                    <Card>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <Activity className="h-5 w-5 text-blue-500" />
+                            Open Tickets
+                            {openTickets.length > 0 && <Badge className="text-[10px] bg-blue-100 text-blue-800">{openTickets.length}</Badge>}
+                          </CardTitle>
+                          <Button size="sm" onClick={() => setActiveTab("submit")}><UserPlus className="h-3.5 w-3.5 mr-1.5" /> New Ticket</Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        {openTickets.length === 0 ? (
+                          <div className="text-center py-8">
+                            <CheckCircle className="h-8 w-8 mx-auto text-green-400 mb-3" />
+                            <p className="text-sm font-medium text-muted-foreground">No Open Tickets</p>
+                            <p className="text-xs text-muted-foreground mt-1">All caught up! Submit a new ticket if you need help.</p>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium truncate">{ticket.subject}</span>
-                              <Badge className={`text-[10px] shrink-0 ${statusColors[ticket.status] || "bg-gray-100 text-gray-800"}`}>{ticket.status.replace(/_/g, " ")}</Badge>
-                              <Badge variant="outline" className="text-[10px] shrink-0">{ticket.priority}</Badge>
-                            </div>
-                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                              <span className="font-medium text-foreground/70">{ticket.submitter.name}</span>
-                              {ticket.device && <span className="flex items-center gap-1"><Monitor className="h-3 w-3" />{ticket.device.hostname}</span>}
-                              <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
-                              {ticket._count && ticket._count.messages > 0 && (
-                                <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" />{ticket._count.messages}</span>
-                              )}
-                              {ticket.assignee && <span className="flex items-center gap-1"><Shield className="h-3 w-3" />{ticket.assignee.name}</span>}
-                            </div>
-                          </div>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                        ) : (
+                          <div className="space-y-2">{openTickets.map(renderTicket)}</div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Resolved Tickets */}
+                    {resolvedTickets.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                            Resolved Tickets
+                            <Badge className="text-[10px] bg-green-100 text-green-800">{resolvedTickets.length}</Badge>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">{resolvedTickets.map(renderTicket)}</div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Closed Tickets */}
+                    {closedTickets.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <XCircle className="h-5 w-5 text-gray-400" />
+                            Closed Tickets
+                            <Badge className="text-[10px] bg-gray-100 text-gray-800">{closedTickets.length}</Badge>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">{closedTickets.map(renderTicket)}</div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
           )}
         </>
       )}
