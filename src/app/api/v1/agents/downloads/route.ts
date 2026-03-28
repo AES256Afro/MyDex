@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFile, stat } from "fs/promises";
-import path from "path";
 
 /**
  * GET /api/v1/agents/downloads?platform=windows&format=exe
  *
- * Serves pre-built agent binaries for download.
- * Files are located in /agent/dist/ directory.
+ * Redirects to Cloudflare R2-hosted agent binaries for download.
+ * Files are stored in the mydex-agent-downloads R2 bucket.
+ *
+ * Set R2_PUBLIC_URL env var to your R2 public access domain, e.g.:
+ *   https://downloads.mydexnow.com
+ *   or https://pub-xxxxx.r2.dev
  */
 
 const AGENT_VERSION = "0.3.0";
 
-// Map of platform+format to the actual filename in agent/dist/
+// Map of platform+format to the actual filename in R2
 const ARTIFACT_MAP: Record<string, { filename: string; contentType: string }> = {
   "windows-exe": {
     filename: `MyDex-Agent-Setup-${AGENT_VERSION}.exe`,
@@ -69,36 +71,26 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Resolve path to agent/dist/
-  const distDir = path.resolve(process.cwd(), "agent", "dist");
-  const filePath = path.join(distDir, artifact.filename);
+  const r2PublicUrl = process.env.R2_PUBLIC_URL;
 
-  // Security: ensure we're not traversing outside dist/
-  if (!filePath.startsWith(distDir)) {
-    return NextResponse.json({ error: "Invalid path" }, { status: 400 });
-  }
-
-  try {
-    const fileStat = await stat(filePath);
-    const fileBuffer = await readFile(filePath);
-
-    return new NextResponse(fileBuffer, {
-      headers: {
-        "Content-Type": artifact.contentType,
-        "Content-Disposition": `attachment; filename="${artifact.filename}"`,
-        "Content-Length": fileStat.size.toString(),
-        "Cache-Control": "public, max-age=3600",
-        "X-Agent-Version": AGENT_VERSION,
-      },
-    });
-  } catch {
+  if (!r2PublicUrl) {
     return NextResponse.json(
       {
-        error: "Build not available",
-        message: `The ${platform} ${format} build has not been generated yet. Run 'npm run build:win' (or build:mac/build:linux) in the agent/ directory to create it.`,
-        filename: artifact.filename,
+        error: "Downloads not configured",
+        message: "R2_PUBLIC_URL environment variable is not set. Set it to your Cloudflare R2 public access domain.",
       },
-      { status: 404 }
+      { status: 503 }
     );
   }
+
+  // Construct R2 download URL: {R2_PUBLIC_URL}/v{version}/{filename}
+  const downloadUrl = `${r2PublicUrl.replace(/\/$/, "")}/v${AGENT_VERSION}/${artifact.filename}`;
+
+  // Redirect to R2 for the actual file download
+  return NextResponse.redirect(downloadUrl, {
+    headers: {
+      "X-Agent-Version": AGENT_VERSION,
+      "Cache-Control": "public, max-age=3600",
+    },
+  });
 }
