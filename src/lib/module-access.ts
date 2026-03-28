@@ -16,7 +16,7 @@ export interface ModuleConfig {
   /** Can this module be enabled for lower roles by admin? */
   configurable: boolean;
   /** Category for grouping in the admin config UI */
-  category: "core" | "monitoring" | "management" | "security" | "admin";
+  category: "core" | "monitoring" | "management" | "security" | "it-support" | "admin";
 }
 
 export const MODULE_REGISTRY: ModuleConfig[] = [
@@ -161,6 +161,17 @@ export const MODULE_REGISTRY: ModuleConfig[] = [
     minRole: "ADMIN",
     configurable: false,
     category: "security",
+  },
+
+  // IT Support
+  {
+    id: "it-support",
+    label: "IT Support",
+    href: "/it-support",
+    description: "Remediations, support tickets, and device troubleshooting",
+    minRole: "EMPLOYEE",
+    configurable: true,
+    category: "it-support",
   },
 
   // Admin — admin only
