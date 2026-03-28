@@ -17,7 +17,9 @@ import {
   Mail, UserPlus, Filter, MoreHorizontal, Check, X, Layers, Grid3X3,
   Briefcase, ClipboardList, Timer, Calendar, Coffee, Star, Download,
   UserCircle, Bell, Palette, Sun, Moon, Smartphone, Laptop,
-  Phone, Pause,
+  Phone, Pause, Wrench, Terminal, Zap, Leaf, RotateCcw, Recycle,
+  ShieldOff, KeyRound as CertIcon, HardDriveDownload, CircleStop,
+  Thermometer, WifiOff, PrinterIcon, FolderCog,
 } from "lucide-react";
 
 // ─── Mock Timestamps ─────────────────────────────────────────────────────────
@@ -414,6 +416,12 @@ const sectionGroups = [
       { id: "software-inventory", label: "Software Inventory", icon: Package },
       { id: "host-groups", label: "Host Groups", icon: Server },
       { id: "security", label: "Security", icon: Shield },
+    ],
+  },
+  {
+    category: "IT SUPPORT",
+    items: [
+      { id: "it-support", label: "IT Support", icon: Wrench },
     ],
   },
   {
@@ -2395,6 +2403,483 @@ export default function DemoPage() {
                     <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg"><div className="text-2xl font-bold text-green-600">{mockDevices.filter((d) => d.status === "ONLINE").length}</div><div className="text-xs text-muted-foreground">Online</div></div>
                     <div className="text-center p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg"><div className="text-2xl font-bold">{mockDevices.filter((d) => d.status === "OFFLINE").length}</div><div className="text-xs text-muted-foreground">Offline</div></div>
                     <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg"><div className="text-2xl font-bold text-blue-600">{mockDevices.length}</div><div className="text-xs text-muted-foreground">Total Enrolled</div></div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* ── IT SUPPORT ─────────────────────────────────────────────── */}
+          {activeSection === "it-support" && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                  <Wrench className="h-6 w-6" /> IT Support &amp; Remediation
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Resolve digital friction, enforce compliance, and maintain fleet health — remotely and at scale.
+                </p>
+              </div>
+
+              {/* ── KPI Stats ────────────────────────────────────────────── */}
+              <div className="grid gap-4 md:grid-cols-5">
+                {[
+                  { label: "Remediations Today", value: "47", icon: Wrench, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20" },
+                  { label: "Auto-Resolved", value: "34", icon: Zap, color: "text-green-600", bg: "bg-green-50 dark:bg-green-900/20" },
+                  { label: "Pending Approval", value: "8", icon: Clock, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-900/20" },
+                  { label: "Compliance Score", value: "96%", icon: ShieldCheck, color: "text-indigo-600", bg: "bg-indigo-50 dark:bg-indigo-900/20" },
+                  { label: "Avg Resolution", value: "< 2m", icon: Timer, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-900/20" },
+                ].map((stat) => (
+                  <Card key={stat.label}>
+                    <CardContent className="pt-4 pb-3 text-center">
+                      <stat.icon className={`h-5 w-5 mx-auto mb-1 ${stat.color}`} />
+                      <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
+                      <div className="text-xs text-muted-foreground">{stat.label}</div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* ── Advanced Capabilities ────────────────────────────────── */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-amber-500" /> Advanced Capabilities
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {[
+                      {
+                        title: "Offline Remediation",
+                        icon: WifiOff,
+                        color: "text-blue-600",
+                        bg: "bg-blue-50 dark:bg-blue-950/30",
+                        desc: "Execute security and maintenance scripts even when devices are disconnected from VPN or corporate network. Commands queue and execute on reconnect.",
+                        status: "Active",
+                        statusColor: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                      },
+                      {
+                        title: "Compliance Drift Monitoring",
+                        icon: ShieldAlert,
+                        color: "text-red-600",
+                        bg: "bg-red-50 dark:bg-red-950/30",
+                        desc: "Instant detection and automated correction of unauthorized registry changes, file modifications, or disabled security tools.",
+                        status: "3 Drifts Detected",
+                        statusColor: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+                      },
+                      {
+                        title: "Zero-Day Vulnerability Patching",
+                        icon: Bug,
+                        color: "text-orange-600",
+                        bg: "bg-orange-50 dark:bg-orange-950/30",
+                        desc: "Rapid deployment of patches or configuration changes across the entire fleet within minutes of a threat announcement.",
+                        status: "Ready",
+                        statusColor: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                      },
+                      {
+                        title: "Resource Reclamation",
+                        icon: Recycle,
+                        color: "text-teal-600",
+                        bg: "bg-teal-50 dark:bg-teal-950/30",
+                        desc: "Automated uninstallation of unused software licenses and killing of zombie processes to reclaim memory, CPU, and disk space.",
+                        status: "12 Licenses Freed",
+                        statusColor: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200",
+                      },
+                      {
+                        title: "Ransomware Rollback",
+                        icon: RotateCcw,
+                        color: "text-purple-600",
+                        bg: "bg-purple-50 dark:bg-purple-950/30",
+                        desc: "Detect anomalous file encryption patterns and automatically revert to a previous system state using VSS snapshots and Time Machine.",
+                        status: "Monitoring",
+                        statusColor: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                      },
+                      {
+                        title: "Sustainability & Carbon Reporting",
+                        icon: Leaf,
+                        color: "text-green-600",
+                        bg: "bg-green-50 dark:bg-green-950/30",
+                        desc: "Track power consumption and device age to optimize refresh cycles and reduce environmental footprint with carbon-equivalent metrics.",
+                        status: "38 tCO\u2082 Saved",
+                        statusColor: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                      },
+                    ].map((cap) => (
+                      <div key={cap.title} className={`rounded-xl border p-4 ${cap.bg}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <cap.icon className={`h-5 w-5 ${cap.color}`} />
+                            <span className="font-semibold text-sm">{cap.title}</span>
+                          </div>
+                          <Badge className={`text-[10px] ${cap.statusColor}`}>{cap.status}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{cap.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* ── Live Remediation Queue ───────────────────────────────── */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-green-500" /> Live Remediation Queue
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-muted-foreground text-xs uppercase tracking-wider">
+                          <th className="text-left pb-2 font-medium">Device</th>
+                          <th className="text-left pb-2 font-medium">Remediation</th>
+                          <th className="text-left pb-2 font-medium">Type</th>
+                          <th className="text-left pb-2 font-medium">Status</th>
+                          <th className="text-left pb-2 font-medium">Triggered</th>
+                          <th className="text-right pb-2 font-medium">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {[
+                          { device: "DESKTOP-JMILLER", remediation: "Clear Print Spooler", type: "Windows", status: "completed", time: "2m ago", auto: true },
+                          { device: "LAPTOP-SCHEN", remediation: "Flush DNS Cache", type: "macOS", status: "completed", time: "5m ago", auto: true },
+                          { device: "DESKTOP-JMILLER", remediation: "System File Repair (SFC)", type: "Windows", status: "running", time: "8m ago", auto: false },
+                          { device: "WS-TGARCIA", remediation: "Disk Cleanup (Temp Files)", type: "macOS", status: "completed", time: "12m ago", auto: true },
+                          { device: "MACBOOK-APATEL", remediation: "Spotlight Re-index", type: "macOS", status: "running", time: "15m ago", auto: false },
+                          { device: "DESKTOP-JMILLER", remediation: "Group Policy Refresh", type: "Windows", status: "queued", time: "1m ago", auto: true },
+                          { device: "MACBOOK-APATEL", remediation: "Reset TCC Permissions (Slack)", type: "macOS", status: "completed", time: "22m ago", auto: false },
+                          { device: "WS-TGARCIA", remediation: "Kill Zombie Processes (3)", type: "Cross-Platform", status: "completed", time: "30m ago", auto: true },
+                        ].map((item, i) => (
+                          <tr key={i} className="hover:bg-muted/30">
+                            <td className="py-2.5 font-medium">{item.device}</td>
+                            <td className="py-2.5">{item.remediation}</td>
+                            <td className="py-2.5">
+                              <Badge variant="outline" className="text-[10px]">
+                                {item.type === "Windows" ? "🪟" : item.type === "macOS" ? "🍎" : "🌐"} {item.type}
+                              </Badge>
+                            </td>
+                            <td className="py-2.5">
+                              {item.status === "completed" && <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-[10px]"><CheckCircle className="h-3 w-3 mr-1" />Complete</Badge>}
+                              {item.status === "running" && <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-[10px]"><RefreshCw className="h-3 w-3 mr-1 animate-spin" />Running</Badge>}
+                              {item.status === "queued" && <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 text-[10px]"><Clock className="h-3 w-3 mr-1" />Queued</Badge>}
+                            </td>
+                            <td className="py-2.5 text-muted-foreground text-xs">{item.time}</td>
+                            <td className="py-2.5 text-right">
+                              {item.auto ? (
+                                <Badge variant="outline" className="text-[10px] text-green-600 border-green-300"><Zap className="h-3 w-3 mr-1" />Auto</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px]">Manual</Badge>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* ── Cross-Platform Remediations ─────────────────────────── */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Globe className="h-5 w-5 text-blue-500" /> General / Cross-Platform Remediations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {[
+                      { title: "Process Management", icon: CircleStop, desc: "Terminate hung processes or those exceeding CPU/RAM thresholds", action: "Kill Process" },
+                      { title: "Disk Cleanup", icon: Trash2, desc: "Delete temp files, clear browser caches, and empty trash", action: "Run Cleanup" },
+                      { title: "Network Reset", icon: Wifi, desc: "Flush DNS cache and renew DHCP lease to resolve connectivity drops", action: "Reset Network" },
+                      { title: "Service Management", icon: FolderCog, desc: "Restart core background services (Print Spooler, MDM agents, etc.)", action: "Restart Service" },
+                      { title: "Time Sync (NTP)", icon: Clock, desc: "Force NTP sync to prevent SSO or certificate auth failures", action: "Sync Time" },
+                      { title: "Reboot Orchestration", icon: RefreshCw, desc: "Trigger restart with user-facing countdown and snooze options", action: "Schedule Reboot" },
+                    ].map((rem) => (
+                      <div key={rem.title} className="flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/30 transition-colors">
+                        <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                          <rem.icon className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium">{rem.title}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">{rem.desc}</div>
+                        </div>
+                        <Button size="sm" variant="outline" className="text-xs shrink-0">{rem.action}</Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* ── Windows Remediations ─────────────────────────────────── */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Monitor className="h-5 w-5 text-cyan-500" /> Windows Remediations <Badge variant="outline" className="text-[10px]">PowerShell</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {[
+                    {
+                      title: "Clear Print Spooler",
+                      desc: "Stops the service, purges the print queue, and restarts the service.",
+                      icon: PrinterIcon,
+                      code: `Stop-Service -Name Spooler -Force\nRemove-Item -Path "$env:SystemRoot\\System32\\spool\\PRINTERS\\*" -Force\nStart-Service -Name Spooler`,
+                      risk: "low",
+                    },
+                    {
+                      title: "System File Repair",
+                      desc: "Checks for and repairs corrupted OS components.",
+                      icon: HardDrive,
+                      code: `sfc /scannow\nDISM /Online /Cleanup-Image /RestoreHealth`,
+                      risk: "medium",
+                    },
+                    {
+                      title: "Network Reset",
+                      desc: "Flushes DNS cache and renews the DHCP lease.",
+                      icon: Wifi,
+                      code: `ipconfig /flushdns\nipconfig /release\nipconfig /renew`,
+                      risk: "low",
+                    },
+                    {
+                      title: "Force Group Policy Refresh",
+                      desc: "Ensures the machine is synced with the latest domain configurations.",
+                      icon: RefreshCw,
+                      code: `gpupdate /force`,
+                      risk: "low",
+                    },
+                    {
+                      title: "Explorer Restart",
+                      desc: "Restart explorer.exe to fix taskbar freezes or UI lag.",
+                      icon: Monitor,
+                      code: `Stop-Process -Name explorer -Force\nStart-Process explorer`,
+                      risk: "low",
+                    },
+                    {
+                      title: "Windows Update Reset",
+                      desc: "Clear the SoftwareDistribution folder and restart update services to fix stuck patches.",
+                      icon: Download,
+                      code: `Stop-Service -Name wuauserv -Force\nRemove-Item -Path "C:\\Windows\\SoftwareDistribution\\*" -Recurse -Force\nStart-Service -Name wuauserv`,
+                      risk: "medium",
+                    },
+                    {
+                      title: "WMI Repository Repair",
+                      desc: "Rebuild the WMI database to fix reporting and management tool errors.",
+                      icon: HardDriveDownload,
+                      code: `winmgmt /salvagerepository\nwinmgmt /verifyrepository`,
+                      risk: "high",
+                    },
+                    {
+                      title: "Disk Cleanup (Temp Files)",
+                      desc: "Clears user and system temporary files.",
+                      icon: Trash2,
+                      code: `$TempFolders = @("$env:TEMP", "C:\\Windows\\Temp")\nforeach ($Folder in $TempFolders) {\n    Get-ChildItem -Path $Folder -Recurse |\n    Remove-Item -Force -Recurse -ErrorAction SilentlyContinue\n}`,
+                      risk: "low",
+                    },
+                  ].map((rem) => (
+                    <div key={rem.title} className="rounded-lg border overflow-hidden">
+                      <div className="flex items-center justify-between p-3 bg-muted/30">
+                        <div className="flex items-center gap-3">
+                          <rem.icon className="h-4 w-4 text-cyan-600" />
+                          <div>
+                            <div className="text-sm font-medium">{rem.title}</div>
+                            <div className="text-xs text-muted-foreground">{rem.desc}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className={`text-[10px] ${rem.risk === "low" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : rem.risk === "medium" ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"}`}>
+                            {rem.risk === "low" ? "Low Risk" : rem.risk === "medium" ? "Medium Risk" : "High Risk"}
+                          </Badge>
+                          <Button size="sm" variant="outline" className="text-xs"><Play className="h-3 w-3 mr-1" />Execute</Button>
+                        </div>
+                      </div>
+                      <div className="bg-gray-950 text-green-400 p-3 font-mono text-xs overflow-x-auto">
+                        <pre className="whitespace-pre-wrap">{rem.code}</pre>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* ── macOS Remediations ───────────────────────────────────── */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Laptop className="h-5 w-5 text-gray-500" /> macOS Remediations <Badge variant="outline" className="text-[10px]">Zsh</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {[
+                    {
+                      title: "Reset TCC Permissions",
+                      desc: "Resets privacy permissions (Screen Recording, Camera, etc.) for a specific application.",
+                      icon: Lock,
+                      code: `# Example for Slack\ntccutil reset All com.tinyspeck.slackmacgap`,
+                      risk: "medium",
+                    },
+                    {
+                      title: "Spotlight Re-index",
+                      desc: "Forces the system to rebuild the search index.",
+                      icon: Search,
+                      code: `mdutil -i on /\nmdutil -E /`,
+                      risk: "low",
+                    },
+                    {
+                      title: "Restart SystemUIServer",
+                      desc: "Clears glitches in the menu bar and system icons.",
+                      icon: Monitor,
+                      code: `killall SystemUIServer`,
+                      risk: "low",
+                    },
+                    {
+                      title: "Flush DNS",
+                      desc: "Standard command for macOS 12.0 and later.",
+                      icon: Globe,
+                      code: `sudo dscacheutil -flushcache\nsudo killall -HUP mDNSResponder`,
+                      risk: "low",
+                    },
+                    {
+                      title: "FileVault Verification",
+                      desc: "Check encryption status and prompt user to enable if compliance is lost.",
+                      icon: Lock,
+                      code: `fdesetup status\n# If not enabled:\n# sudo fdesetup enable`,
+                      risk: "low",
+                    },
+                    {
+                      title: "Dock/Finder Restart",
+                      desc: "Refresh the UI layer to resolve graphical artifacts or frozen folders.",
+                      icon: RefreshCw,
+                      code: `killall Finder\nkillall Dock`,
+                      risk: "low",
+                    },
+                    {
+                      title: "LaunchDaemon Management",
+                      desc: "Re-load LaunchDaemons or LaunchAgents that have crashed or stopped.",
+                      icon: FolderCog,
+                      code: `# List loaded agents\nlaunchctl list | grep com.mydex\n# Reload a crashed agent\nlaunchctl unload /Library/LaunchDaemons/com.mydex.agent.plist\nlaunchctl load /Library/LaunchDaemons/com.mydex.agent.plist`,
+                      risk: "medium",
+                    },
+                    {
+                      title: "Disk Cleanup (Caches & Logs)",
+                      desc: "Removes user-level cache and log files.",
+                      icon: Trash2,
+                      code: `rm -rf ~/Library/Caches/*\nrm -rf ~/Library/Logs/*`,
+                      risk: "low",
+                    },
+                  ].map((rem) => (
+                    <div key={rem.title} className="rounded-lg border overflow-hidden">
+                      <div className="flex items-center justify-between p-3 bg-muted/30">
+                        <div className="flex items-center gap-3">
+                          <rem.icon className="h-4 w-4 text-gray-500" />
+                          <div>
+                            <div className="text-sm font-medium">{rem.title}</div>
+                            <div className="text-xs text-muted-foreground">{rem.desc}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className={`text-[10px] ${rem.risk === "low" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"}`}>
+                            {rem.risk === "low" ? "Low Risk" : "Medium Risk"}
+                          </Badge>
+                          <Button size="sm" variant="outline" className="text-xs"><Play className="h-3 w-3 mr-1" />Execute</Button>
+                        </div>
+                      </div>
+                      <div className="bg-gray-950 text-green-400 p-3 font-mono text-xs overflow-x-auto">
+                        <pre className="whitespace-pre-wrap">{rem.code}</pre>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* ── Security & Compliance Remediations ──────────────────── */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <ShieldCheck className="h-5 w-5 text-red-500" /> Security &amp; Compliance Remediations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {[
+                      {
+                        title: "Certificate Injection",
+                        desc: "Push missing root or intermediate certificates to the system keychain/store.",
+                        icon: CertIcon,
+                        status: "2 certs pending",
+                        statusColor: "text-amber-600",
+                      },
+                      {
+                        title: "Agent Health Recovery",
+                        desc: "Reinstall or restart the EDR/AV agent if it stops reporting to the console.",
+                        icon: ShieldCheck,
+                        status: "All agents healthy",
+                        statusColor: "text-green-600",
+                      },
+                      {
+                        title: "Local Admin Removal",
+                        desc: "Automatically strip administrative privileges from unauthorized local users.",
+                        icon: ShieldOff,
+                        status: "1 unauthorized admin found",
+                        statusColor: "text-red-600",
+                      },
+                      {
+                        title: "Unauthorized App Removal",
+                        desc: "Uninstall blacklisted software or browser extensions identified by the sensor.",
+                        icon: XCircle,
+                        status: "3 apps flagged",
+                        statusColor: "text-red-600",
+                      },
+                    ].map((rem) => (
+                      <div key={rem.title} className="flex items-start gap-3 p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                        <div className="p-2 rounded-lg bg-red-50 dark:bg-red-900/20">
+                          <rem.icon className="h-4 w-4 text-red-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium">{rem.title}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">{rem.desc}</div>
+                          <div className={`text-xs font-medium mt-1.5 ${rem.statusColor}`}>{rem.status}</div>
+                        </div>
+                        <Button size="sm" variant="outline" className="text-xs shrink-0">Remediate</Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* ── Remediation History / Audit ──────────────────────────── */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-indigo-500" /> Remediation History
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {[
+                      { time: "Today 14:32", device: "DESKTOP-JMILLER", action: "Print Spooler cleared", user: "Auto-Trigger", result: "success" },
+                      { time: "Today 14:28", device: "LAPTOP-SCHEN", action: "DNS cache flushed", user: "Auto-Trigger", result: "success" },
+                      { time: "Today 14:15", device: "DESKTOP-JMILLER", action: "SFC scan started", user: "admin@acme.com", result: "running" },
+                      { time: "Today 13:55", device: "WS-TGARCIA", action: "Temp files cleaned (2.4 GB freed)", user: "Auto-Trigger", result: "success" },
+                      { time: "Today 13:40", device: "MACBOOK-APATEL", action: "TCC permissions reset for Slack", user: "admin@acme.com", result: "success" },
+                      { time: "Today 12:10", device: "WS-TGARCIA", action: "3 zombie processes terminated", user: "Auto-Trigger", result: "success" },
+                      { time: "Today 11:45", device: "DESKTOP-JMILLER", action: "Group Policy refreshed", user: "Auto-Trigger", result: "success" },
+                      { time: "Today 10:30", device: "MACBOOK-APATEL", action: "FileVault verified — compliant", user: "Compliance Monitor", result: "success" },
+                      { time: "Yesterday 16:22", device: "LAPTOP-SCHEN", action: "Unauthorized admin 'temp_admin' removed", user: "Compliance Monitor", result: "success" },
+                      { time: "Yesterday 15:00", device: "DESKTOP-JMILLER", action: "Windows Update services reset", user: "admin@acme.com", result: "success" },
+                    ].map((entry, i) => (
+                      <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted/30 text-sm">
+                        <div className="w-24 shrink-0 text-xs text-muted-foreground">{entry.time}</div>
+                        <div className="w-40 shrink-0 font-medium text-xs">{entry.device}</div>
+                        <div className="flex-1 min-w-0 truncate">{entry.action}</div>
+                        <div className="text-xs text-muted-foreground w-32 shrink-0 truncate">{entry.user}</div>
+                        {entry.result === "success" ? (
+                          <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4 text-blue-500 shrink-0 animate-spin" />
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>

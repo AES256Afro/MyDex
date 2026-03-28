@@ -164,6 +164,19 @@ Employee self-service portal for profile management, password changes, MFA setup
 
 Secure login with email/password, GitHub OAuth, and Microsoft SSO. Protected by rate limiting, MFA enforcement, and full audit logging.
 
+### IT Support & Remediation
+
+![IT Support](screenshots/it-support.png)
+
+Full IT support console for resolving digital friction remotely and at scale. Includes:
+- **Advanced Capabilities** — Offline remediation, compliance drift monitoring, zero-day vulnerability patching, resource reclamation, ransomware rollback, and sustainability/carbon reporting
+- **Cross-Platform Remediations** — Process management, disk cleanup, network reset, service restart, NTP sync, and reboot orchestration
+- **Windows Remediations (PowerShell)** — Print spooler clear, SFC/DISM repair, Group Policy refresh, Explorer restart, Windows Update reset, WMI repair, temp file cleanup
+- **macOS Remediations (Zsh)** — TCC permission reset, Spotlight re-index, SystemUIServer restart, DNS flush, FileVault verification, Dock/Finder restart, LaunchDaemon management
+- **Security & Compliance** — Certificate injection, agent health recovery, local admin removal, unauthorized app removal
+- **Live Remediation Queue** — Real-time status tracking with auto-trigger and manual execution modes
+- **Remediation History** — Full audit trail of every action taken across the fleet
+
 ### Licensing & Pricing
 
 ![Licensing](screenshots/licensing.png)
