@@ -762,14 +762,18 @@ export default function ITSupportPage() {
                     </div>
                     {/* Status actions */}
                     <div className="flex items-center gap-2">
-                      {ticket.status !== "IN_PROGRESS" && <Button size="sm" variant="outline" onClick={() => updateTicket(ticket.id, { status: "IN_PROGRESS", assignedTo: session?.user?.id })}>Assign to Me</Button>}
+                      {ticket.assignee && ticket.assignee.id === session?.user?.id ? (
+                        <Badge className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Assigned: {ticket.assignee.name}</Badge>
+                      ) : (
+                        <Button size="sm" variant="outline" onClick={() => updateTicket(ticket.id, { status: "IN_PROGRESS", assignedTo: session?.user?.id })}>Assign to Me</Button>
+                      )}
                       {!["RESOLVED", "CLOSED"].includes(ticket.status) && (
                         <>
-                          <Button size="sm" variant="outline" className="text-orange-600" onClick={() => updateTicket(ticket.id, { status: "WAITING_ON_USER" })}>Waiting on User</Button>
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => updateTicket(ticket.id, { status: "RESOLVED" })}>Resolve</Button>
+                          {ticket.firstResponseAt && <Button size="sm" variant="outline" className="text-orange-600" onClick={() => updateTicket(ticket.id, { status: "WAITING_ON_USER" })}>Waiting on User</Button>}
+                          <Button size="sm" variant="outline" className="text-red-600 border-red-300" onClick={() => updateTicket(ticket.id, { status: "CLOSED" })}>Close</Button>
                         </>
                       )}
-                      {ticket.status === "RESOLVED" && <Button size="sm" variant="outline" onClick={() => updateTicket(ticket.id, { status: "CLOSED" })}>Close</Button>}
+                      {ticket.status === "RESOLVED" && <Button size="sm" variant="outline" className="text-red-600 border-red-300" onClick={() => updateTicket(ticket.id, { status: "CLOSED" })}>Close</Button>}
                     </div>
                   </div>
                 </CardHeader>
