@@ -565,6 +565,7 @@ const sectionGroups = [
     items: [
       { id: "activity", label: "Activity", icon: Activity },
       { id: "productivity", label: "Productivity", icon: Brain },
+      { id: "fleet-health", label: "Fleet Health", icon: Activity },
     ],
   },
   {
@@ -1788,6 +1789,182 @@ export default function DemoPage() {
                             <td className="py-3 text-center text-muted-foreground">{p.activeHrs}h</td>
                             <td className="py-3">{p.topApp}</td>
                             <td className={`py-3 text-right ${p.trend.startsWith("+") ? "text-green-600" : "text-red-600"}`}>{p.trend}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* ═══ FLEET HEALTH & DIGITAL FRICTION ═══ */}
+          {activeSection === "fleet-health" && (
+            <div className="space-y-6">
+              {/* Header */}
+              <div>
+                <div className="text-xs text-muted-foreground mb-1">Dashboard &gt; Fleet Health</div>
+                <h1 className="text-2xl font-bold flex items-center gap-2"><Activity className="h-6 w-6" /> Fleet Health &amp; Digital Friction</h1>
+                <p className="text-muted-foreground text-sm mt-1">Aggregate device health and friction scores across the fleet</p>
+              </div>
+
+              {/* KPI Row */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="pt-4 pb-3">
+                    <div className="text-sm text-muted-foreground">Digital Friction Score</div>
+                    <div className="text-2xl font-bold text-green-600">82<span className="text-sm font-normal text-muted-foreground">/100</span></div>
+                    <div className="text-xs text-muted-foreground mt-1">Lower is better. Measures delays, hangs, and blockers across the fleet</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4 pb-3">
+                    <div className="text-sm text-muted-foreground">Fleet Health</div>
+                    <div className="text-2xl font-bold text-green-600">94%</div>
+                    <div className="text-xs text-muted-foreground mt-1">Devices meeting health baseline</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4 pb-3">
+                    <div className="text-sm text-muted-foreground">Avg Boot Time</div>
+                    <div className="text-2xl font-bold">28s</div>
+                    <div className="text-xs text-muted-foreground mt-1">Fleet-wide average cold boot duration</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4 pb-3">
+                    <div className="text-sm text-muted-foreground">Critical Devices</div>
+                    <div className="text-2xl font-bold text-orange-500">1<span className="text-sm font-normal text-muted-foreground"> / 4</span></div>
+                    <div className="text-xs text-muted-foreground mt-1">Devices with friction score &gt; 70 or health &lt; 70%</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Digital Friction Breakdown */}
+              <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-yellow-500" /> Digital Friction Breakdown</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {[
+                      { category: "Slow Boot (>60s)", count: "1 device", score: 12, color: "bg-orange-500" },
+                      { category: "App Hangs (per day)", count: "3 events", score: 18, color: "bg-red-500" },
+                      { category: "Network Latency (>100ms)", count: "0 devices", score: 0, color: "bg-green-500" },
+                      { category: "Pending Updates", count: "7 updates", score: 15, color: "bg-yellow-500" },
+                      { category: "Disk Pressure (>85%)", count: "0 devices", score: 0, color: "bg-green-500" },
+                      { category: "BSOD Events (30d)", count: "2 events", score: 22, color: "bg-red-600" },
+                      { category: "Login Failures (30d)", count: "5 events", score: 8, color: "bg-yellow-500" },
+                      { category: "Stale Agent (>24h)", count: "1 device", score: 7, color: "bg-orange-400" },
+                    ].map((item) => (
+                      <div key={item.category} className="flex items-center gap-3">
+                        <div className="w-44 text-sm font-medium truncate">{item.category}</div>
+                        <div className="flex-1 h-5 bg-muted rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.score * 4}%` }} />
+                        </div>
+                        <div className="w-16 text-right text-sm text-muted-foreground">{item.count}</div>
+                        <div className="w-12 text-right text-sm font-semibold">{item.score}</div>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-3 pt-2 border-t mt-2">
+                      <div className="w-44 text-sm font-bold">Total Friction</div>
+                      <div className="flex-1" />
+                      <div className="w-16" />
+                      <div className="w-12 text-right text-lg font-bold text-orange-600">82<span className="text-sm font-normal text-muted-foreground">/100</span></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Fleet Health Grid */}
+              <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><Monitor className="h-5 w-5" /> Fleet Health Grid</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {mockDevices.map((d) => {
+                      const avOn = d.antivirusName !== "None";
+                      const fwOn = d.firewallStatus.domain && d.firewallStatus.private && d.firewallStatus.public;
+                      const noUpdates = d.pendingUpdates.length === 0;
+                      const noBsod = d.bsodCount === 0;
+                      const online = d.status === "ONLINE";
+                      const noCves = d.openCves === 0;
+                      const healthScore = (avOn ? 20 : 0) + (fwOn ? 20 : 0) + (noUpdates ? 15 : 0) + (noBsod ? 15 : 0) + (online ? 15 : 0) + (noCves ? 15 : 0);
+                      const scoreColor = healthScore > 90 ? "text-green-600" : healthScore >= 70 ? "text-yellow-600" : "text-red-600";
+                      const scoreBg = healthScore > 90 ? "bg-green-50 border-green-200" : healthScore >= 70 ? "bg-yellow-50 border-yellow-200" : "bg-red-50 border-red-200";
+                      return (
+                        <div key={d.id} className={`p-4 rounded-lg border ${scoreBg}`}>
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <div className="font-semibold text-sm">{d.hostname}</div>
+                              <div className="text-xs text-muted-foreground">{d.user.name} &middot; {d.department}</div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={d.status === "ONLINE" ? "default" : "secondary"} className={d.status === "ONLINE" ? "bg-green-600" : "bg-gray-400"}>{d.status}</Badge>
+                              <div className={`text-xl font-bold ${scoreColor}`}>{healthScore}</div>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            <Badge variant="outline" className={avOn ? "border-green-300 text-green-700 bg-green-50" : "border-red-300 text-red-700 bg-red-50"}>
+                              {avOn ? <CheckCircle className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />} AV
+                            </Badge>
+                            <Badge variant="outline" className={fwOn ? "border-green-300 text-green-700 bg-green-50" : "border-red-300 text-red-700 bg-red-50"}>
+                              {fwOn ? <CheckCircle className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />} FW
+                            </Badge>
+                            <Badge variant="outline" className={noUpdates ? "border-green-300 text-green-700 bg-green-50" : "border-yellow-300 text-yellow-700 bg-yellow-50"}>
+                              {noUpdates ? <CheckCircle className="h-3 w-3 mr-1" /> : <AlertTriangle className="h-3 w-3 mr-1" />} {d.pendingUpdates.length} Updates
+                            </Badge>
+                            <Badge variant="outline" className={noBsod ? "border-green-300 text-green-700 bg-green-50" : "border-red-300 text-red-700 bg-red-50"}>
+                              {noBsod ? <CheckCircle className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />} Stability
+                            </Badge>
+                            <Badge variant="outline" className={noCves ? "border-green-300 text-green-700 bg-green-50" : "border-red-300 text-red-700 bg-red-50"}>
+                              {noCves ? <CheckCircle className="h-3 w-3 mr-1" /> : <AlertTriangle className="h-3 w-3 mr-1" />} {d.openCves} CVEs
+                            </Badge>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Telemetry Overview */}
+              <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><Cpu className="h-5 w-5" /> Telemetry Overview</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left pb-3 text-muted-foreground font-medium">Category</th>
+                          <th className="text-left pb-3 text-muted-foreground font-medium">Metric</th>
+                          <th className="text-left pb-3 text-muted-foreground font-medium">Value</th>
+                          <th className="text-center pb-3 text-muted-foreground font-medium">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { cat: "System", metric: "Boot Duration", value: "28s avg", status: "green" },
+                          { cat: "System", metric: "Shutdown Reason", value: "Clean (3/4 devices)", status: "green" },
+                          { cat: "System", metric: "Thermal Throttling", value: "0 events", status: "green" },
+                          { cat: "System", metric: "Battery Wear", value: "8% (1 laptop)", status: "green" },
+                          { cat: "Network", metric: "Gateway Latency", value: "4ms", status: "green" },
+                          { cat: "Network", metric: "DNS Resolution", value: "12ms avg", status: "green" },
+                          { cat: "Network", metric: "Wi-Fi RSSI", value: "-52 dBm", status: "amber" },
+                          { cat: "Application", metric: "Hang Rate", value: "3/day fleet-wide", status: "amber" },
+                          { cat: "Application", metric: "Crash Logs", value: "1 in 7d", status: "green" },
+                          { cat: "Application", metric: "Focus Time", value: "5.2h avg/user", status: "green" },
+                          { cat: "Hardware", metric: "Disk I/O", value: "45 MB/s avg", status: "green" },
+                          { cat: "Hardware", metric: "S.M.A.R.T. Status", value: "All Healthy", status: "green" },
+                          { cat: "Hardware", metric: "RAM Pressure", value: "62% avg", status: "amber" },
+                        ].map((row, i) => (
+                          <tr key={i} className="border-b last:border-0 hover:bg-muted/50">
+                            <td className="py-2.5 font-medium text-muted-foreground">{row.cat}</td>
+                            <td className="py-2.5">{row.metric}</td>
+                            <td className="py-2.5 font-mono text-xs">{row.value}</td>
+                            <td className="py-2.5 text-center">
+                              {row.status === "green" && <CheckCircle className="h-4 w-4 text-green-500 inline-block" />}
+                              {row.status === "amber" && <AlertTriangle className="h-4 w-4 text-yellow-500 inline-block" />}
+                              {row.status === "red" && <XCircle className="h-4 w-4 text-red-500 inline-block" />}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
