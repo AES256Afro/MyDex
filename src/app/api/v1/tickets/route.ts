@@ -27,6 +27,7 @@ const createTicketSchema = z.object({
   deviceId: z.string().optional(),
   deviceInfo: z.any().optional(),
   networkInfo: z.any().optional(),
+  assignedTo: z.string().optional(),
 });
 
 // GET - list tickets + optional metrics mode
@@ -217,6 +218,7 @@ export async function POST(request: NextRequest) {
         deviceId: parsed.data.deviceId,
         deviceInfo: parsed.data.deviceInfo || null,
         networkInfo: parsed.data.networkInfo || null,
+        assignedTo: parsed.data.assignedTo || null,
         slaResponseDue: calculateSlaDue(now, sla.responseMinutes),
         slaResolutionDue: calculateSlaDue(now, sla.resolutionMinutes),
       },
