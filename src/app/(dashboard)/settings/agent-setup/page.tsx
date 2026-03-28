@@ -390,28 +390,13 @@ export default function AgentSetupPage() {
   const handleDownload = async (format: string) => {
     setDownloading(format);
     try {
+      // Open the download URL directly — the API returns a redirect to R2/CDN
       const url = `/api/v1/agents/downloads?platform=${selectedPlatform}&format=${format}`;
-      const res = await fetch(url);
-      if (!res.ok) {
-        const err = await res.json();
-        alert(err.message || "Download not available yet.");
-        return;
-      }
-      const blob = await res.blob();
-      const disposition = res.headers.get("Content-Disposition") || "";
-      const filenameMatch = disposition.match(/filename="(.+?)"/);
-      const filename = filenameMatch ? filenameMatch[1] : `mydex-agent.${format}`;
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(a.href);
+      window.open(url, "_blank");
     } catch {
       alert("Failed to download. Please try again.");
     } finally {
-      setDownloading(null);
+      setTimeout(() => setDownloading(null), 2000);
     }
   };
 
