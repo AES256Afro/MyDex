@@ -13,7 +13,7 @@ import {
   Sparkles, BatteryCharging, Volume2, Bluetooth, MousePointer,
   Keyboard, Eye, Loader2, ClipboardList, UserPlus, PrinterCheck,
   AlertTriangle, ChevronDown, ChevronUp, X, ScrollText, Bug,
-  Package, HardDrive, Cpu, Activity, Wrench,
+  Package, HardDrive, Cpu, Activity, Wrench, MessageCircle, Send, ArrowLeft,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -54,6 +54,33 @@ interface CommandLog {
   completedAt?: Date;
   result?: string;
   commandId?: string;
+}
+
+interface TicketData {
+  id: string;
+  subject: string;
+  category: string;
+  reason?: string;
+  appName?: string;
+  description?: string;
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+  submitter: { id: string; name: string; email: string };
+  assignee?: { id: string; name: string; email: string } | null;
+  device?: { id: string; hostname: string; platform: string } | null;
+  messages?: { user: { name: string }; createdAt: string }[];
+  _count?: { messages: number };
+}
+
+interface TicketMessageData {
+  id: string;
+  message: string;
+  isInternal: boolean;
+  createdAt: string;
+  user: { id: string; name: string; email: string; image?: string; role: string };
 }
 
 // Stock ticket reasons (enabled ones only, no admin config)
@@ -111,7 +138,15 @@ export default function SupportPage() {
   const [runningCommands, setRunningCommands] = useState<Set<string>>(new Set());
   const [selectedResetApp, setSelectedResetApp] = useState<string | null>(null);
   const [appSearchQuery, setAppSearchQuery] = useState("");
+  const [tickets, setTickets] = useState<TicketData[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [submittingTicket, setSubmittingTicket] = useState(false);
+  const [viewingTicket, setViewingTicket] = useState<string | null>(null);
+  const [ticketMessages, setTicketMessages] = useState<TicketMessageData[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch the current user's device automatically
   useEffect(() => {
@@ -230,6 +265,111 @@ export default function SupportPage() {
       setRunningCommands(prev => { const s = new Set(prev); s.delete(logId); return s; });
     }
   }, [myDevice, pollCommandStatus]);
+
+  // Fetch user's tickets
+  const fetchTickets = useCallback(async () => {
+    setTicketsLoading(true);
+    try {
+      const res = await fetch("/api/v1/tickets?mine=true");
+      if (res.ok) {
+        const data = await res.json();
+        setTickets(data.tickets || []);
+      }
+    } catch { /* ignore */ } finally {
+      setTicketsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "tickets") fetchTickets();
+  }, [activeTab, fetchTickets]);
+
+  // Submit a ticket
+  const submitTicket = async () => {
+    if (!selectedReason) return;
+    setSubmittingTicket(true);
+    try {
+      const reason = stockReasons.find(r => r.id === selectedReason);
+      const res = await fetch("/api/v1/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: reason?.label || "Support Request",
+          category: reason?.category || "other",
+          reason: reason?.label,
+          appName: selectedApp || undefined,
+          description: ticketDescription || undefined,
+          deviceId: myDevice?.id,
+          deviceInfo: myDevice ? {
+            hostname: myDevice.hostname,
+            platform: myDevice.platform,
+            osVersion: myDevice.osVersion,
+            ipAddress: myDevice.ipAddress,
+            cpuName: myDevice.cpuName,
+            ramTotalGb: myDevice.ramTotalGb,
+          } : undefined,
+          networkInfo: myDevice && (selectedReason === "sr3" || selectedReason === "sr4") ? {
+            ipAddress: myDevice.ipAddress,
+            platform: myDevice.platform,
+          } : undefined,
+        }),
+      });
+
+      if (res.ok) {
+        setSelectedReason(null);
+        setSelectedApp(null);
+        setTicketDescription("");
+        setActiveTab("tickets");
+        fetchTickets();
+      }
+    } catch { /* ignore */ } finally {
+      setSubmittingTicket(false);
+    }
+  };
+
+  // Fetch messages for a ticket
+  const fetchMessages = useCallback(async (ticketId: string) => {
+    try {
+      const res = await fetch(`/api/v1/tickets/${ticketId}/messages`);
+      if (res.ok) {
+        const data = await res.json();
+        setTicketMessages(data.messages || []);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (viewingTicket) {
+      fetchMessages(viewingTicket);
+      const interval = setInterval(() => fetchMessages(viewingTicket), 5000);
+      return () => clearInterval(interval);
+    }
+  }, [viewingTicket, fetchMessages]);
+
+  // Send a message on a ticket
+  const sendMessage = async () => {
+    if (!viewingTicket || !newMessage.trim()) return;
+    setSendingMessage(true);
+    try {
+      const res = await fetch(`/api/v1/tickets/${viewingTicket}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: newMessage.trim() }),
+      });
+      if (res.ok) {
+        setNewMessage("");
+        fetchMessages(viewingTicket);
+        fetchTickets();
+      }
+    } catch { /* ignore */ } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  // Scroll messages to bottom
+  useEffect(() => {
+    if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+  }, [ticketMessages]);
 
   // Self-service remediations
   type SelfRemedy = { id: string; title: string; desc: string; icon: React.ElementType; category: string; risk: "safe" | "low" | "medium"; os: "all" | "windows" | "macos"; steps: string[]; script?: string; time: string };
@@ -781,7 +921,9 @@ export default function SupportPage() {
                 {selectedReason && <span className="mr-3">Issue: <strong>{stockReasons.find(r => r.id === selectedReason)?.label}</strong></span>}
                 {selectedApp && <span>App: <strong>{selectedApp}</strong></span>}
               </div>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white"><ClipboardList className="h-4 w-4 mr-2" />Submit Ticket</Button>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" disabled={!selectedReason || submittingTicket} onClick={submitTicket}>
+                {submittingTicket ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting...</> : <><ClipboardList className="h-4 w-4 mr-2" />Submit Ticket</>}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -789,21 +931,143 @@ export default function SupportPage() {
 
       {/* ═══ MY TICKETS TAB ═══ */}
       {activeTab === "tickets" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2"><ClipboardList className="h-5 w-5 text-amber-500" /> My Tickets</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-12">
-              <ClipboardList className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-              <p className="text-sm font-medium">No tickets yet</p>
-              <p className="text-xs text-muted-foreground mt-1">Tickets you submit will appear here so you can track their status.</p>
-              <Button size="sm" className="mt-4" onClick={() => setActiveTab("submit")}>
-                <UserPlus className="h-3.5 w-3.5 mr-1.5" /> Submit a Ticket
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          {viewingTicket ? (() => {
+            const ticket = tickets.find(t => t.id === viewingTicket);
+            if (!ticket) return null;
+            const statusColors: Record<string, string> = { OPEN: "bg-blue-100 text-blue-800", IN_PROGRESS: "bg-amber-100 text-amber-800", WAITING_ON_USER: "bg-orange-100 text-orange-800", WAITING_ON_IT: "bg-purple-100 text-purple-800", RESOLVED: "bg-green-100 text-green-800", CLOSED: "bg-gray-100 text-gray-800" };
+            return (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="sm" onClick={() => { setViewingTicket(null); setTicketMessages([]); }}><ArrowLeft className="h-4 w-4" /></Button>
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{ticket.subject}</CardTitle>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge className={`text-[10px] ${statusColors[ticket.status] || "bg-gray-100 text-gray-800"}`}>{ticket.status.replace(/_/g, " ")}</Badge>
+                        <Badge variant="outline" className="text-[10px]">{ticket.priority}</Badge>
+                        {ticket.device && <span className="text-xs text-muted-foreground">{ticket.device.hostname}</span>}
+                        <span className="text-xs text-muted-foreground">Opened {new Date(ticket.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Ticket details */}
+                  {ticket.description && (
+                    <div className="rounded-lg border bg-muted/20 p-3">
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Description</div>
+                      <p className="text-sm">{ticket.description}</p>
+                    </div>
+                  )}
+
+                  {/* Messages thread */}
+                  <div className="border rounded-lg">
+                    <div className="px-3 py-2 border-b bg-muted/30">
+                      <div className="flex items-center gap-2 text-sm font-medium"><MessageCircle className="h-4 w-4" /> Conversation ({ticketMessages.length})</div>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto p-3 space-y-3">
+                      {ticketMessages.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-6">No messages yet. Send a message to get help from IT.</p>
+                      ) : (
+                        ticketMessages.map((msg) => {
+                          const isMe = msg.user.id === session?.user?.id;
+                          const isIT = msg.user.role === "ADMIN" || msg.user.role === "SUPER_ADMIN";
+                          return (
+                            <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                              <div className={`max-w-[75%] rounded-xl px-3 py-2 ${isMe ? "bg-blue-600 text-white" : "bg-muted"}`}>
+                                <div className={`text-[10px] font-medium mb-0.5 ${isMe ? "text-blue-200" : "text-muted-foreground"}`}>
+                                  {isMe ? "You" : msg.user.name} {isIT && !isMe && <Badge className="text-[8px] ml-1 bg-green-100 text-green-700 px-1 py-0">IT</Badge>}
+                                </div>
+                                <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                                <div className={`text-[9px] mt-1 ${isMe ? "text-blue-200" : "text-muted-foreground"}`}>{new Date(msg.createdAt).toLocaleString()}</div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                      <div ref={messagesEndRef} />
+                    </div>
+
+                    {/* Message input */}
+                    {!["RESOLVED", "CLOSED"].includes(ticket.status) && (
+                      <div className="border-t p-3">
+                        <div className="flex gap-2">
+                          <textarea
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                            placeholder="Type a message..."
+                            className="flex-1 h-10 rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <Button onClick={sendMessage} disabled={!newMessage.trim() || sendingMessage} className="bg-blue-600 hover:bg-blue-700 text-white">
+                            {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {["RESOLVED", "CLOSED"].includes(ticket.status) && (
+                      <div className="border-t p-3 text-center text-sm text-muted-foreground">
+                        This ticket has been {ticket.status.toLowerCase()}.
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })() : (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-2"><ClipboardList className="h-5 w-5 text-amber-500" /> My Tickets</CardTitle>
+                  <Button size="sm" onClick={() => setActiveTab("submit")}><UserPlus className="h-3.5 w-3.5 mr-1.5" /> New Ticket</Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {ticketsLoading ? (
+                  <div className="text-center py-8"><Loader2 className="h-6 w-6 mx-auto animate-spin text-muted-foreground" /></div>
+                ) : tickets.length === 0 ? (
+                  <div className="text-center py-12">
+                    <ClipboardList className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-sm font-medium">No tickets yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">Tickets you submit will appear here so you can track their status.</p>
+                    <Button size="sm" className="mt-4" onClick={() => setActiveTab("submit")}>
+                      <UserPlus className="h-3.5 w-3.5 mr-1.5" /> Submit a Ticket
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {tickets.map((ticket) => {
+                      const statusColors: Record<string, string> = { OPEN: "bg-blue-100 text-blue-800", IN_PROGRESS: "bg-amber-100 text-amber-800", WAITING_ON_USER: "bg-orange-100 text-orange-800", WAITING_ON_IT: "bg-purple-100 text-purple-800", RESOLVED: "bg-green-100 text-green-800", CLOSED: "bg-gray-100 text-gray-800" };
+                      return (
+                        <button key={ticket.id} onClick={() => setViewingTicket(ticket.id)}
+                          className="w-full flex items-center gap-3 p-3 rounded-lg border text-left hover:bg-muted/30 transition-colors">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium truncate">{ticket.subject}</span>
+                              <Badge className={`text-[10px] shrink-0 ${statusColors[ticket.status] || "bg-gray-100 text-gray-800"}`}>{ticket.status.replace(/_/g, " ")}</Badge>
+                              <Badge variant="outline" className="text-[10px] shrink-0">{ticket.priority}</Badge>
+                            </div>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              {ticket.device && <span>{ticket.device.hostname}</span>}
+                              <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
+                              {ticket._count && ticket._count.messages > 0 && (
+                                <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" />{ticket._count.messages}</span>
+                              )}
+                              {ticket.assignee && <span>Assigned: {ticket.assignee.name}</span>}
+                            </div>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
       {/* ═══ FLOATING COMMAND LOG ═══ */}

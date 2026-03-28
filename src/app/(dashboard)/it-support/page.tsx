@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import {
   XCircle, UserPlus, Terminal, Server, ChevronRight, PrinterCheck,
   Sparkles, BatteryCharging, Volume2, Bluetooth, MousePointer,
   Keyboard, Eye, Shield, LifeBuoy, Loader2, AlertTriangle, X,
-  ScrollText, ChevronDown, ChevronUp,
+  ScrollText, ChevronDown, ChevronUp, MessageCircle, Send, ArrowLeft,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -40,7 +41,35 @@ interface CommandLog {
   completedAt?: Date;
   result?: string;
   exitCode?: number;
-  commandId?: string; // server-side ID
+  commandId?: string;
+}
+
+interface TicketData {
+  id: string;
+  subject: string;
+  category: string;
+  reason?: string;
+  appName?: string;
+  description?: string;
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+  submitter: { id: string; name: string; email: string; image?: string };
+  assignee?: { id: string; name: string; email: string } | null;
+  device?: { id: string; hostname: string; platform: string } | null;
+  deviceInfo?: Record<string, unknown> | null;
+  messages?: { user: { name: string }; createdAt: string }[];
+  _count?: { messages: number };
+}
+
+interface TicketMessageData {
+  id: string;
+  message: string;
+  isInternal: boolean;
+  createdAt: string;
+  user: { id: string; name: string; email: string; image?: string; role: string };
 }
 
 // App install paths by OS
@@ -89,6 +118,7 @@ const defaultRemediationGroups = [
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function ITSupportPage() {
+  const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<"queue" | "tickets" | "submit" | "selfservice" | "config">("queue");
   const [selfServiceFilter, setSelfServiceFilter] = useState<"all" | "performance" | "network" | "display" | "apps" | "security" | "peripherals">("all");
   const [ranRemediations, setRanRemediations] = useState<Set<string>>(new Set());
@@ -106,8 +136,18 @@ export default function ITSupportPage() {
   const [showLogPanel, setShowLogPanel] = useState(false);
   const [logPanelMinimized, setLogPanelMinimized] = useState(false);
   const [runningCommands, setRunningCommands] = useState<Set<string>>(new Set());
+  const [tickets, setTickets] = useState<TicketData[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [viewingTicket, setViewingTicket] = useState<string | null>(null);
+  const [ticketMessages, setTicketMessages] = useState<TicketMessageData[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [isInternalNote, setIsInternalNote] = useState(false);
+  const [ticketFilter, setTicketFilter] = useState<"all" | "active" | "mine">("active");
+  const [submittingTicket, setSubmittingTicket] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch real devices from API
   useEffect(() => {
@@ -250,6 +290,121 @@ export default function ITSupportPage() {
     }
   }, [device, pollCommandStatus]);
 
+  // Fetch all org tickets (admin view)
+  const fetchTickets = useCallback(async () => {
+    setTicketsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (ticketFilter === "active") params.set("status", "active");
+      if (ticketFilter === "mine") params.set("mine", "true");
+      const res = await fetch(`/api/v1/tickets?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTickets(data.tickets || []);
+      }
+    } catch { /* ignore */ } finally {
+      setTicketsLoading(false);
+    }
+  }, [ticketFilter]);
+
+  // Fetch tickets on mount (for KPI) and when viewing tickets tab
+  useEffect(() => {
+    fetchTickets();
+  }, [fetchTickets]);
+
+  useEffect(() => {
+    if (activeTab === "tickets") fetchTickets();
+  }, [activeTab, fetchTickets]);
+
+  // Submit ticket from admin
+  const submitTicket = async () => {
+    if (!selectedReason || !selectedDevice) return;
+    setSubmittingTicket(true);
+    try {
+      const reason = stockReasons.find(r => r.id === selectedReason);
+      const dev = devices.find(d => d.hostname === selectedDevice);
+      const res = await fetch("/api/v1/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: reason?.label || "Support Request",
+          category: reason?.category || "other",
+          reason: reason?.label,
+          appName: selectedApp || undefined,
+          description: ticketDescription || undefined,
+          deviceId: dev?.id,
+          deviceInfo: dev ? { hostname: dev.hostname, platform: dev.platform, ipAddress: dev.ipAddress } : undefined,
+        }),
+      });
+      if (res.ok) {
+        setSelectedReason(null);
+        setSelectedApp(null);
+        setTicketDescription("");
+        setActiveTab("tickets");
+        fetchTickets();
+      }
+    } catch { /* ignore */ } finally {
+      setSubmittingTicket(false);
+    }
+  };
+
+  // Fetch messages for a ticket
+  const fetchMessages = useCallback(async (ticketId: string) => {
+    try {
+      const res = await fetch(`/api/v1/tickets/${ticketId}/messages`);
+      if (res.ok) {
+        const data = await res.json();
+        setTicketMessages(data.messages || []);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (viewingTicket) {
+      fetchMessages(viewingTicket);
+      const interval = setInterval(() => fetchMessages(viewingTicket), 5000);
+      return () => clearInterval(interval);
+    }
+  }, [viewingTicket, fetchMessages]);
+
+  // Send a message on a ticket
+  const sendMessage = async () => {
+    if (!viewingTicket || !newMessage.trim()) return;
+    setSendingMessage(true);
+    try {
+      const res = await fetch(`/api/v1/tickets/${viewingTicket}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: newMessage.trim(), isInternal: isInternalNote }),
+      });
+      if (res.ok) {
+        setNewMessage("");
+        setIsInternalNote(false);
+        fetchMessages(viewingTicket);
+        fetchTickets();
+      }
+    } catch { /* ignore */ } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  // Update ticket status/assignment
+  const updateTicket = async (ticketId: string, updates: Record<string, unknown>) => {
+    try {
+      await fetch("/api/v1/tickets", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: ticketId, ...updates }),
+      });
+      fetchTickets();
+      if (viewingTicket === ticketId) fetchMessages(ticketId);
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => {
+    if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+  }, [ticketMessages]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -267,7 +422,7 @@ export default function ITSupportPage() {
         {[
           { label: "Enrolled Devices", value: String(devices.length), icon: Monitor, color: "text-blue-600" },
           { label: "Online Now", value: String(devices.filter(d => d.status === "ONLINE").length), icon: Zap, color: "text-green-600" },
-          { label: "Open Tickets", value: "0", icon: ClipboardList, color: "text-amber-600" },
+          { label: "Open Tickets", value: String(tickets.filter(t => ["OPEN", "IN_PROGRESS", "WAITING_ON_USER", "WAITING_ON_IT"].includes(t.status)).length), icon: ClipboardList, color: "text-amber-600" },
           { label: "Compliance Score", value: "--", icon: ShieldCheck, color: "text-indigo-600" },
           { label: "Avg Resolution", value: "--", icon: Timer, color: "text-purple-600" },
         ].map((stat) => (
@@ -479,23 +634,180 @@ export default function ITSupportPage() {
       {/* TAB: SUPPORT TICKETS                                       */}
       {/* ═══════════════════════════════════════════════════════════ */}
       {activeTab === "tickets" && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2"><ClipboardList className="h-5 w-5 text-amber-500" /> Support Tickets</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-12">
-              <ClipboardList className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-              <p className="text-sm font-medium">No support tickets yet</p>
-              <p className="text-xs text-muted-foreground mt-1">Tickets submitted by users will appear here with device info, network data, and app details.</p>
-              <Button size="sm" className="mt-4" onClick={() => setActiveTab("submit")}>
-                <UserPlus className="h-3.5 w-3.5 mr-1.5" /> Submit First Ticket
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          {viewingTicket ? (() => {
+            const ticket = tickets.find(t => t.id === viewingTicket);
+            if (!ticket) return null;
+            const statusColors: Record<string, string> = { OPEN: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200", IN_PROGRESS: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200", WAITING_ON_USER: "bg-orange-100 text-orange-800", WAITING_ON_IT: "bg-purple-100 text-purple-800", RESOLVED: "bg-green-100 text-green-800", CLOSED: "bg-gray-100 text-gray-800" };
+            const priorityColors: Record<string, string> = { LOW: "bg-gray-100 text-gray-700", MEDIUM: "bg-blue-100 text-blue-700", HIGH: "bg-orange-100 text-orange-700", URGENT: "bg-red-100 text-red-700" };
+            return (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="sm" onClick={() => { setViewingTicket(null); setTicketMessages([]); }}><ArrowLeft className="h-4 w-4" /></Button>
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{ticket.subject}</CardTitle>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <Badge className={`text-[10px] ${statusColors[ticket.status] || "bg-gray-100 text-gray-800"}`}>{ticket.status.replace(/_/g, " ")}</Badge>
+                        <Badge className={`text-[10px] ${priorityColors[ticket.priority] || ""}`}>{ticket.priority}</Badge>
+                        <span className="text-xs text-muted-foreground">by {ticket.submitter.name} ({ticket.submitter.email})</span>
+                        {ticket.device && <span className="text-xs text-muted-foreground">{ticket.device.hostname}</span>}
+                        <span className="text-xs text-muted-foreground">{new Date(ticket.createdAt).toLocaleString()}</span>
+                      </div>
+                    </div>
+                    {/* Status actions */}
+                    <div className="flex items-center gap-2">
+                      {ticket.status !== "IN_PROGRESS" && <Button size="sm" variant="outline" onClick={() => updateTicket(ticket.id, { status: "IN_PROGRESS", assignedTo: session?.user?.id })}>Assign to Me</Button>}
+                      {!["RESOLVED", "CLOSED"].includes(ticket.status) && (
+                        <>
+                          <Button size="sm" variant="outline" className="text-orange-600" onClick={() => updateTicket(ticket.id, { status: "WAITING_ON_USER" })}>Waiting on User</Button>
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => updateTicket(ticket.id, { status: "RESOLVED" })}>Resolve</Button>
+                        </>
+                      )}
+                      {ticket.status === "RESOLVED" && <Button size="sm" variant="outline" onClick={() => updateTicket(ticket.id, { status: "CLOSED" })}>Close</Button>}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Ticket info row */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {ticket.reason && <div className="rounded-lg border p-2"><div className="text-[10px] text-muted-foreground">Issue</div><div className="text-sm font-medium">{ticket.reason}</div></div>}
+                    {ticket.appName && <div className="rounded-lg border p-2"><div className="text-[10px] text-muted-foreground">Application</div><div className="text-sm font-medium">{ticket.appName}</div></div>}
+                    {ticket.device && <div className="rounded-lg border p-2"><div className="text-[10px] text-muted-foreground">Device</div><div className="text-sm font-medium">{ticket.device.hostname}</div></div>}
+                    {ticket.assignee && <div className="rounded-lg border p-2"><div className="text-[10px] text-muted-foreground">Assigned To</div><div className="text-sm font-medium">{ticket.assignee.name}</div></div>}
+                  </div>
+
+                  {ticket.description && (
+                    <div className="rounded-lg border bg-muted/20 p-3">
+                      <div className="text-xs font-medium text-muted-foreground mb-1">Description</div>
+                      <p className="text-sm">{ticket.description}</p>
+                    </div>
+                  )}
+
+                  {/* Messages thread */}
+                  <div className="border rounded-lg">
+                    <div className="px-3 py-2 border-b bg-muted/30">
+                      <div className="flex items-center gap-2 text-sm font-medium"><MessageCircle className="h-4 w-4" /> Conversation ({ticketMessages.length})</div>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto p-3 space-y-3">
+                      {ticketMessages.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-6">No messages yet. Send a reply to the user.</p>
+                      ) : (
+                        ticketMessages.map((msg) => {
+                          const isMe = msg.user.id === session?.user?.id;
+                          const isIT = msg.user.role === "ADMIN" || msg.user.role === "SUPER_ADMIN";
+                          return (
+                            <div key={msg.id} className={`flex ${isIT ? "justify-end" : "justify-start"}`}>
+                              <div className={`max-w-[75%] rounded-xl px-3 py-2 ${msg.isInternal ? "bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-300 dark:border-yellow-700" : isIT ? "bg-blue-600 text-white" : "bg-muted"}`}>
+                                <div className={`text-[10px] font-medium mb-0.5 ${msg.isInternal ? "text-yellow-700 dark:text-yellow-300" : isIT ? "text-blue-200" : "text-muted-foreground"}`}>
+                                  {msg.user.name} {isIT && <Badge className="text-[8px] ml-1 bg-green-100 text-green-700 px-1 py-0">IT</Badge>}
+                                  {msg.isInternal && <Badge className="text-[8px] ml-1 bg-yellow-100 text-yellow-700 px-1 py-0">Internal Note</Badge>}
+                                </div>
+                                <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                                <div className={`text-[9px] mt-1 ${msg.isInternal ? "text-yellow-600" : isIT ? "text-blue-200" : "text-muted-foreground"}`}>{new Date(msg.createdAt).toLocaleString()}</div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                      <div ref={messagesEndRef} />
+                    </div>
+
+                    {/* Message input with internal note toggle */}
+                    {!["CLOSED"].includes(ticket.status) && (
+                      <div className="border-t p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setIsInternalNote(false)}
+                            className={`text-xs px-2 py-1 rounded ${!isInternalNote ? "bg-blue-100 text-blue-700 font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+                            Reply to User
+                          </button>
+                          <button onClick={() => setIsInternalNote(true)}
+                            className={`text-xs px-2 py-1 rounded ${isInternalNote ? "bg-yellow-100 text-yellow-700 font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+                            Internal Note
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <textarea
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                            placeholder={isInternalNote ? "Add an internal note (not visible to user)..." : "Reply to user..."}
+                            className={`flex-1 h-10 rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 ${isInternalNote ? "focus:ring-yellow-500 border-yellow-300" : "focus:ring-blue-500"}`}
+                          />
+                          <Button onClick={sendMessage} disabled={!newMessage.trim() || sendingMessage}
+                            className={isInternalNote ? "bg-yellow-600 hover:bg-yellow-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}>
+                            {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })() : (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-2"><ClipboardList className="h-5 w-5 text-amber-500" /> Support Tickets</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1 bg-muted/50 p-0.5 rounded-md">
+                      {([{ id: "active" as const, label: "Active" }, { id: "all" as const, label: "All" }, { id: "mine" as const, label: "My Tickets" }]).map(f => (
+                        <button key={f.id} onClick={() => setTicketFilter(f.id)}
+                          className={`text-xs px-2 py-1 rounded ${ticketFilter === f.id ? "bg-background shadow font-medium" : "text-muted-foreground hover:text-foreground"}`}>{f.label}</button>
+                      ))}
+                    </div>
+                    <Button size="sm" onClick={() => setActiveTab("submit")}><UserPlus className="h-3.5 w-3.5 mr-1.5" /> New Ticket</Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {ticketsLoading ? (
+                  <div className="text-center py-8"><Loader2 className="h-6 w-6 mx-auto animate-spin text-muted-foreground" /></div>
+                ) : tickets.length === 0 ? (
+                  <div className="text-center py-12">
+                    <ClipboardList className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-sm font-medium">No support tickets yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">Tickets submitted by users will appear here with device info, network data, and app details.</p>
+                    <Button size="sm" className="mt-4" onClick={() => setActiveTab("submit")}>
+                      <UserPlus className="h-3.5 w-3.5 mr-1.5" /> Submit First Ticket
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {tickets.map((ticket) => {
+                      const statusColors: Record<string, string> = { OPEN: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200", IN_PROGRESS: "bg-amber-100 text-amber-800", WAITING_ON_USER: "bg-orange-100 text-orange-800", WAITING_ON_IT: "bg-purple-100 text-purple-800", RESOLVED: "bg-green-100 text-green-800", CLOSED: "bg-gray-100 text-gray-800" };
+                      const priorityColors: Record<string, string> = { LOW: "", MEDIUM: "", HIGH: "border-orange-300", URGENT: "border-red-400 bg-red-50/30 dark:bg-red-950/20" };
+                      return (
+                        <button key={ticket.id} onClick={() => { setViewingTicket(ticket.id); fetchMessages(ticket.id); }}
+                          className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left hover:bg-muted/30 transition-colors ${priorityColors[ticket.priority] || ""}`}>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium truncate">{ticket.subject}</span>
+                              <Badge className={`text-[10px] shrink-0 ${statusColors[ticket.status] || ""}`}>{ticket.status.replace(/_/g, " ")}</Badge>
+                              {ticket.priority === "HIGH" && <Badge className="text-[10px] bg-orange-100 text-orange-700 shrink-0">HIGH</Badge>}
+                              {ticket.priority === "URGENT" && <Badge className="text-[10px] bg-red-100 text-red-700 shrink-0">URGENT</Badge>}
+                            </div>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              <span>{ticket.submitter.name}</span>
+                              {ticket.device && <span>{ticket.device.hostname}</span>}
+                              <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
+                              {ticket._count && ticket._count.messages > 0 && (
+                                <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" />{ticket._count.messages}</span>
+                              )}
+                              {ticket.assignee && <span className="text-blue-600">Assigned: {ticket.assignee.name}</span>}
+                            </div>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
       {/* ═══════════════════════════════════════════════════════════ */}
@@ -587,7 +899,9 @@ export default function ITSupportPage() {
                 {selectedReason && <span className="mr-3">Issue: <strong>{stockReasons.find(r => r.id === selectedReason)?.label}</strong></span>}
                 {selectedApp && <span>App: <strong>{selectedApp}</strong></span>}
               </div>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white"><ClipboardList className="h-4 w-4 mr-2" />Submit Ticket</Button>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" disabled={!selectedReason || !selectedDevice || submittingTicket} onClick={submitTicket}>
+                {submittingTicket ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting...</> : <><ClipboardList className="h-4 w-4 mr-2" />Submit Ticket</>}
+              </Button>
             </div>
           </CardContent>
         </Card>
