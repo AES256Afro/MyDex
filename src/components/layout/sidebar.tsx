@@ -28,6 +28,7 @@ import {
   Download,
   Package,
   Wrench,
+  LifeBuoy,
   type LucideIcon,
 } from "lucide-react";
 
@@ -53,6 +54,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   "module-access": Blocks,
   "software-inventory": Package,
   "compliance": ShieldCheck,
+  "support": LifeBuoy,
   "it-support": Wrench,
   "agent-setup": Download,
 };

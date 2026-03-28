@@ -13,7 +13,11 @@ export const metadata: Metadata = {
   description:
     "Open-source employee monitoring and productivity management for small business",
   icons: {
-    icon: "/icon.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png", sizes: "32x32" },
+    ],
+    apple: "/apple-icon.png",
   },
   appleWebApp: {
     capable: true,

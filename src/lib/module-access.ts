@@ -174,14 +174,24 @@ export const MODULE_REGISTRY: ModuleConfig[] = [
     category: "compliance",
   },
 
-  // IT Support
+  // IT Support — user-facing self-service
+  {
+    id: "support",
+    label: "IT Support",
+    href: "/support",
+    description: "Self-service remediation, submit tickets, and view your device",
+    minRole: "EMPLOYEE",
+    configurable: false,
+    category: "it-support",
+  },
+  // IT Support Admin — full admin portal
   {
     id: "it-support",
-    label: "IT Support",
+    label: "IT Admin Portal",
     href: "/it-support",
-    description: "Remediations, support tickets, and device troubleshooting",
-    minRole: "EMPLOYEE",
-    configurable: true,
+    description: "Ticket queue, configuration, and device troubleshooting",
+    minRole: "ADMIN",
+    configurable: false,
     category: "it-support",
   },
 

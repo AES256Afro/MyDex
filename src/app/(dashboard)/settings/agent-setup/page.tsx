@@ -385,6 +385,35 @@ export default function AgentSetupPage() {
   const [commandLoading, setCommandLoading] = useState<string | null>(null);
 
   const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
+  const [downloading, setDownloading] = useState<string | null>(null);
+
+  const handleDownload = async (format: string) => {
+    setDownloading(format);
+    try {
+      const url = `/api/v1/agents/downloads?platform=${selectedPlatform}&format=${format}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.message || "Download not available yet.");
+        return;
+      }
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") || "";
+      const filenameMatch = disposition.match(/filename="(.+?)"/);
+      const filename = filenameMatch ? filenameMatch[1] : `mydex-agent.${format}`;
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    } catch {
+      alert("Failed to download. Please try again.");
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   const fetchDevices = useCallback(async () => {
     try {
@@ -741,9 +770,13 @@ services:
                     {fmt.format === "msi" && (
                       <Badge variant="outline" className="text-xs">GPO Ready</Badge>
                     )}
-                    <Button size="sm">
-                      <Download className="h-4 w-4 mr-1" />
-                      Download .{fmt.format}
+                    <Button size="sm" onClick={() => handleDownload(fmt.format)} disabled={downloading === fmt.format}>
+                      {downloading === fmt.format ? (
+                        <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4 mr-1" />
+                      )}
+                      {downloading === fmt.format ? "Downloading..." : `Download .${fmt.format}`}
                     </Button>
                   </div>
                 </div>
