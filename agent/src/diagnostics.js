@@ -6,6 +6,8 @@ const { execSync } = require("child_process");
 const os = require("os");
 const path = require("path");
 const fs = require("fs");
+const dns = require("dns");
+const si = require("systeminformation");
 
 const PS_OPTS = { encoding: "utf-8", timeout: 30000 };
 
@@ -350,12 +352,252 @@ async function collectDiagnostics() {
   const bsod = getBsodEvents();
   const firewall = getFirewallStatus();
   const defender = getDefenderStatus();
-  const dns = getDnsServers();
+  const dnsServers = getDnsServers();
   const adapters = getNetworkAdapters();
   const wifi = getWifiSignal();
   const running = getRunningProcesses();
   const installed = getInstalledSoftware();
   const perfIssues = getPerformanceIssues();
+
+  // --- Extended Telemetry: System ---
+
+  // Boot duration (time from power-on to OS ready)
+  let bootDuration = null;
+  try {
+    const timeData = await si.time();
+    if (timeData && timeData.uptime) {
+      bootDuration = {
+        uptimeSec: timeData.uptime,
+        bootTimestamp: timeData.current - timeData.uptime * 1000,
+      };
+    }
+  } catch { /* non-critical */ }
+
+  // Last shutdown reason (Windows Event Log)
+  let shutdownReason = null;
+  try {
+    if (process.platform === "win32") {
+      const raw = execSync(
+        `powershell -NoProfile -Command "Get-WinEvent -FilterHashtable @{LogName='System';ID=1074} -MaxEvents 1 -ErrorAction SilentlyContinue | Select-Object TimeCreated,Message | ConvertTo-Json"`,
+        { encoding: "utf-8", timeout: 5000 }
+      ).trim();
+      if (raw) {
+        const data = JSON.parse(raw);
+        shutdownReason = {
+          time: data.TimeCreated || null,
+          message: data.Message ? data.Message.substring(0, 300) : null,
+        };
+      }
+    }
+  } catch { /* non-critical */ }
+
+  // Thermal throttling / CPU temperature
+  let thermalThrottling = null;
+  try {
+    const temp = await si.cpuTemperature();
+    thermalThrottling = {
+      mainTemp: temp.main !== null ? temp.main : null,
+      maxTemp: temp.max !== null ? temp.max : null,
+      cores: temp.cores || [],
+      throttling: temp.main !== null && temp.main > 90,
+    };
+  } catch { /* non-critical */ }
+
+  // Battery health (laptops)
+  let batteryHealth = null;
+  try {
+    const bat = await si.battery();
+    if (bat && bat.hasBattery) {
+      batteryHealth = {
+        hasBattery: true,
+        cycleCount: bat.cycleCount || 0,
+        isCharging: bat.isCharging,
+        percent: bat.percent,
+        maxCapacity: bat.maxCapacity || null,
+        designedCapacity: bat.designedCapacity || null,
+        healthPct: bat.designedCapacity && bat.maxCapacity
+          ? Math.round((bat.maxCapacity / bat.designedCapacity) * 100)
+          : null,
+        acConnected: bat.acConnected,
+      };
+    } else {
+      batteryHealth = { hasBattery: false };
+    }
+  } catch { /* non-critical */ }
+
+  // --- Extended Telemetry: Network ---
+
+  // Gateway latency (ping default gateway)
+  let gatewayLatency = null;
+  try {
+    const gw = await si.networkGatewayDefault();
+    if (gw) {
+      const pingCmd = process.platform === "win32"
+        ? `ping -n 1 -w 2000 ${gw}`
+        : `ping -c 1 -W 2 ${gw}`;
+      const pingResult = execSync(pingCmd, { encoding: "utf-8", timeout: 5000 });
+      const match = pingResult.match(/time[=<]\s*([\d.]+)\s*ms/i);
+      gatewayLatency = {
+        gateway: gw,
+        latencyMs: match ? parseFloat(match[1]) : null,
+      };
+    }
+  } catch { /* non-critical */ }
+
+  // DNS resolution time
+  let dnsResolutionMs = null;
+  try {
+    const dnsStart = Date.now();
+    await new Promise((resolve, reject) => {
+      dns.lookup("google.com", (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+    dnsResolutionMs = Date.now() - dnsStart;
+  } catch { /* non-critical */ }
+
+  // Wi-Fi RSSI in dBm
+  let wifiRssiDbm = null;
+  try {
+    if (process.platform === "win32") {
+      const raw = execSync("netsh wlan show interfaces", { encoding: "utf-8", timeout: 5000 });
+      const rssiMatch = raw.match(/Signal\s*:\s*(\d+)%/);
+      if (rssiMatch) {
+        const pct = parseInt(rssiMatch[1]);
+        // Approximate conversion: dBm = (quality / 2) - 100
+        wifiRssiDbm = Math.round(pct / 2 - 100);
+      }
+    } else if (process.platform === "linux") {
+      const raw = execSync("iwconfig 2>/dev/null", { encoding: "utf-8", timeout: 5000 });
+      const rssiMatch = raw.match(/Signal level[=:]\s*(-?\d+)\s*dBm/);
+      if (rssiMatch) {
+        wifiRssiDbm = parseInt(rssiMatch[1]);
+      }
+    } else if (process.platform === "darwin") {
+      const raw = execSync("/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I 2>/dev/null", { encoding: "utf-8", timeout: 5000 });
+      const rssiMatch = raw.match(/agrCtlRSSI:\s*(-?\d+)/);
+      if (rssiMatch) {
+        wifiRssiDbm = parseInt(rssiMatch[1]);
+      }
+    }
+  } catch { /* non-critical */ }
+
+  // --- Extended Telemetry: Application ---
+
+  // Hanging / not-responding processes
+  let hangingProcesses = [];
+  try {
+    if (process.platform === "win32") {
+      const raw = execSync(
+        `powershell -NoProfile -Command "Get-Process | Where-Object { $_.Responding -eq $false } | Select-Object ProcessName,Id,@{N='MemoryMB';E={[math]::Round($_.WorkingSet64/1MB,1)}} | ConvertTo-Json"`,
+        { encoding: "utf-8", timeout: 5000 }
+      ).trim();
+      if (raw) {
+        let data = JSON.parse(raw);
+        if (!Array.isArray(data)) data = [data];
+        hangingProcesses = data.map((p) => ({
+          name: p.ProcessName,
+          pid: p.Id,
+          memoryMb: p.MemoryMB || 0,
+        }));
+      }
+    }
+  } catch { /* non-critical */ }
+
+  // Recent application crash logs
+  let recentCrashLogs = [];
+  try {
+    if (process.platform === "win32") {
+      const raw = execSync(
+        `powershell -NoProfile -Command "Get-WinEvent -FilterHashtable @{LogName='Application';Level=2} -MaxEvents 5 -ErrorAction SilentlyContinue | Select-Object TimeCreated,ProviderName,@{N='Msg';E={$_.Message.Substring(0,[Math]::Min(200,$_.Message.Length))}} | ConvertTo-Json"`,
+        { encoding: "utf-8", timeout: 5000 }
+      ).trim();
+      if (raw) {
+        let data = JSON.parse(raw);
+        if (!Array.isArray(data)) data = [data];
+        recentCrashLogs = data.map((e) => ({
+          time: e.TimeCreated || null,
+          source: e.ProviderName || null,
+          message: e.Msg || null,
+        }));
+      }
+    }
+  } catch { /* non-critical */ }
+
+  // --- Extended Telemetry: Hardware ---
+
+  // Disk I/O latency
+  let diskIoLatency = null;
+  try {
+    const io = await si.disksIO();
+    if (io) {
+      diskIoLatency = {
+        rIOsec: io.rIO_sec || 0,
+        wIOsec: io.wIO_sec || 0,
+        tIOsec: io.tIO_sec || 0,
+        rWaitMs: io.rWaitTime || null,
+        wWaitMs: io.wWaitTime || null,
+      };
+    }
+  } catch { /* non-critical */ }
+
+  // S.M.A.R.T. disk health
+  let smartStatus = [];
+  try {
+    const layout = await si.diskLayout();
+    if (layout && Array.isArray(layout)) {
+      smartStatus = layout.map((d) => ({
+        device: d.device || d.name || "Unknown",
+        type: d.type || "Unknown",
+        smartStatus: d.smartStatus || "unknown",
+      }));
+    }
+  } catch { /* non-critical */ }
+
+  // RAM pressure percentage
+  let ramPressurePct = null;
+  try {
+    if (ram.totalGb > 0) {
+      ramPressurePct = Math.round(((ram.totalGb - ram.availGb) / ram.totalGb) * 10000) / 100;
+    }
+  } catch { /* non-critical */ }
+
+  // --- PII Masking ---
+
+  const piiMaskingEnabled = (typeof globalThis.agentConfig !== "undefined" && globalThis.agentConfig && globalThis.agentConfig.piiMasking === true);
+
+  if (piiMaskingEnabled) {
+    const username = os.userInfo().username;
+    const userPattern = new RegExp(username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+
+    // Mask user paths in running process names
+    if (Array.isArray(running)) {
+      for (const proc of running) {
+        if (proc.name && userPattern.test(proc.name)) {
+          proc.name = proc.name.replace(userPattern, "***");
+        }
+      }
+    }
+
+    // Mask hanging process names
+    if (Array.isArray(hangingProcesses)) {
+      for (const proc of hangingProcesses) {
+        if (proc.name && userPattern.test(proc.name)) {
+          proc.name = proc.name.replace(userPattern, "***");
+        }
+      }
+    }
+
+    // Mask window titles in crash logs
+    if (Array.isArray(recentCrashLogs)) {
+      for (const entry of recentCrashLogs) {
+        if (entry.message) {
+          entry.message = "[masked]";
+        }
+      }
+    }
+  }
 
   const elapsed = Date.now() - start;
   console.log(`Diagnostics collected in ${elapsed}ms`);
@@ -386,7 +628,7 @@ async function collectDiagnostics() {
     bsodCount: bsod.length,
 
     // Network
-    dnsServers: dns,
+    dnsServers: dnsServers,
     networkAdapters: adapters,
     wifiSignal: wifi,
 
@@ -396,6 +638,26 @@ async function collectDiagnostics() {
 
     // Performance
     performanceIssues: perfIssues,
+
+    // Extended Telemetry: System
+    bootDuration,
+    shutdownReason,
+    thermalThrottling,
+    batteryHealth,
+
+    // Extended Telemetry: Network
+    gatewayLatency,
+    dnsResolutionMs,
+    wifiRssiDbm,
+
+    // Extended Telemetry: Application
+    hangingProcesses,
+    recentCrashLogs,
+
+    // Extended Telemetry: Hardware
+    diskIoLatency,
+    smartStatus,
+    ramPressurePct,
   };
 }
 

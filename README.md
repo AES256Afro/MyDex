@@ -114,6 +114,12 @@ SOC 2 compliance health dashboard with overall score, control status breakdown, 
 
 Complete software catalog across all enrolled devices. Version distribution charts, outdated software detection, and per-device software listings. Track what's installed, where, and whether it's up to date.
 
+### Fleet Health & Digital Friction
+
+![Fleet Health](screenshots/fleet-health.png)
+
+Fleet-wide health monitoring with a quantified "Digital Friction" score (0-100) measuring delays, hangs, and blockers across all devices. Friction breakdown shows 8 categories (slow boot, app hangs, network latency, pending updates, disk pressure, BSOD events, login failures, stale agents) with color-coded severity bars. Per-device health grid scores each endpoint on antivirus, firewall, updates, stability, and CVE status. Extended telemetry overview tracks system (boot duration, shutdown reason, thermal throttling, battery wear), network (gateway latency, DNS resolution, Wi-Fi RSSI), application (hang rate, crash logs, focus time), and hardware (disk I/O, S.M.A.R.T., RAM pressure) metrics.
+
 ### Productivity & Engagement
 
 ![Productivity](screenshots/productivity.png)
