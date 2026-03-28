@@ -27,6 +27,7 @@ import {
   Blocks,
   Download,
   Package,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 
@@ -51,16 +52,18 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   "sso-providers": KeyRound,
   "module-access": Blocks,
   "software-inventory": Package,
+  "it-support": Wrench,
   "agent-setup": Download,
 };
 
 // Category labels and order
-const CATEGORY_ORDER = ["core", "monitoring", "management", "security", "admin"];
+const CATEGORY_ORDER = ["core", "monitoring", "management", "security", "it-support", "admin"];
 const CATEGORY_LABELS: Record<string, string> = {
   core: "",
   monitoring: "Monitoring",
   management: "Management",
   security: "Security",
+  "it-support": "IT Support",
   admin: "Administration",
 };
 
