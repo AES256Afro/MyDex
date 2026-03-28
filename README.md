@@ -76,7 +76,13 @@ Built-in clock widget for employees to clock in/out. Daily and weekly timesheet 
 
 ![Projects](screenshots/projects.png)
 
-Create projects with descriptions, deadlines, and team assignments. Kanban task board with drag-and-drop between columns (To Do, In Progress, Review, Done). Milestone tracking with progress indicators. List and board view alternatives.
+Create projects with descriptions, deadlines, and team assignments. Project cards show progress bars, team avatars, and status badges. Click "View Board" to open the full Kanban task board.
+
+#### Kanban Board
+
+![Kanban Board](screenshots/kanban-board.png)
+
+Full Kanban task board with 5 columns (Backlog, To Do, In Progress, In Review, Done). Task cards display priority badges, category labels, due dates, and assignee avatars. Breadcrumb navigation between project list and board views.
 
 ### Security Center
 
@@ -89,6 +95,18 @@ Centralized security dashboard with:
 - **Threat Alerts** — Severity-classified alerts (High/Medium/Low) with device attribution
 - **Device Security Posture** — Antivirus, firewall, update compliance per device
 - **Audit Log** — Complete audit trail of all administrative actions
+
+### DLP Policies
+
+![DLP Policies](screenshots/dlp.png)
+
+Data Loss Prevention policy management with breadcrumbs, a step-by-step explainer, and 8 pre-built policy templates (SSN, credit cards, API keys, email exfiltration, HIPAA, source code, financial documents, USB media). Each template includes expandable rule previews with regex patterns, keyword lists, and action configurations. Create custom policies or start from a template.
+
+### SOC 2 Compliance
+
+![SOC 2 Compliance](screenshots/compliance.png)
+
+SOC 2 compliance health dashboard with overall score, control status breakdown, and compliance trend charts. Trust Service Criteria mapping across all 5 categories (Security, Availability, Processing Integrity, Confidentiality, Privacy). Per-device compliance checks with expandable detail views and automated remediation suggestions.
 
 ### Software Inventory
 
@@ -164,18 +182,29 @@ Employee self-service portal for profile management, password changes, MFA setup
 
 Secure login with email/password, GitHub OAuth, and Microsoft SSO. Protected by rate limiting, MFA enforcement, and full audit logging.
 
-### IT Support & Remediation
+### IT Support (Employee Self-Service)
 
-![IT Support](screenshots/it-support.png)
+![IT Support](screenshots/support.png)
 
-Full IT support console for resolving digital friction remotely and at scale. Includes:
-- **Advanced Capabilities** — Offline remediation, compliance drift monitoring, zero-day vulnerability patching, resource reclamation, ransomware rollback, and sustainability/carbon reporting
+User-facing IT Support portal accessible to all employees. Auto-detects the logged-in user's device and provides:
+- **My Device** — Device overview with CPU, RAM, uptime, and health status cards (antivirus, firewall, updates, stability)
+- **Self-Service Fix** — 21 pre-approved remediations across 6 categories (performance, network, display, apps, security, peripherals) with app picker for stuck application resets
+- **Submit Ticket** — Auto-detected device, stock issue reasons, app selector for app-related issues, and network auto-capture
+- **My Tickets** — Track submitted ticket status
+- **Remediation History** — Personal log of self-service fixes run on the user's device
+
+### IT Admin Portal
+
+![IT Admin Portal](screenshots/it-support.png)
+
+Full IT support admin console for resolving digital friction remotely and at scale. Includes:
+- **Ticket Queue** — Manage and assign support tickets with priority and status tracking
 - **Cross-Platform Remediations** — Process management, disk cleanup, network reset, service restart, NTP sync, and reboot orchestration
 - **Windows Remediations (PowerShell)** — Print spooler clear, SFC/DISM repair, Group Policy refresh, Explorer restart, Windows Update reset, WMI repair, temp file cleanup
 - **macOS Remediations (Zsh)** — TCC permission reset, Spotlight re-index, SystemUIServer restart, DNS flush, FileVault verification, Dock/Finder restart, LaunchDaemon management
 - **Security & Compliance** — Certificate injection, agent health recovery, local admin removal, unauthorized app removal
+- **Configuration** — Manage stock ticket reasons and remediation group settings
 - **Live Remediation Queue** — Real-time status tracking with auto-trigger and manual execution modes
-- **Remediation History** — Full audit trail of every action taken across the fleet
 
 ### Licensing & Pricing
 
