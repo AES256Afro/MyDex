@@ -2,6 +2,7 @@
 
 import { useState, Fragment } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -528,6 +529,8 @@ export default function DemoPage() {
   const [selfServiceFilter, setSelfServiceFilter] = useState<"all" | "performance" | "network" | "display" | "apps" | "security" | "peripherals">("all");
   const [soc2DeviceFilter, setSoc2DeviceFilter] = useState<string | null>(null);
   const [ranSelfRemediations, setRanSelfRemediations] = useState<Set<string>>(new Set());
+  const [selectedDemoResetApp, setSelectedDemoResetApp] = useState<string | null>(null);
+  const [demoAppSearch, setDemoAppSearch] = useState("");
   const [selectedTicketDevice, setSelectedTicketDevice] = useState<string | null>(null);
   const [selectedTicketApp, setSelectedTicketApp] = useState<string | null>(null);
   const [ticketDescription, setTicketDescription] = useState("");
@@ -1149,7 +1152,7 @@ export default function DemoPage() {
                       <Card className="border-l-4 border-l-blue-500">
                         <CardContent className="py-4">
                           <div className="flex gap-1 mb-4 flex-wrap">
-                            {[{ id: "overview", label: "Overview", icon: Monitor }, { id: "security", label: "Security", icon: Shield }, { id: "software", label: "Software", icon: Package }, { id: "activity", label: "Activity", icon: Activity }].map((t) => (
+                            {[{ id: "overview", label: "Overview", icon: Monitor }, { id: "security", label: "Security", icon: Shield }, { id: "software", label: "Software", icon: Package }, { id: "activity", label: "Activity", icon: Activity }, { id: "remediation", label: "Remediation", icon: Wrench }, { id: "compliance", label: "Compliance", icon: FileCheck }].map((t) => (
                               <Button key={t.id} size="sm" variant={deviceTab === t.id ? "default" : "ghost"} onClick={(e) => { e.stopPropagation(); setDeviceTab(t.id); }}>
                                 <t.icon className="h-3.5 w-3.5 mr-1" /> {t.label}
                               </Button>
@@ -1201,6 +1204,173 @@ export default function DemoPage() {
                               </table>
                             </div>
                           )}
+                          {deviceTab === "remediation" && (() => {
+                            const isWindows = d.platform === "win32" || d.platform?.toLowerCase() === "windows";
+                            const remediations: { id: string; severity: "critical" | "high" | "medium" | "low"; category: string; title: string; desc: string; script: string }[] = [];
+
+                            if (d.pendingUpdates && d.pendingUpdates.length > 0) {
+                              remediations.push({ id: "updates", severity: "critical", category: "Updates", title: `Install ${d.pendingUpdates.length} Pending Update(s)`, desc: d.pendingUpdates.slice(0, 2).map((u: { title: string }) => u.title).join(", "), script: isWindows ? "Install-Module PSWindowsUpdate -Force\nGet-WindowsUpdate -Install -AcceptAll -AutoReboot" : "softwareupdate --install --all" });
+                            }
+                            if (d.rebootPending) {
+                              remediations.push({ id: "reboot", severity: "high", category: "System", title: "Reboot Required", desc: "System needs a reboot — patches may not be applied.", script: isWindows ? 'shutdown /r /t 300 /c "Scheduled reboot in 5 minutes"' : "sudo shutdown -r +5" });
+                            }
+                            if (d.bsodCount > 0) {
+                              remediations.push({ id: "bsod", severity: "critical", category: "Stability", title: `Diagnose ${d.bsodCount} BSOD Event(s)`, desc: "Blue screen crashes detected — run system diagnostics.", script: isWindows ? "sfc /scannow\nDISM /Online /Cleanup-Image /RestoreHealth\nmdsched.exe" : "sudo fsck -fy" });
+                              remediations.push({ id: "drivers", severity: "high", category: "Stability", title: "Update Drivers (BSOD Prevention)", desc: "Outdated drivers are the #1 cause of BSODs.", script: isWindows ? "pnputil /scan-devices\ndriverquery /v /fo csv > $env:TEMP\\drivers.csv" : "softwareupdate --list" });
+                            }
+                            if (!Object.values(d.firewallStatus || {}).every(Boolean)) {
+                              const disabled = Object.entries(d.firewallStatus || {}).filter(([, v]) => !v).map(([k]) => k);
+                              remediations.push({ id: "firewall", severity: "high", category: "Security", title: "Enable Firewall Profiles", desc: `Disabled: ${disabled.join(", ")}`, script: isWindows ? `Set-NetFirewallProfile -Profile ${disabled.join(",")} -Enabled True` : "sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on" });
+                            }
+
+                            const sevColors = { critical: "bg-red-100 text-red-800", high: "bg-orange-100 text-orange-800", medium: "bg-yellow-100 text-yellow-800", low: "bg-blue-100 text-blue-800" };
+
+                            return (
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <h3 className="font-semibold text-sm flex items-center gap-2"><Wrench className="h-4 w-4" /> Device Remediations</h3>
+                                    <p className="text-xs text-muted-foreground mt-0.5">{remediations.length} actionable fix{remediations.length !== 1 ? "es" : ""} for {d.hostname}</p>
+                                  </div>
+                                  {remediations.length > 0 && (
+                                    <div className="flex gap-1.5">
+                                      {(["critical", "high", "medium", "low"] as const).map(s => {
+                                        const count = remediations.filter(r => r.severity === s).length;
+                                        return count > 0 ? <Badge key={s} className={`text-[10px] ${sevColors[s]}`}>{count} {s}</Badge> : null;
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                                {remediations.length === 0 ? (
+                                  <div className="text-center py-8 rounded-lg border border-green-200 bg-green-50/50">
+                                    <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                                    <p className="text-sm font-medium text-green-800">No issues detected</p>
+                                    <p className="text-xs text-muted-foreground mt-1">This device is healthy.</p>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-3">
+                                    {remediations.map(r => (
+                                      <div key={r.id} className="rounded-lg border overflow-hidden">
+                                        <div className="flex items-center justify-between p-3 bg-muted/30">
+                                          <div className="flex items-center gap-3">
+                                            <Badge className={`text-[10px] ${sevColors[r.severity]}`}>{r.severity}</Badge>
+                                            <div>
+                                              <span className="text-sm font-medium">{r.title}</span>
+                                              <p className="text-xs text-muted-foreground mt-0.5">{r.desc}</p>
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <Badge variant="outline" className="text-[10px]">{r.category}</Badge>
+                                            <Button size="sm" variant="default" className="h-7 text-xs" onClick={(e) => e.stopPropagation()}>
+                                              <Zap className="h-3 w-3 mr-1" /> Run Fix (Demo)
+                                            </Button>
+                                          </div>
+                                        </div>
+                                        <div className="bg-gray-950 text-green-400 p-3 font-mono text-[11px] overflow-x-auto">
+                                          <pre className="whitespace-pre-wrap">{r.script}</pre>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+                          {deviceTab === "compliance" && (() => {
+                            const isWindows = d.platform === "win32" || d.platform?.toLowerCase() === "windows";
+                            const hasAv = !!d.antivirusName;
+                            const allFwOn = Object.values(d.firewallStatus || {}).every(Boolean);
+                            const noUpdates = !d.pendingUpdates || d.pendingUpdates.length === 0;
+                            const noReboot = !d.rebootPending;
+                            const noBsod = !d.bsodCount || d.bsodCount === 0;
+                            const hasSoftware = d.installedSoftware && d.installedSoftware.length > 0;
+                            const isOnline = d.status === "ONLINE";
+
+                            const checks = [
+                              { id: "av", label: "Antivirus Active", control: "CC6.8", pass: hasAv, desc: hasAv ? d.antivirusName : "No antivirus detected", icon: Shield },
+                              { id: "fw", label: "Firewall Enabled", control: "CC6.6", pass: allFwOn, desc: allFwOn ? "All firewall profiles active" : "One or more firewall profiles disabled", icon: Shield },
+                              { id: "updates", label: "Updates Current", control: "CC7.1", pass: noUpdates, desc: noUpdates ? "All patches applied" : `${d.pendingUpdates.length} pending update(s)`, icon: RefreshCw },
+                              { id: "reboot", label: "No Pending Reboot", control: "CC7.5", pass: noReboot, desc: noReboot ? "No reboot required" : "Reboot pending — system may be unpatched", icon: RefreshCw },
+                              { id: "bsod", label: "System Stability", control: "CC7.5", pass: noBsod, desc: noBsod ? "No crash events" : `${d.bsodCount} BSOD event(s) detected`, icon: AlertTriangle },
+                              { id: "software", label: "Software Inventory", control: "CC8.2", pass: hasSoftware, desc: hasSoftware ? `${d.installedSoftware.length} apps tracked` : "No software inventory", icon: Package },
+                              { id: "agent", label: "Agent Reporting", control: "CC7.1", pass: isOnline, desc: isOnline ? "Agent online" : "Agent offline", icon: Monitor },
+                            ];
+
+                            const passCount = checks.filter(c => c.pass).length;
+                            const score = Math.round((passCount / checks.length) * 100);
+                            const failingChecks = checks.filter(c => !c.pass);
+
+                            return (
+                              <div className="space-y-4">
+                                {/* Score bar */}
+                                <div className="flex items-center gap-4">
+                                  <div className="flex-1">
+                                    <div className="flex justify-between text-sm mb-1">
+                                      <span className="font-medium">SOC 2 Compliance Score</span>
+                                      <span className={cn("font-bold", score >= 80 ? "text-green-600" : score >= 50 ? "text-yellow-600" : "text-red-600")}>{score}%</span>
+                                    </div>
+                                    <div className="w-full bg-muted rounded-full h-2.5">
+                                      <div className={cn("h-2.5 rounded-full transition-all", score >= 80 ? "bg-green-500" : score >= 50 ? "bg-yellow-500" : "bg-red-500")} style={{ width: `${score}%` }} />
+                                    </div>
+                                  </div>
+                                  <Badge variant={score >= 80 ? "default" : "destructive"} className="text-xs">{passCount}/{checks.length} controls</Badge>
+                                </div>
+
+                                {/* Control checks grid */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                  {checks.map((check) => (
+                                    <div key={check.id} className={cn("flex items-start gap-2 p-2 rounded-md border text-xs", check.pass ? "border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-800" : "border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800")}>
+                                      {check.pass ? <CheckCircle className="h-3.5 w-3.5 text-green-500 mt-0.5 shrink-0" /> : <XCircle className="h-3.5 w-3.5 text-red-500 mt-0.5 shrink-0" />}
+                                      <div>
+                                        <div className="font-medium">{check.label} <span className="text-muted-foreground">({check.control})</span></div>
+                                        <div className="text-muted-foreground">{check.desc}</div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {/* Quick-fix remediations for failing controls */}
+                                {failingChecks.length > 0 && (
+                                  <div className="space-y-2">
+                                    <h4 className="text-sm font-semibold flex items-center gap-1"><Zap className="h-4 w-4 text-yellow-500" /> Quick-Fix Remediations</h4>
+                                    {failingChecks.map((check) => {
+                                      const scripts: Record<string, { label: string; script: string }> = {
+                                        av: { label: "Enable Windows Defender", script: isWindows ? "Set-MpPreference -DisableRealtimeMonitoring $false" : "# macOS: Install antivirus from IT portal" },
+                                        fw: { label: "Enable Firewall", script: isWindows ? "Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True" : "sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on" },
+                                        updates: { label: "Install Updates", script: isWindows ? "Install-WindowsUpdate -AcceptAll -AutoReboot" : "sudo softwareupdate -ia" },
+                                        reboot: { label: "Reboot System", script: isWindows ? "Restart-Computer -Force" : "sudo shutdown -r now" },
+                                        bsod: { label: "Run System Diagnostics", script: isWindows ? "sfc /scannow && DISM /Online /Cleanup-Image /RestoreHealth" : "sudo fsck -fy" },
+                                        software: { label: "Sync Software Inventory", script: "# Restart MyDex agent to trigger inventory sync" },
+                                        agent: { label: "Restart Agent", script: isWindows ? "Restart-Service MyDexAgent" : "sudo launchctl kickstart -k system/com.mydex.agent" },
+                                      };
+                                      const fix = scripts[check.id];
+                                      if (!fix) return null;
+                                      return (
+                                        <div key={check.id} className="border rounded-md p-2">
+                                          <div className="flex items-center justify-between mb-1">
+                                            <span className="text-xs font-medium flex items-center gap-1"><Terminal className="h-3 w-3" /> {fix.label}</span>
+                                            <Badge variant="outline" className="text-[10px]">{check.control}</Badge>
+                                          </div>
+                                          <pre className="text-[11px] bg-muted/50 p-1.5 rounded font-mono overflow-x-auto">{fix.script}</pre>
+                                          <Button size="sm" variant="outline" className="mt-1 h-6 text-[10px]" onClick={(e) => { e.stopPropagation(); }}>
+                                            <Zap className="h-3 w-3 mr-1" /> Run Fix (Demo)
+                                          </Button>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+
+                                {failingChecks.length === 0 && (
+                                  <div className="text-center py-4 bg-green-50 dark:bg-green-900/10 rounded-md">
+                                    <CheckCircle className="h-6 w-6 text-green-500 mx-auto mb-2" />
+                                    <p className="text-sm font-medium text-green-800 dark:text-green-300">All SOC 2 controls passing</p>
+                                    <p className="text-xs text-muted-foreground mt-1">This device meets all compliance requirements.</p>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </CardContent>
                       </Card>
                     )}
@@ -2938,7 +3108,7 @@ export default function DemoPage() {
                   { id: "sf7", title: "Test VPN Connectivity", desc: "Check if VPN tunnel is active", icon: Globe, category: "network", risk: "safe", os: "all", steps: ["Checks VPN adapter status", "Tests internal DNS resolution"], script: selfIsWindows ? "Get-VpnConnection | Format-Table Name,ServerAddress,ConnectionStatus" : "ifconfig | grep -A 5 utun", time: "~10s" },
                   { id: "sf8", title: "Fix Display Scaling", desc: "Reset DPI and display scaling to defaults", icon: Eye, category: "display", risk: "low", os: "all", steps: ["Resets display scaling to recommended", "Refreshes desktop rendering"], script: selfIsWindows ? "Set-ItemProperty -Path 'HKCU:\\Control Panel\\Desktop' -Name LogPixels -Value 96" : "defaults delete NSGlobalDomain AppleDisplayScaleFactor 2>/dev/null\nkillall Dock", time: "~5s" },
                   { id: "sf9", title: "Clear Browser Cache", desc: "Remove cached data from Chrome, Edge, or Firefox", icon: Globe, category: "apps", risk: "safe", os: "all", steps: ["Closes browser processes safely", "Clears cache and session storage", "Preserves bookmarks and passwords"], script: selfIsWindows ? "Stop-Process -Name chrome,msedge -Force -EA SilentlyContinue\nRemove-Item \"$env:LOCALAPPDATA\\Google\\Chrome\\User Data\\Default\\Cache\\*\" -Recurse -Force -EA SilentlyContinue" : "rm -rf ~/Library/Caches/Google/Chrome/Default/Cache/*", time: "~15s" },
-                  { id: "sf10", title: "Reset Stuck Application", desc: "Force-quit and relaunch a frozen application", icon: Zap, category: "apps", risk: "safe", os: "all", steps: ["Select the frozen application", "Force terminates the process"], script: selfIsWindows ? "Stop-Process -Name AppName -Force" : "killall AppName", time: "~5s" },
+                  { id: "sf10", title: "Reset Stuck Application", desc: "Force-quit and relaunch a frozen application", icon: Zap, category: "apps", risk: "safe", os: "all", steps: ["Select the frozen application below", "Force terminates the process"], script: selectedDemoResetApp ? (selfIsWindows ? `Stop-Process -Name "${selectedDemoResetApp}" -Force -EA SilentlyContinue\nWrite-Host 'Terminated: ${selectedDemoResetApp}'` : `killall "${selectedDemoResetApp}" 2>/dev/null\necho 'Terminated: ${selectedDemoResetApp}'`) : undefined, time: "~5s" },
                   { id: "sf11", title: "Repair Microsoft Office", desc: "Run the built-in Office repair tool", icon: FileText, category: "apps", risk: "low", os: "windows", steps: ["Launches Office Click-to-Run repair", "Verifies Office file integrity"], script: "& \"C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\OfficeC2RClient.exe\" /update user", time: "~5min" },
                   { id: "sf12", title: "Fix Teams/Slack Issues", desc: "Clear app cache and reset for fresh login", icon: RefreshCw, category: "apps", risk: "low", os: "all", steps: ["Stops the application", "Clears local cache"], script: selfIsWindows ? "Stop-Process -Name Teams,slack -Force -EA SilentlyContinue\nRemove-Item \"$env:APPDATA\\Microsoft\\Teams\\Cache\\*\" -Recurse -Force -EA SilentlyContinue" : "killall Teams Slack 2>/dev/null\nrm -rf ~/Library/Application\\ Support/Microsoft/Teams/Cache/*", time: "~15s" },
                   { id: "sf13", title: "Check for Malware", desc: "Run a quick scan with built-in security tools", icon: Shield, category: "security", risk: "safe", os: "all", steps: ["Initiates a quick system scan", "Reports findings immediately"], script: selfIsWindows ? "Start-MpScan -ScanType QuickScan" : "echo 'XProtect is active and monitoring'", time: "~2min" },
@@ -3030,6 +3200,52 @@ export default function DemoPage() {
                                   </li>
                                 ))}
                               </ul>
+
+                              {/* App picker for Reset Stuck Application */}
+                              {remedy.id === "sf10" && selfDevice && selfDevice.installedSoftware.length > 0 && (
+                                <div className="mt-2 space-y-1.5">
+                                  <div className="relative">
+                                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                    <Input
+                                      placeholder="Search applications..."
+                                      value={demoAppSearch}
+                                      onChange={(e) => setDemoAppSearch(e.target.value)}
+                                      className="pl-7 h-7 text-xs"
+                                    />
+                                  </div>
+                                  <div className="max-h-32 overflow-y-auto rounded-lg border bg-muted/20 divide-y">
+                                    {selfDevice.installedSoftware
+                                      .filter((a: { name: string }) => !demoAppSearch || a.name.toLowerCase().includes(demoAppSearch.toLowerCase()))
+                                      .slice(0, 30)
+                                      .map((app: { name: string; version: string }, idx: number) => (
+                                        <button
+                                          key={`${app.name}-${idx}`}
+                                          onClick={() => setSelectedDemoResetApp(selectedDemoResetApp === app.name ? null : app.name)}
+                                          className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-left transition-colors text-xs ${
+                                            selectedDemoResetApp === app.name
+                                              ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200"
+                                              : "hover:bg-muted/50"
+                                          }`}
+                                        >
+                                          <Package className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                          <span className="font-medium truncate">{app.name}</span>
+                                          <span className="text-[10px] text-muted-foreground ml-auto shrink-0">v{app.version}</span>
+                                          {selectedDemoResetApp === app.name && <CheckCircle className="h-3 w-3 text-emerald-600 shrink-0" />}
+                                        </button>
+                                      ))}
+                                  </div>
+                                  {selectedDemoResetApp && (
+                                    <div className="text-[11px] text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                                      <CheckCircle className="h-3 w-3" /> Selected: <strong>{selectedDemoResetApp}</strong>
+                                    </div>
+                                  )}
+                                  {!selectedDemoResetApp && (
+                                    <div className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                      <AlertTriangle className="h-3 w-3" /> Select an application above to continue
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                             {remedy.script && selfDevice && (
                               <div className="border-t">
@@ -3043,8 +3259,11 @@ export default function DemoPage() {
                             )}
                             <div className="px-4 py-2.5 bg-muted/20 border-t">
                               <Button size="sm" className={`w-full text-xs h-8 ${hasRun ? "bg-green-600 hover:bg-green-700" : "bg-emerald-600 hover:bg-emerald-700"} text-white`}
+                                disabled={remedy.id === "sf10" && !selectedDemoResetApp}
                                 onClick={() => setRanSelfRemediations(prev => new Set(prev).add(remedy.id))}>
-                                {hasRun ? <><CheckCircle className="h-3 w-3 mr-1.5" />Completed</> : <><Play className="h-3 w-3 mr-1.5" />Run Fix</>}
+                                {hasRun ? <><CheckCircle className="h-3 w-3 mr-1.5" />Completed</> :
+                                 remedy.id === "sf10" && !selectedDemoResetApp ? <><AlertTriangle className="h-3 w-3 mr-1.5" />Select App First</> :
+                                 <><Play className="h-3 w-3 mr-1.5" />Run Fix</>}
                               </Button>
                             </div>
                           </div>
