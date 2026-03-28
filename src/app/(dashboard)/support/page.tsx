@@ -1029,17 +1029,74 @@ export default function SupportPage() {
                     <Button variant="ghost" size="sm" onClick={() => { setViewingTicket(null); setTicketMessages([]); }}><ArrowLeft className="h-4 w-4" /></Button>
                     <div className="flex-1">
                       <CardTitle className="text-lg">{ticket.subject}</CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <Badge className={`text-[10px] ${statusColors[ticket.status] || "bg-gray-100 text-gray-800"}`}>{ticket.status.replace(/_/g, " ")}</Badge>
                         <Badge variant="outline" className="text-[10px]">{ticket.priority}</Badge>
-                        {ticket.device && <span className="text-xs text-muted-foreground">{ticket.device.hostname}</span>}
                         <span className="text-xs text-muted-foreground">Opened {new Date(ticket.createdAt).toLocaleDateString()}</span>
                       </div>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Ticket details */}
+                  {/* Submitter & Device info */}
+                  <div className="flex items-center gap-4 rounded-lg border bg-muted/20 p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-sm font-semibold text-blue-700 dark:text-blue-300">
+                        {ticket.submitter.name.split(" ").map(n => n[0]).join("").toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium">{ticket.submitter.name}</div>
+                        <div className="text-[11px] text-muted-foreground">{ticket.submitter.email}</div>
+                      </div>
+                    </div>
+                    {ticket.device && (
+                      <>
+                        <div className="h-8 border-l" />
+                        <div className="flex items-center gap-2">
+                          <Monitor className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <div className="text-sm font-medium">{ticket.device.hostname}</div>
+                            <div className="text-[11px] text-muted-foreground capitalize">{ticket.device.platform}</div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {ticket.assignee && (
+                      <>
+                        <div className="h-8 border-l" />
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4 text-green-600" />
+                          <div>
+                            <div className="text-sm font-medium">{ticket.assignee.name}</div>
+                            <div className="text-[11px] text-muted-foreground">IT Assigned</div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* User status actions */}
+                  {!["RESOLVED", "CLOSED"].includes(ticket.status) && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground mr-1">Update status:</span>
+                      {ticket.status !== "IN_PROGRESS" && (
+                        <Button size="sm" variant="outline" className="text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950" onClick={async () => {
+                          await fetch("/api/v1/tickets", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: ticket.id, status: "IN_PROGRESS" }) });
+                          fetchTickets();
+                        }}>
+                          <Wrench className="h-3.5 w-3.5 mr-1.5" /> Mark as Working
+                        </Button>
+                      )}
+                      <Button size="sm" variant="outline" className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950" onClick={async () => {
+                        await fetch("/api/v1/tickets", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: ticket.id, status: "RESOLVED" }) });
+                        fetchTickets();
+                      }}>
+                        <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Mark as Resolved
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Ticket description */}
                   {ticket.description && (
                     <div className="rounded-lg border bg-muted/20 p-3">
                       <div className="text-xs font-medium text-muted-foreground mb-1">Description</div>
@@ -1180,6 +1237,9 @@ export default function SupportPage() {
                       return (
                         <button key={ticket.id} onClick={() => setViewingTicket(ticket.id)}
                           className="w-full flex items-center gap-3 p-3 rounded-lg border text-left hover:bg-muted/30 transition-colors">
+                          <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xs font-semibold text-blue-700 dark:text-blue-300 shrink-0">
+                            {ticket.submitter.name.split(" ").map(n => n[0]).join("").toUpperCase()}
+                          </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium truncate">{ticket.subject}</span>
@@ -1187,12 +1247,13 @@ export default function SupportPage() {
                               <Badge variant="outline" className="text-[10px] shrink-0">{ticket.priority}</Badge>
                             </div>
                             <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                              {ticket.device && <span>{ticket.device.hostname}</span>}
+                              <span className="font-medium text-foreground/70">{ticket.submitter.name}</span>
+                              {ticket.device && <span className="flex items-center gap-1"><Monitor className="h-3 w-3" />{ticket.device.hostname}</span>}
                               <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
                               {ticket._count && ticket._count.messages > 0 && (
                                 <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" />{ticket._count.messages}</span>
                               )}
-                              {ticket.assignee && <span>Assigned: {ticket.assignee.name}</span>}
+                              {ticket.assignee && <span className="flex items-center gap-1"><Shield className="h-3 w-3" />{ticket.assignee.name}</span>}
                             </div>
                           </div>
                           <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
