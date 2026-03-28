@@ -48,25 +48,39 @@ MyDex is a self-hostable, multi-tenant SaaS platform that gives small businesses
 
 ### Dashboard
 
+![Dashboard](screenshots/dashboard.png)
+
 The admin dashboard provides a bird's-eye view of your organization with KPI cards (employee count, devices online, open alerts, blocked domains), a 24-hour activity heatmap, recent activity feed, and a security overview panel. Employees see a simplified personal dashboard with their clock status, attendance, tasks, and leave requests.
 
 ### Device Management
+
+![Devices](screenshots/devices.png)
 
 Full hardware inventory for every enrolled workstation. Expandable device cards show CPU, RAM, GPU, disk, network info, pending OS updates, and reboot status. Tabbed views for Overview, Security posture, Installed Software, and Recent Activity. Real-time online/offline status with last-seen timestamps.
 
 ### Activity Monitoring
 
+![Activity](screenshots/activity.png)
+
 Track application usage and website visits across your team. Horizontal bar charts show time spent per app (VS Code, Chrome, Slack, etc.). Hourly activity heatmaps visualize work patterns across a 24-hour period. Filter by employee and date range.
 
 ### Time Tracking & Attendance
 
+![Time Tracking](screenshots/time-tracking.png)
+
 Built-in clock widget for employees to clock in/out. Daily and weekly timesheet views. Attendance calendar with present/absent/late status. Leave request system with approval workflow.
 
+![Attendance](screenshots/attendance.png)
+
 ### Project Management
+
+![Projects](screenshots/projects.png)
 
 Create projects with descriptions, deadlines, and team assignments. Kanban task board with drag-and-drop between columns (To Do, In Progress, Review, Done). Milestone tracking with progress indicators. List and board view alternatives.
 
 ### Security Center
+
+![Security](screenshots/security.png)
 
 Centralized security dashboard with:
 - **CVE Detection** — Scan devices for known vulnerabilities, import from NVD feeds
@@ -76,13 +90,85 @@ Centralized security dashboard with:
 - **Device Security Posture** — Antivirus, firewall, update compliance per device
 - **Audit Log** — Complete audit trail of all administrative actions
 
+### Software Inventory
+
+![Software Inventory](screenshots/software-inventory.png)
+
+Complete software catalog across all enrolled devices. Version distribution charts, outdated software detection, and per-device software listings. Track what's installed, where, and whether it's up to date.
+
 ### Productivity & Engagement
+
+![Productivity](screenshots/productivity.png)
 
 Productivity scoring based on active time ratios, productive app usage, and task completion rates. Engagement scoring combining attendance, activity, and project participation. Team comparison charts and trend analysis.
 
+### Employee Management
+
+![Employees](screenshots/employees.png)
+
+Full employee directory with role, department, and status filters. Invite new users, manage profiles, and view individual activity timelines. Bulk operations for large teams.
+
+### Department & Host Group Management
+
+![Departments](screenshots/departments.png)
+
+Organize employees into departments with managers and headcount tracking.
+
+![Host Groups](screenshots/host-groups.png)
+
+Group devices by function, location, or team. Apply policies and blocklists at the group level.
+
 ### Reports
 
+![Reports](screenshots/reports.png)
+
 Generate PDF, CSV, and XLSX reports. Report builder with configurable type, filters, and date ranges. Scheduled report delivery via email (Resend).
+
+### User Management
+
+![User Management](screenshots/user-management.png)
+
+Manage all users across your organization. Assign roles, reset passwords, enable/disable accounts, and audit login history. Bulk invite and provisioning support.
+
+### Settings & Administration
+
+![Settings](screenshots/settings.png)
+
+Organization-wide settings including company info, registration mode, device allowlists, and agent policies.
+
+![MFA & Security](screenshots/mfa-security.png)
+
+Configure MFA enforcement, security policies, and brute-force protection settings.
+
+![SSO Providers](screenshots/sso-providers.png)
+
+Set up enterprise SSO with Microsoft Entra ID, Okta, GitHub, and custom OIDC/SAML providers. Step-by-step configuration guides included.
+
+![Module Access](screenshots/module-access.png)
+
+Fine-grained control over which modules each role can access. Toggle visibility for all 22 modules across 5 categories.
+
+![Agent Setup](screenshots/agent-setup.png)
+
+Download and deploy the MyDex agent on Windows, macOS, and Linux. API key management for agent authentication. MDM deployment guides for Intune, Jamf, SCCM, and GPO.
+
+### Account Settings
+
+![My Account](screenshots/my-account.png)
+
+Employee self-service portal for profile management, password changes, MFA setup, and monitoring pause controls. Privacy-first design lets users pause agent reporting at any time.
+
+### Authentication
+
+![Login](screenshots/login.png)
+
+Secure login with email/password, GitHub OAuth, and Microsoft SSO. Protected by rate limiting, MFA enforcement, and full audit logging.
+
+### Licensing & Pricing
+
+![Licensing](screenshots/licensing.png)
+
+Transparent, tiered pricing with an interactive cost calculator. Three plans (Starter, Business, Enterprise) scaling from 10 to 1,000+ employees. Optional Security Suite add-on for CVE scanning, threat intelligence, and DLP.
 
 ---
 
