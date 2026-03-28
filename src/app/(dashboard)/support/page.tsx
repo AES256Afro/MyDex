@@ -1197,47 +1197,76 @@ export default function SupportPage() {
 
                     {/* Resolution confirmation + rating */}
                     {ticket.status === "RESOLVED" && !ticket.satisfactionRating && (
-                      <div className="border-t p-4 space-y-3 bg-green-50/50 dark:bg-green-950/20">
+                      <div className="border-t p-4 space-y-4 bg-white dark:bg-gray-900">
                         <div className="text-sm font-medium text-center flex items-center justify-center gap-2">
                           <ThumbsUp className="h-4 w-4 text-green-600" />
-                          IT has marked this ticket as resolved. Is your issue fixed?
+                          IT has marked this ticket as resolved. Please rate your experience.
                         </div>
-                        <div className="flex justify-center gap-3">
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => confirmResolved(ticket.id)}>
-                            <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Yes, issue is fixed
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-orange-600 border-orange-300" onClick={async () => {
-                            await fetch("/api/v1/tickets", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: ticket.id, status: "WAITING_ON_IT" }) });
-                            fetchTickets();
-                          }}>
-                            No, still having issues
-                          </Button>
-                        </div>
+
+                        {/* Step 1: Rate (required) */}
                         <div className="text-center">
-                          <div className="text-xs text-muted-foreground mb-2">Rate your support experience</div>
-                          <div className="flex justify-center gap-1 mb-2">
+                          <div className="text-xs font-medium text-muted-foreground mb-2">Rate your support experience</div>
+                          <div className="flex justify-center gap-2 mb-2">
                             {[1, 2, 3, 4, 5].map(star => (
                               <button key={star}
                                 onMouseEnter={() => setRatingHover(star)}
                                 onMouseLeave={() => setRatingHover(0)}
                                 onClick={() => setRatingStars(star)}
-                                className="p-0.5 transition-transform hover:scale-110">
-                                <Star className={`h-6 w-6 ${(ratingHover || ratingStars) >= star ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                                className="p-1 transition-transform hover:scale-125">
+                                <Star className={`h-8 w-8 ${(ratingHover || ratingStars) >= star ? "fill-yellow-400 text-yellow-400" : "text-gray-400 dark:text-gray-500"}`} />
                               </button>
                             ))}
                           </div>
                           {ratingStars > 0 && (
-                            <div className="space-y-2 max-w-sm mx-auto">
-                              <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value)}
-                                placeholder="Any feedback? (optional)" className="w-full h-16 rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-500" />
-                              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" disabled={submittingRating}
-                                onClick={() => submitRating(ticket.id)}>
-                                {submittingRating ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Star className="h-3.5 w-3.5 mr-1.5" />}
-                                Submit Rating & Close
-                              </Button>
+                            <div className="text-xs font-medium mt-1">
+                              {ratingStars >= 4 ? <span className="text-green-600">Great experience!</span> : ratingStars === 3 ? <span className="text-amber-600">Average experience</span> : <span className="text-red-600">Below expectations</span>}
                             </div>
                           )}
                         </div>
+
+                        {/* Step 2: If rating < 4, require feedback */}
+                        {ratingStars > 0 && ratingStars < 4 && (
+                          <div className="space-y-2 max-w-md mx-auto">
+                            <div className="text-xs font-medium text-red-600 text-center">What problems did you experience with your support?</div>
+                            <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value)}
+                              placeholder="Please describe what could have been better..."
+                              className="w-full h-20 rounded-lg border border-red-200 bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-400" />
+                          </div>
+                        )}
+
+                        {/* Optional feedback for good ratings */}
+                        {ratingStars >= 4 && (
+                          <div className="space-y-2 max-w-md mx-auto">
+                            <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value)}
+                              placeholder="Any additional feedback? (optional)"
+                              className="w-full h-16 rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-500" />
+                          </div>
+                        )}
+
+                        {/* Step 3: Confirm or reopen — only after rating */}
+                        {ratingStars > 0 && (
+                          <div className="flex justify-center gap-3">
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white"
+                              disabled={submittingRating || (ratingStars < 4 && !ratingComment.trim())}
+                              onClick={() => submitRating(ticket.id)}>
+                              {submittingRating ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
+                              Yes, issue is fixed
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-orange-600 border-orange-300" onClick={async () => {
+                              if (ratingStars > 0) {
+                                await submitRating(ticket.id);
+                              }
+                              await fetch("/api/v1/tickets", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: ticket.id, status: "WAITING_ON_IT" }) });
+                              fetchTickets();
+                            }}>
+                              No, still having issues
+                            </Button>
+                          </div>
+                        )}
+
+                        {!ratingStars && (
+                          <div className="text-center text-xs text-muted-foreground">Please select a rating above to continue</div>
+                        )}
                       </div>
                     )}
 
