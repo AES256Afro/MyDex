@@ -67,19 +67,38 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - create a new command (admin only)
+// POST - create a new command (admin, or self-service on own device)
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!hasPermission(session.user.role, "security:manage")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   try {
     const body = await request.json();
     const parsed = createCommandSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid input", details: parsed.error.flatten() }, { status: 400 });
+    }
+
+    const isSelfService = parsed.data.description?.startsWith("Self-Service:");
+    const isAdmin = hasPermission(session.user.role, "security:manage");
+
+    if (!isAdmin) {
+      if (!isSelfService) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+
+      // Verify the employee owns this device
+      const device = await prisma.agentDevice.findFirst({
+        where: {
+          id: parsed.data.deviceId,
+          organizationId: session.user.organizationId,
+          userId: session.user.id,
+        },
+      });
+
+      if (!device) {
+        return NextResponse.json({ error: "You can only run self-service fixes on your own device" }, { status: 403 });
+      }
     }
 
     const command = await prisma.remediationCommand.create({
