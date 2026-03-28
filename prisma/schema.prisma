@@ -69,6 +69,9 @@ model User {
   agentDevices      AgentDevice[]
   mfaCredential     MfaCredential?
   activeSessions    ActiveSession[]
+  submittedTickets  SupportTicket[]  @relation("TicketSubmitter")
+  assignedTickets   SupportTicket[]  @relation("TicketAssignee")
+  ticketMessages    TicketMessage[]
 
   @@index([organizationId])
   @@index([email])
@@ -752,6 +755,7 @@ model AgentDevice {
   dnsQueryLogs         DnsQueryLog[]
   usbDeviceEvents      UsbDeviceEvent[]
   apiKey               AgentApiKey?
+  supportTickets       SupportTicket[]
 
   @@unique([organizationId, userId, hostname])
   @@index([organizationId])
@@ -1025,4 +1029,68 @@ model ActiveSession {
 
   @@index([userId])
   @@index([organizationId])
+}
+
+// ============================================
+// SUPPORT TICKETS
+// ============================================
+
+model SupportTicket {
+  id             String       @id @default(cuid())
+  organizationId String
+  submittedBy    String       // userId of the submitter
+  assignedTo     String?      // userId of assigned IT admin
+  deviceId       String?      // optional linked device
+  subject        String
+  category       String       // e.g., "performance", "network", "access"
+  reason         String?      // stock reason label
+  appName        String?      // affected application
+  description    String?      @db.Text
+  priority       TicketPriority @default(MEDIUM)
+  status         TicketStatus   @default(OPEN)
+  deviceInfo     Json?        // snapshot of device info at submission time
+  networkInfo    Json?        // snapshot of network info
+  resolvedAt     DateTime?
+  closedAt       DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  submitter User            @relation("TicketSubmitter", fields: [submittedBy], references: [id])
+  assignee  User?           @relation("TicketAssignee", fields: [assignedTo], references: [id])
+  device    AgentDevice?    @relation(fields: [deviceId], references: [id])
+  messages  TicketMessage[]
+
+  @@index([organizationId, status])
+  @@index([submittedBy])
+  @@index([assignedTo])
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  userId    String
+  message   String   @db.Text
+  isInternal Boolean @default(false) // internal IT note, not visible to submitter
+  createdAt DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User          @relation(fields: [userId], references: [id])
+
+  @@index([ticketId, createdAt])
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_USER
+  WAITING_ON_IT
+  RESOLVED
+  CLOSED
 }
