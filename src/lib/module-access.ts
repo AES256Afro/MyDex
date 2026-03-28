@@ -16,7 +16,7 @@ export interface ModuleConfig {
   /** Can this module be enabled for lower roles by admin? */
   configurable: boolean;
   /** Category for grouping in the admin config UI */
-  category: "core" | "monitoring" | "management" | "security" | "it-support" | "admin";
+  category: "core" | "monitoring" | "management" | "security" | "compliance" | "it-support" | "admin";
 }
 
 export const MODULE_REGISTRY: ModuleConfig[] = [
@@ -161,6 +161,17 @@ export const MODULE_REGISTRY: ModuleConfig[] = [
     minRole: "ADMIN",
     configurable: false,
     category: "security",
+  },
+
+  // Compliance
+  {
+    id: "compliance",
+    label: "SOC 2 Compliance",
+    href: "/compliance",
+    description: "SOC 2 compliance health, controls, evidence, and audit readiness",
+    minRole: "MANAGER",
+    configurable: true,
+    category: "compliance",
   },
 
   // IT Support

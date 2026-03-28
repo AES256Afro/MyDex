@@ -19,8 +19,16 @@ import {
   UserCircle, Bell, Palette, Sun, Moon, Smartphone, Laptop,
   Phone, Pause, Wrench, Terminal, Zap, Leaf, RotateCcw, Recycle,
   ShieldOff, KeyRound as CertIcon, HardDriveDownload, CircleStop,
-  Thermometer, WifiOff, PrinterIcon, FolderCog,
+  Thermometer, WifiOff, PrinterIcon, FolderCog, FileCheck,
+  LifeBuoy, Sparkles, BatteryCharging, Volume2, Bluetooth, MousePointer,
+  Keyboard as KeyboardIcon, Info, ArrowUpRight, ArrowDownRight,
+  AlertCircle, Loader2,
 } from "lucide-react";
+import {
+  PieChart as RechartsPieChart, Pie, Cell, Tooltip as RechartsTooltip,
+  ResponsiveContainer, BarChart as RechartsBarChart, Bar, XAxis, YAxis,
+  CartesianGrid, RadialBarChart, RadialBar, LineChart, Line,
+} from "recharts";
 
 // ─── Mock Timestamps ─────────────────────────────────────────────────────────
 
@@ -478,6 +486,12 @@ const sectionGroups = [
     ],
   },
   {
+    category: "COMPLIANCE",
+    items: [
+      { id: "compliance", label: "SOC 2 Compliance", icon: FileCheck },
+    ],
+  },
+  {
     category: "IT SUPPORT",
     items: [
       { id: "it-support", label: "IT Support", icon: Wrench },
@@ -510,7 +524,10 @@ export default function DemoPage() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [userSearch, setUserSearch] = useState("");
   // IT Support state
-  const [itSubTab, setItSubTab] = useState<"queue" | "tickets" | "submit" | "config">("queue");
+  const [itSubTab, setItSubTab] = useState<"queue" | "tickets" | "submit" | "selfservice" | "config">("queue");
+  const [selfServiceFilter, setSelfServiceFilter] = useState<"all" | "performance" | "network" | "display" | "apps" | "security" | "peripherals">("all");
+  const [soc2DeviceFilter, setSoc2DeviceFilter] = useState<string | null>(null);
+  const [ranSelfRemediations, setRanSelfRemediations] = useState<Set<string>>(new Set());
   const [selectedTicketDevice, setSelectedTicketDevice] = useState<string | null>(null);
   const [selectedTicketApp, setSelectedTicketApp] = useState<string | null>(null);
   const [ticketDescription, setTicketDescription] = useState("");
@@ -2525,6 +2542,7 @@ export default function DemoPage() {
                   { id: "queue" as const, label: "Remediation Queue", icon: Activity },
                   { id: "tickets" as const, label: "Support Tickets", icon: ClipboardList },
                   { id: "submit" as const, label: "Submit Ticket", icon: UserPlus },
+                  { id: "selfservice" as const, label: "Self-Service Fix", icon: LifeBuoy },
                   { id: "config" as const, label: "Configuration", icon: Settings },
                 ] as const).map((tab) => (
                   <button
@@ -2903,6 +2921,149 @@ export default function DemoPage() {
               </>)}
 
               {/* ══════════════════════════════════════════════════════════ */}
+              {/* ── TAB: SELF-SERVICE FIX ─────────────────────────────────── */}
+              {/* ══════════════════════════════════════════════════════════ */}
+              {itSubTab === "selfservice" && (() => {
+                const selfDevice = selectedTicketDevice ? mockDevices.find(d => d.id === selectedTicketDevice) : null;
+                const selfIsWindows = selfDevice ? selfDevice.platform === "win32" : true;
+
+                type SelfRemedy = { id: string; title: string; desc: string; icon: React.ElementType; category: string; risk: "safe" | "low" | "medium"; os: "all" | "windows" | "macos"; steps: string[]; script?: string; time: string };
+                const selfRemediations: SelfRemedy[] = [
+                  { id: "sf1", title: "Clear Temporary Files", desc: "Free up disk space by removing cached and temp files", icon: Trash2, category: "performance", risk: "safe", os: "all", steps: ["Closes running temp file handles", "Deletes user-level temp files", "Reports space recovered"], script: selfIsWindows ? "Remove-Item -Path \"$env:TEMP\\*\" -Recurse -Force -EA SilentlyContinue" : "rm -rf ~/Library/Caches/* ~/Library/Logs/*", time: "~30s" },
+                  { id: "sf2", title: "Close Background Apps", desc: "Shut down heavy background processes eating memory", icon: CircleStop, category: "performance", risk: "safe", os: "all", steps: ["Scans for high-memory background processes", "Shows list before terminating", "Keeps essential services running"], script: selfIsWindows ? "Get-Process | Where {$_.WorkingSet -gt 500MB -and $_.MainWindowHandle -eq 0} | Select Name,@{N='MB';E={[math]::Round($_.WorkingSet/1MB)}}" : "ps aux | awk '$6 > 500000 {print $11, $6/1024 \" MB\"}' | head -10", time: "~10s" },
+                  { id: "sf3", title: "Restart Explorer / Finder", desc: "Fix frozen desktop, taskbar, or file browser", icon: RefreshCw, category: "performance", risk: "safe", os: "all", steps: ["Gracefully restarts the shell", "Taskbar/Dock refreshes automatically"], script: selfIsWindows ? "Stop-Process -Name explorer -Force; Start-Sleep 2; Start-Process explorer" : "killall Finder", time: "~5s" },
+                  { id: "sf4", title: "Free Up RAM", desc: "Purge inactive memory and clear system caches", icon: BatteryCharging, category: "performance", risk: "safe", os: "all", steps: ["Flushes standby memory pages", "Clears file system cache"], script: selfIsWindows ? "Get-Process | Where {$_.WorkingSet -gt 1GB} | ForEach { $_.MinWorkingSet = 1MB }" : "sudo purge", time: "~15s" },
+                  { id: "sf5", title: "Fix Internet Connection", desc: "Reset DNS cache and renew IP address", icon: Wifi, category: "network", risk: "safe", os: "all", steps: ["Flushes DNS resolver cache", "Releases and renews DHCP lease", "Tests connectivity"], script: selfIsWindows ? "ipconfig /flushdns\nipconfig /release\nipconfig /renew" : "sudo dscacheutil -flushcache\nsudo killall -HUP mDNSResponder", time: "~20s" },
+                  { id: "sf6", title: "Reset Wi-Fi Adapter", desc: "Turn Wi-Fi off and back on to fix connectivity issues", icon: WifiOff, category: "network", risk: "safe", os: "all", steps: ["Disables the Wi-Fi adapter", "Waits 5 seconds", "Re-enables and reconnects"], script: selfIsWindows ? "Disable-NetAdapter -Name 'Wi-Fi' -Confirm:$false\nStart-Sleep 5\nEnable-NetAdapter -Name 'Wi-Fi'" : "networksetup -setairportpower en0 off\nsleep 5\nnetworksetup -setairportpower en0 on", time: "~15s" },
+                  { id: "sf7", title: "Test VPN Connectivity", desc: "Check if VPN tunnel is active", icon: Globe, category: "network", risk: "safe", os: "all", steps: ["Checks VPN adapter status", "Tests internal DNS resolution"], script: selfIsWindows ? "Get-VpnConnection | Format-Table Name,ServerAddress,ConnectionStatus" : "ifconfig | grep -A 5 utun", time: "~10s" },
+                  { id: "sf8", title: "Fix Display Scaling", desc: "Reset DPI and display scaling to defaults", icon: Eye, category: "display", risk: "low", os: "all", steps: ["Resets display scaling to recommended", "Refreshes desktop rendering"], script: selfIsWindows ? "Set-ItemProperty -Path 'HKCU:\\Control Panel\\Desktop' -Name LogPixels -Value 96" : "defaults delete NSGlobalDomain AppleDisplayScaleFactor 2>/dev/null\nkillall Dock", time: "~5s" },
+                  { id: "sf9", title: "Clear Browser Cache", desc: "Remove cached data from Chrome, Edge, or Firefox", icon: Globe, category: "apps", risk: "safe", os: "all", steps: ["Closes browser processes safely", "Clears cache and session storage", "Preserves bookmarks and passwords"], script: selfIsWindows ? "Stop-Process -Name chrome,msedge -Force -EA SilentlyContinue\nRemove-Item \"$env:LOCALAPPDATA\\Google\\Chrome\\User Data\\Default\\Cache\\*\" -Recurse -Force -EA SilentlyContinue" : "rm -rf ~/Library/Caches/Google/Chrome/Default/Cache/*", time: "~15s" },
+                  { id: "sf10", title: "Reset Stuck Application", desc: "Force-quit and relaunch a frozen application", icon: Zap, category: "apps", risk: "safe", os: "all", steps: ["Select the frozen application", "Force terminates the process"], script: selfIsWindows ? "Stop-Process -Name AppName -Force" : "killall AppName", time: "~5s" },
+                  { id: "sf11", title: "Repair Microsoft Office", desc: "Run the built-in Office repair tool", icon: FileText, category: "apps", risk: "low", os: "windows", steps: ["Launches Office Click-to-Run repair", "Verifies Office file integrity"], script: "& \"C:\\Program Files\\Common Files\\Microsoft Shared\\ClickToRun\\OfficeC2RClient.exe\" /update user", time: "~5min" },
+                  { id: "sf12", title: "Fix Teams/Slack Issues", desc: "Clear app cache and reset for fresh login", icon: RefreshCw, category: "apps", risk: "low", os: "all", steps: ["Stops the application", "Clears local cache"], script: selfIsWindows ? "Stop-Process -Name Teams,slack -Force -EA SilentlyContinue\nRemove-Item \"$env:APPDATA\\Microsoft\\Teams\\Cache\\*\" -Recurse -Force -EA SilentlyContinue" : "killall Teams Slack 2>/dev/null\nrm -rf ~/Library/Application\\ Support/Microsoft/Teams/Cache/*", time: "~15s" },
+                  { id: "sf13", title: "Check for Malware", desc: "Run a quick scan with built-in security tools", icon: Shield, category: "security", risk: "safe", os: "all", steps: ["Initiates a quick system scan", "Reports findings immediately"], script: selfIsWindows ? "Start-MpScan -ScanType QuickScan" : "echo 'XProtect is active and monitoring'", time: "~2min" },
+                  { id: "sf14", title: "Update Security Definitions", desc: "Force-update antivirus/malware definitions", icon: ShieldCheck, category: "security", risk: "safe", os: "all", steps: ["Downloads latest threat definitions", "Verifies update"], script: selfIsWindows ? "Update-MpSignature -UpdateSource MicrosoftUpdateServer" : "softwareupdate --background-critical", time: "~1min" },
+                  { id: "sf15", title: "Check Disk Encryption", desc: "Verify BitLocker or FileVault is enabled", icon: Lock, category: "security", risk: "safe", os: "all", steps: ["Checks encryption status on all drives", "Alerts if encryption is off"], script: selfIsWindows ? "Get-BitLockerVolume | Select MountPoint,VolumeStatus,EncryptionPercentage" : "fdesetup status", time: "~5s" },
+                  { id: "sf16", title: "Fix Audio Issues", desc: "Reset audio service and default output device", icon: Volume2, category: "peripherals", risk: "safe", os: "all", steps: ["Restarts the audio service", "Resets default playback device"], script: selfIsWindows ? "Restart-Service AudioSrv -Force\nRestart-Service AudioEndpointBuilder -Force" : "sudo killall coreaudiod", time: "~10s" },
+                  { id: "sf17", title: "Fix Bluetooth Devices", desc: "Reset Bluetooth adapter and re-pair devices", icon: Bluetooth, category: "peripherals", risk: "safe", os: "all", steps: ["Restarts Bluetooth service", "Device will need to re-pair"], script: selfIsWindows ? "Restart-Service bthserv -Force" : "sudo pkill bluetoothd", time: "~10s" },
+                  { id: "sf18", title: "Fix Mouse/Trackpad", desc: "Reset pointer settings and drivers", icon: MousePointer, category: "peripherals", risk: "safe", os: "all", steps: ["Resets pointer acceleration", "Restores default sensitivity"], script: selfIsWindows ? "Set-ItemProperty -Path 'HKCU:\\Control Panel\\Mouse' -Name MouseSpeed -Value 1" : "defaults write .GlobalPreferences com.apple.mouse.scaling -1", time: "~5s" },
+                  { id: "sf19", title: "Fix Keyboard Input", desc: "Reset keyboard layout and input method", icon: KeyboardIcon, category: "peripherals", risk: "safe", os: "all", steps: ["Resets keyboard layout to default", "Fixes dead key issues"], script: selfIsWindows ? "Set-ItemProperty -Path 'HKCU:\\Control Panel\\Accessibility\\StickyKeys' -Name Flags -Value 506" : "defaults delete com.apple.HIToolbox 2>/dev/null", time: "~5s" },
+                  { id: "sf20", title: "Fix Printer Issues", desc: "Clear print queue and restart spooler", icon: PrinterIcon, category: "peripherals", risk: "safe", os: "all", steps: ["Stops the print spooler", "Clears all stuck print jobs", "Restarts the service"], script: selfIsWindows ? "Stop-Service Spooler -Force\nRemove-Item \"$env:SystemRoot\\System32\\spool\\PRINTERS\\*\" -Force -EA SilentlyContinue\nStart-Service Spooler" : "cancel -a\ncupsctl", time: "~10s" },
+                ];
+
+                const filteredRemediations = selfServiceFilter === "all" ? selfRemediations : selfRemediations.filter(r => r.category === selfServiceFilter);
+                const displayRemediations = selfDevice ? filteredRemediations.filter(r => r.os === "all" || (selfIsWindows && r.os === "windows") || (!selfIsWindows && r.os === "macos")) : filteredRemediations;
+
+                const categories = [
+                  { id: "all" as const, label: "All", icon: Sparkles, count: selfRemediations.length },
+                  { id: "performance" as const, label: "Performance", icon: Zap, count: selfRemediations.filter(r => r.category === "performance").length },
+                  { id: "network" as const, label: "Network", icon: Wifi, count: selfRemediations.filter(r => r.category === "network").length },
+                  { id: "display" as const, label: "Display", icon: Monitor, count: selfRemediations.filter(r => r.category === "display").length },
+                  { id: "apps" as const, label: "Applications", icon: Globe, count: selfRemediations.filter(r => r.category === "apps").length },
+                  { id: "security" as const, label: "Security", icon: Shield, count: selfRemediations.filter(r => r.category === "security").length },
+                  { id: "peripherals" as const, label: "Peripherals", icon: MousePointer, count: selfRemediations.filter(r => r.category === "peripherals").length },
+                ];
+
+                return (<>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2"><LifeBuoy className="h-5 w-5 text-emerald-500" /> Self-Service Remediation</CardTitle>
+                    <p className="text-sm text-muted-foreground">Fix common issues on your own device — no IT ticket needed. Safe, pre-approved actions.</p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Device Selector */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Select your device:</label>
+                      <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
+                        {mockDevices.map((dev) => (
+                          <button key={dev.id} onClick={() => setSelectedTicketDevice(selectedTicketDevice === dev.id ? null : dev.id)}
+                            className={`p-3 rounded-lg border text-left transition-all ${selectedTicketDevice === dev.id ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 ring-1 ring-emerald-500" : "hover:bg-muted/30"}`}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className={`w-2 h-2 rounded-full ${dev.status === "ONLINE" ? "bg-green-500" : "bg-red-400"}`} />
+                              <span className="text-sm font-medium">{dev.hostname}</span>
+                            </div>
+                            <div className="text-[11px] text-muted-foreground">{dev.platform === "win32" ? "🪟 Windows" : "🍎 macOS"} &bull; {dev.ipAddress}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Category Filter */}
+                    <div className="flex gap-1.5 flex-wrap">
+                      {categories.map((cat) => (
+                        <button key={cat.id} onClick={() => setSelfServiceFilter(cat.id)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${selfServiceFilter === cat.id ? "bg-emerald-100 border-emerald-400 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" : "border-transparent bg-muted/40 text-muted-foreground hover:bg-muted/60"}`}>
+                          <cat.icon className="h-3 w-3" />
+                          {cat.label}
+                          <span className="text-[10px] opacity-70">({cat.count})</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Remediation Grid */}
+                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      {displayRemediations.map((remedy) => {
+                        const hasRun = ranSelfRemediations.has(remedy.id);
+                        return (
+                          <div key={remedy.id} className={`rounded-xl border overflow-hidden transition-all ${hasRun ? "border-green-300 bg-green-50/50 dark:bg-green-950/20" : "hover:border-emerald-300 hover:shadow-sm"}`}>
+                            <div className="p-4 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <div className={`p-1.5 rounded-lg ${remedy.risk === "safe" ? "bg-green-100" : "bg-amber-100"}`}>
+                                  <remedy.icon className={`h-4 w-4 ${remedy.risk === "safe" ? "text-green-600" : "text-amber-600"}`} />
+                                </div>
+                                <div>
+                                  <div className="text-sm font-semibold">{remedy.title}</div>
+                                  <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+                                    <Badge variant="outline" className={`text-[9px] px-1 ${remedy.risk === "safe" ? "text-green-700 border-green-300" : "text-amber-700 border-amber-300"}`}>
+                                      {remedy.risk === "safe" ? "✓ Safe" : "⚡ Low Risk"}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-[9px] px-1">{remedy.os === "all" ? "🌐 All" : remedy.os === "windows" ? "🪟 Win" : "🍎 Mac"}</Badge>
+                                    <span><Clock className="h-2.5 w-2.5 inline mr-0.5" />{remedy.time}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <p className="text-xs text-muted-foreground">{remedy.desc}</p>
+                              <ul className="space-y-0.5">
+                                {remedy.steps.map((step, i) => (
+                                  <li key={i} className="text-[11px] text-muted-foreground flex items-start gap-1.5">
+                                    <span className="text-emerald-500 mt-0.5 shrink-0">{hasRun ? "✓" : `${i + 1}.`}</span>{step}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                            {remedy.script && selfDevice && (
+                              <div className="border-t">
+                                <details className="group">
+                                  <summary className="px-4 py-2 text-[11px] text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1">
+                                    <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />Preview script
+                                  </summary>
+                                  <div className="bg-gray-950 text-green-400 px-4 py-2 font-mono text-[10px] overflow-x-auto max-h-32"><pre className="whitespace-pre-wrap">{remedy.script}</pre></div>
+                                </details>
+                              </div>
+                            )}
+                            <div className="px-4 py-2.5 bg-muted/20 border-t">
+                              <Button size="sm" className={`w-full text-xs h-8 ${hasRun ? "bg-green-600 hover:bg-green-700" : "bg-emerald-600 hover:bg-emerald-700"} text-white`}
+                                onClick={() => setRanSelfRemediations(prev => new Set(prev).add(remedy.id))}>
+                                {hasRun ? <><CheckCircle className="h-3 w-3 mr-1.5" />Completed</> : <><Play className="h-3 w-3 mr-1.5" />Run Fix</>}
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="rounded-lg border border-dashed p-4 text-center bg-muted/10">
+                      <p className="text-sm font-medium">Still having issues?</p>
+                      <p className="text-xs text-muted-foreground mt-1">Submit a ticket and IT will help.</p>
+                      <Button size="sm" variant="outline" className="mt-3" onClick={() => setItSubTab("submit")}><ClipboardList className="h-3.5 w-3.5 mr-1.5" />Submit a Ticket</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+                </>);
+              })()}
+
+
+              {/* ══════════════════════════════════════════════════════════ */}
               {/* ── TAB: CONFIGURATION ──────────────────────────────────── */}
               {/* ══════════════════════════════════════════════════════════ */}
               {itSubTab === "config" && (<>
@@ -3037,6 +3198,339 @@ export default function DemoPage() {
               </>)}
             </div>
           ); })()}
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* COMPLIANCE — SOC 2                                                 */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {activeSection === "compliance" && (() => {
+          const soc2Device = soc2DeviceFilter ? mockDevices.find(d => d.id === soc2DeviceFilter) : null;
+          const soc2IsWindows = soc2Device ? soc2Device.platform === "win32" : true;
+
+          const trustCriteria = [
+            { id: "CC6", name: "Logical & Physical Access", score: 82, total: 11, passing: 9, failing: 2, color: "#3b82f6",
+              controls: [
+                { id: "CC6.1", name: "Logical access restrictions", status: "pass" as const, desc: "User access provisioned through SSO with MFA enforcement" },
+                { id: "CC6.2", name: "Access credentials management", status: "pass" as const, desc: "Passwords hashed with bcrypt, MFA available" },
+                { id: "CC6.3", name: "Access removal on termination", status: "warn" as const, desc: "2 accounts with stale access >90 days" },
+                { id: "CC6.6", name: "System boundary protection", status: "pass" as const, desc: "Firewall enabled on all enrolled devices" },
+                { id: "CC6.7", name: "Data transmission encryption", status: "pass" as const, desc: "All API communications use TLS 1.3" },
+                { id: "CC6.8", name: "Malware prevention", status: "fail" as const, desc: "1 device has outdated AV definitions (>14 days)" },
+              ] },
+            { id: "CC7", name: "System Operations", score: 91, total: 8, passing: 7, failing: 1, color: "#22c55e",
+              controls: [
+                { id: "CC7.1", name: "Infrastructure monitoring", status: "pass" as const, desc: "Agent reporting device health and software inventory" },
+                { id: "CC7.2", name: "Anomaly detection", status: "pass" as const, desc: "Activity monitoring detects unusual access patterns" },
+                { id: "CC7.3", name: "Security event evaluation", status: "pass" as const, desc: "Security alerts triaged via threat dashboard" },
+                { id: "CC7.4", name: "Incident response", status: "warn" as const, desc: "Procedures documented but not tested in 90 days" },
+                { id: "CC7.5", name: "Incident recovery", status: "pass" as const, desc: "Ransomware rollback and backup systems operational" },
+              ] },
+            { id: "CC8", name: "Change Management", score: 75, total: 6, passing: 4, failing: 2, color: "#f59e0b",
+              controls: [
+                { id: "CC8.1", name: "Change authorization", status: "pass" as const, desc: "Deployments require PR review and approval" },
+                { id: "CC8.2", name: "Infrastructure changes tracked", status: "fail" as const, desc: "3 devices have unauthorized software" },
+                { id: "CC8.3", name: "Configuration management", status: "warn" as const, desc: "GP compliance at 87% — 2 devices drifted" },
+              ] },
+            { id: "CC9", name: "Risk Mitigation", score: 88, total: 5, passing: 4, failing: 1, color: "#8b5cf6",
+              controls: [
+                { id: "CC9.1", name: "Risk identification", status: "pass" as const, desc: "CVE tracking with automated vulnerability scanning" },
+                { id: "CC9.2", name: "Vendor risk assessment", status: "pass" as const, desc: "Third-party software with version monitoring" },
+                { id: "CC9.3", name: "Risk remediation", status: "pass" as const, desc: "Remediation queue with automated deployment" },
+              ] },
+            { id: "A1", name: "Availability", score: 95, total: 4, passing: 4, failing: 0, color: "#06b6d4",
+              controls: [
+                { id: "A1.1", name: "Capacity planning", status: "pass" as const, desc: "Device resource monitoring with alerts" },
+                { id: "A1.2", name: "Recovery objectives", status: "pass" as const, desc: "Backup/restore procedures tested" },
+                { id: "A1.3", name: "Environmental protections", status: "pass" as const, desc: "Cloud infra with multi-region availability" },
+              ] },
+            { id: "C1", name: "Confidentiality", score: 79, total: 5, passing: 4, failing: 1, color: "#ec4899",
+              controls: [
+                { id: "C1.1", name: "Confidential data identification", status: "pass" as const, desc: "DLP policies active for sensitive data patterns" },
+                { id: "C1.2", name: "Confidential data disposal", status: "pass" as const, desc: "Secure deletion for decommissioned devices" },
+                { id: "C1.3", name: "Encryption at rest", status: "fail" as const, desc: "1 device missing disk encryption" },
+              ] },
+          ];
+
+          const overallScore = Math.round(trustCriteria.reduce((sum, c) => sum + c.score, 0) / trustCriteria.length);
+          const totalControls = trustCriteria.reduce((sum, c) => sum + c.total, 0);
+          const passingControls = trustCriteria.reduce((sum, c) => sum + c.passing, 0);
+          const failingControls = trustCriteria.reduce((sum, c) => sum + c.failing, 0);
+          const compliancePieData = [
+            { name: "Passing", value: passingControls, color: "#22c55e" },
+            { name: "Warnings", value: totalControls - passingControls - failingControls, color: "#f59e0b" },
+            { name: "Failing", value: failingControls, color: "#ef4444" },
+          ];
+          const criteriaBarData = trustCriteria.map(c => ({ name: c.id, score: c.score, fill: c.color }));
+          const trendData = Array.from({ length: 30 }, (_, i) => ({ day: `Day ${30 - i}`, score: Math.min(100, 78 + Math.floor(i / 3) + Math.floor(Math.random() * 5)) }));
+          const deviceComplianceData = mockDevices.map((dev, idx) => ({
+            device: dev, encryption: idx !== 2, antivirus: idx !== 3, firewall: true,
+            updates: idx !== 1, mfa: idx !== 2, diskSpace: true, screenLock: idx !== 4,
+            score: [92, 78, 65, 85, 71][idx] || 80,
+          }));
+          const complianceRemediations = [
+            { id: "sr1", control: "CC6.8", title: "Update Antivirus Definitions", desc: "Force-update Defender/XProtect for CC6.8", severity: "critical" as const, autoFix: true, script: soc2IsWindows ? "Update-MpSignature -UpdateSource MicrosoftUpdateServer" : "softwareupdate --background-critical" },
+            { id: "sr2", control: "C1.3", title: "Enable Disk Encryption", desc: "Verify BitLocker/FileVault for C1.3", severity: "critical" as const, autoFix: false, script: soc2IsWindows ? "Get-BitLockerVolume | Select MountPoint,VolumeStatus,EncryptionPercentage" : "fdesetup status" },
+            { id: "sr3", control: "CC6.6", title: "Verify Firewall Status", desc: "Ensure firewall active for CC6.6", severity: "high" as const, autoFix: true, script: soc2IsWindows ? "Get-NetFirewallProfile | Select Name,Enabled\nSet-NetFirewallProfile -Profile Domain,Public,Private -Enabled True" : "sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on" },
+            { id: "sr4", control: "CC6.3", title: "Audit Stale User Accounts", desc: "Find accounts inactive >90 days per CC6.3", severity: "high" as const, autoFix: false, script: soc2IsWindows ? "Get-LocalUser | Where { $_.LastLogon -lt (Get-Date).AddDays(-90) -and $_.Enabled } | Select Name,LastLogon" : "dscl . -list /Users" },
+            { id: "sr5", control: "CC8.2", title: "Detect Unauthorized Software", desc: "Scan for unapproved installs per CC8.2", severity: "high" as const, autoFix: false, script: soc2IsWindows ? "Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | Select DisplayName,Publisher | Format-Table" : "ls -la /Applications/" },
+            { id: "sr6", control: "CC8.3", title: "Group Policy Compliance", desc: "Verify GP applied for CC8.3", severity: "medium" as const, autoFix: true, script: soc2IsWindows ? "gpresult /R /SCOPE Computer\ngpupdate /force" : "sudo profiles list -all" },
+            { id: "sr7", control: "CC7.1", title: "System Health Audit", desc: "Health check for CC7.1 monitoring", severity: "medium" as const, autoFix: false, script: soc2IsWindows ? "Get-Service | Where {$_.Status -eq 'Stopped' -and $_.StartType -eq 'Automatic'} | Select Name,Status" : "launchctl list | head -20" },
+            { id: "sr8", control: "CC6.1", title: "Verify MFA Enforcement", desc: "Check MFA on accounts per CC6.1", severity: "high" as const, autoFix: false, script: "Write-Host 'Check MyDex admin panel for MFA enrollment status'" },
+          ];
+          const criticalCount = complianceRemediations.filter(r => r.severity === "critical").length;
+          const gaugeData = [{ name: "Score", value: overallScore, fill: overallScore >= 90 ? "#22c55e" : overallScore >= 75 ? "#f59e0b" : "#ef4444" }];
+
+          return (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold flex items-center gap-2"><FileCheck className="h-6 w-6" /> SOC 2 Compliance</h2>
+                <p className="text-muted-foreground text-sm">Compliance health, trust criteria, device audits, and self-remediation scripts mapped to SOC 2 controls.</p>
+              </div>
+
+              {/* Overall Score + Charts */}
+              <div className="grid gap-4 md:grid-cols-4">
+                <Card className="md:col-span-1">
+                  <CardContent className="pt-6 pb-4 flex flex-col items-center">
+                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Overall SOC 2 Score</div>
+                    <ResponsiveContainer width={160} height={160}>
+                      <RadialBarChart cx="50%" cy="50%" innerRadius="70%" outerRadius="100%" barSize={14} data={gaugeData} startAngle={90} endAngle={-270}>
+                        <RadialBar background={{ fill: "hsl(var(--muted))" }} dataKey="value" cornerRadius={10} />
+                      </RadialBarChart>
+                    </ResponsiveContainer>
+                    <div className="text-4xl font-bold -mt-24 mb-16" style={{ color: overallScore >= 90 ? "#22c55e" : overallScore >= 75 ? "#f59e0b" : "#ef4444" }}>{overallScore}%</div>
+                    <div className="text-xs text-muted-foreground">{overallScore >= 90 ? "Audit Ready" : overallScore >= 75 ? "Needs Attention" : "At Risk"}</div>
+                  </CardContent>
+                </Card>
+                <Card className="md:col-span-1">
+                  <CardContent className="pt-6">
+                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Control Status</div>
+                    <ResponsiveContainer width="100%" height={140}>
+                      <RechartsPieChart>
+                        <Pie data={compliancePieData} cx="50%" cy="50%" innerRadius={35} outerRadius={55} paddingAngle={3} dataKey="value">
+                          {compliancePieData.map((entry, i) => (<Cell key={i} fill={entry.color} />))}
+                        </Pie>
+                        <RechartsTooltip formatter={(value) => [`${value} controls`, ""]} />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                    <div className="flex justify-center gap-4 text-[10px] -mt-2">
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />{passingControls} Pass</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" />{totalControls - passingControls - failingControls} Warn</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" />{failingControls} Fail</span>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="md:col-span-2">
+                  <CardContent className="pt-6">
+                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Compliance Trend (30 Days)</div>
+                    <ResponsiveContainer width="100%" height={150}>
+                      <LineChart data={trendData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                        <XAxis dataKey="day" tick={false} />
+                        <YAxis domain={[60, 100]} tick={{ fontSize: 10 }} />
+                        <RechartsTooltip formatter={(value) => [`${value}%`, "Score"]} />
+                        <Line type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="grid gap-3 md:grid-cols-5">
+                {[
+                  { label: "Total Controls", value: String(totalControls), icon: Shield, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
+                  { label: "Passing", value: String(passingControls), icon: CheckCircle, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
+                  { label: "Failing", value: String(failingControls), icon: XCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
+                  { label: "Critical Fixes", value: String(criticalCount), icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
+                  { label: "Auto-Fixable", value: String(complianceRemediations.filter(r => r.autoFix).length), icon: Zap, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30" },
+                ].map(s => (
+                  <Card key={s.label} className={s.bg}>
+                    <CardContent className="pt-4 pb-3 text-center">
+                      <s.icon className={`h-5 w-5 mx-auto mb-1 ${s.color}`} />
+                      <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+                      <div className="text-[10px] text-muted-foreground">{s.label}</div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Trust Service Criteria */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2"><Shield className="h-5 w-5 text-blue-500" /> Trust Service Criteria</CardTitle>
+                  <p className="text-xs text-muted-foreground">SOC 2 Type II mapped to AICPA Trust Service Criteria</p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <RechartsBarChart data={criteriaBarData} layout="vertical" margin={{ left: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                      <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} />
+                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={40} />
+                      <RechartsTooltip formatter={(value) => [`${value}%`, "Score"]} />
+                      <Bar dataKey="score" radius={[0, 6, 6, 0]} barSize={20}>
+                        {criteriaBarData.map((entry, i) => (<Cell key={i} fill={entry.fill} />))}
+                      </Bar>
+                    </RechartsBarChart>
+                  </ResponsiveContainer>
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {trustCriteria.map(criteria => (
+                      <div key={criteria.id} className="rounded-xl border overflow-hidden">
+                        <div className="p-3 bg-muted/30 flex items-center justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <Badge style={{ backgroundColor: criteria.color + "20", color: criteria.color, borderColor: criteria.color + "40" }} className="text-[10px] font-mono border">{criteria.id}</Badge>
+                              <span className="text-sm font-semibold">{criteria.name}</span>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground mt-0.5">{criteria.passing}/{criteria.total} passing</div>
+                          </div>
+                          <div className="text-2xl font-bold" style={{ color: criteria.color }}>{criteria.score}%</div>
+                        </div>
+                        <div className="p-2 space-y-1">
+                          {criteria.controls.map(ctrl => (
+                            <div key={ctrl.id} className="flex items-start gap-2 p-2 rounded-lg hover:bg-muted/20">
+                              {ctrl.status === "pass" && <CheckCircle className="h-3.5 w-3.5 text-green-500 mt-0.5 shrink-0" />}
+                              {ctrl.status === "warn" && <AlertCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />}
+                              {ctrl.status === "fail" && <XCircle className="h-3.5 w-3.5 text-red-500 mt-0.5 shrink-0" />}
+                              <div className="min-w-0">
+                                <div className="text-[11px] font-medium"><span className="font-mono text-muted-foreground mr-1">{ctrl.id}</span>{ctrl.name}</div>
+                                <div className="text-[10px] text-muted-foreground">{ctrl.desc}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Device Compliance */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2"><Monitor className="h-5 w-5 text-indigo-500" /> Device Compliance Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-left text-xs text-muted-foreground">
+                          <th className="pb-2 pr-4">Device</th>
+                          <th className="pb-2 px-2 text-center">Encryption</th>
+                          <th className="pb-2 px-2 text-center">Antivirus</th>
+                          <th className="pb-2 px-2 text-center">Firewall</th>
+                          <th className="pb-2 px-2 text-center">Updates</th>
+                          <th className="pb-2 px-2 text-center">MFA</th>
+                          <th className="pb-2 px-2 text-center">Lock</th>
+                          <th className="pb-2 px-2 text-center">Score</th>
+                          <th className="pb-2 pl-2"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {deviceComplianceData.map(d => (
+                          <tr key={d.device.id} className={`border-b hover:bg-muted/20 ${soc2DeviceFilter === d.device.id ? "bg-indigo-50 dark:bg-indigo-950/20" : ""}`}>
+                            <td className="py-2.5 pr-4">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${d.device.status === "ONLINE" ? "bg-green-500" : "bg-red-400"}`} />
+                                <div>
+                                  <div className="font-medium text-xs">{d.device.hostname}</div>
+                                  <div className="text-[10px] text-muted-foreground">{d.device.platform === "win32" ? "Windows" : "macOS"}</div>
+                                </div>
+                              </div>
+                            </td>
+                            {[d.encryption, d.antivirus, d.firewall, d.updates, d.mfa, d.screenLock].map((check, i) => (
+                              <td key={i} className="px-2 text-center">
+                                {check ? <CheckCircle className="h-3.5 w-3.5 text-green-500 mx-auto" /> : <XCircle className="h-3.5 w-3.5 text-red-500 mx-auto" />}
+                              </td>
+                            ))}
+                            <td className="px-2 text-center">
+                              <Badge className={`text-[10px] ${d.score >= 90 ? "bg-green-100 text-green-800" : d.score >= 75 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}`}>{d.score}%</Badge>
+                            </td>
+                            <td className="pl-2">
+                              <Button size="sm" variant="outline" className="text-[10px] h-6"
+                                onClick={() => setSoc2DeviceFilter(soc2DeviceFilter === d.device.id ? null : d.device.id)}>
+                                {soc2DeviceFilter === d.device.id ? "Deselect" : "Fix"}
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Compliance Remediations */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg flex items-center gap-2"><Terminal className="h-5 w-5 text-green-500" /> Compliance Remediations</CardTitle>
+                      <p className="text-xs text-muted-foreground mt-1">Self-remediation scripts mapped to SOC 2 controls.</p>
+                    </div>
+                    <Button size="sm" variant="outline" className="text-xs"><Zap className="h-3 w-3 mr-1" />Run All Auto-Fix</Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {complianceRemediations.map(remedy => (
+                      <div key={remedy.id} className="rounded-xl border overflow-hidden">
+                        <div className="p-4 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Badge className={`text-[9px] font-mono ${remedy.severity === "critical" ? "bg-red-100 text-red-800" : remedy.severity === "high" ? "bg-orange-100 text-orange-800" : "bg-amber-100 text-amber-800"}`}>{remedy.severity.toUpperCase()}</Badge>
+                            <Badge variant="outline" className="text-[9px] font-mono">{remedy.control}</Badge>
+                            {remedy.autoFix && <Badge className="text-[9px] bg-green-100 text-green-800">Auto-Fix</Badge>}
+                          </div>
+                          <div className="text-sm font-semibold">{remedy.title}</div>
+                          <p className="text-xs text-muted-foreground">{remedy.desc}</p>
+                        </div>
+                        <div className="border-t">
+                          <details className="group">
+                            <summary className="px-4 py-2 text-[11px] text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1">
+                              <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />Script
+                            </summary>
+                            <div className="bg-gray-950 text-green-400 px-4 py-2 font-mono text-[10px] overflow-x-auto max-h-40"><pre className="whitespace-pre-wrap">{remedy.script}</pre></div>
+                          </details>
+                        </div>
+                        <div className="px-4 py-2.5 bg-muted/20 border-t flex items-center justify-between">
+                          <div className="text-[10px] text-muted-foreground">{soc2Device ? `Target: ${soc2Device.hostname}` : "Select a device"}</div>
+                          <Button size="sm" className="text-xs h-7 bg-blue-600 hover:bg-blue-700 text-white"><Play className="h-3 w-3 mr-1" />Run</Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Audit Recommendations */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Info className="h-5 w-5 text-blue-500" /> SOC 2 Audit Recommendations</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {[
+                      { priority: "critical", title: "Enable Disk Encryption on All Devices", desc: "SOC 2 C1.3 requires encryption at rest for all systems.", action: "Run C1.3 remediation", trend: "down" },
+                      { priority: "critical", title: "Update Antivirus Definitions Fleet-Wide", desc: "Devices with outdated AV (>7 days) violate CC6.8.", action: "Run CC6.8 remediation", trend: "up" },
+                      { priority: "high", title: "Implement 90-Day Access Review", desc: "CC6.3 requires timely removal of stale access.", action: "Configure in Settings → SSO", trend: "up" },
+                      { priority: "high", title: "Document Incident Response", desc: "CC7.4 requires tested IR procedures.", action: "Create runbook", trend: "down" },
+                      { priority: "medium", title: "Enforce Software Allowlist", desc: "CC8.2 requires change tracking.", action: "Configure in Security → DLP", trend: "up" },
+                      { priority: "medium", title: "Automated Compliance Scanning", desc: "Weekly scans with alerts on score drops.", action: "Configure schedule", trend: "up" },
+                      { priority: "low", title: "Continuous Monitoring Dashboard", desc: "Real-time visibility reduces audit prep by 60%.", action: "Share this dashboard", trend: "up" },
+                      { priority: "low", title: "Automate Evidence Collection", desc: "Auto-collect logs and reports per control.", action: "Enable in Reports", trend: "up" },
+                    ].map((rec, i) => (
+                      <div key={i} className={`p-4 rounded-xl border ${rec.priority === "critical" ? "border-red-200 bg-red-50/50" : rec.priority === "high" ? "border-orange-200 bg-orange-50/50" : rec.priority === "medium" ? "border-amber-200 bg-amber-50/50" : "border-blue-200 bg-blue-50/50"}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge className={`text-[9px] ${rec.priority === "critical" ? "bg-red-200 text-red-800" : rec.priority === "high" ? "bg-orange-200 text-orange-800" : rec.priority === "medium" ? "bg-amber-200 text-amber-800" : "bg-blue-200 text-blue-800"}`}>{rec.priority.toUpperCase()}</Badge>
+                          {rec.trend === "up" ? <div className="flex items-center gap-0.5 text-green-600 text-[10px]"><ArrowUpRight className="h-3 w-3" />Improving</div> : <div className="flex items-center gap-0.5 text-red-600 text-[10px]"><ArrowDownRight className="h-3 w-3" />Needs Work</div>}
+                        </div>
+                        <div className="text-sm font-semibold mb-1">{rec.title}</div>
+                        <p className="text-xs text-muted-foreground mb-2">{rec.desc}</p>
+                        <div className="text-[10px] font-medium text-blue-600">{rec.action}</div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          );
+        })()}
 
         </div>
       </main>
