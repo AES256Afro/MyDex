@@ -15,7 +15,7 @@ import {
   Building2, Server, Globe, Flame, Upload, BarChart, PieChart, TrendingUp,
   Eye, EyeOff, UserCog, KeyRound, Lock, Unlock, Fingerprint, LogIn, LogOut,
   QrCode, ShieldCheck, ShieldAlert, LinkIcon, ToggleLeft, ToggleRight,
-  Mail, UserPlus, Filter, MoreHorizontal, Check, X, Layers, Grid3X3,
+  Mail, UserPlus, Filter, MoreHorizontal, Check, X, Layers, Grid3X3, Plus,
   Briefcase, ClipboardList, Timer, Calendar, Coffee, Star, Download,
   UserCircle, Bell, Palette, Sun, Moon, Smartphone, Laptop,
   Phone, Pause, Wrench, Terminal, Zap, Leaf, RotateCcw, Recycle,
@@ -318,6 +318,105 @@ const mockProjects = [
   },
 ];
 
+// ─── Mock Kanban Tasks ──────────────────────────────────────────────────────
+
+const mockKanbanTasks: Record<string, { backlog: KanbanTask[]; todo: KanbanTask[]; inProgress: KanbanTask[]; review: KanbanTask[]; done: KanbanTask[] }> = {
+  p1: {
+    backlog: [
+      { id: "t1", title: "WebSocket error handling", priority: "medium", assignee: "MJ", labels: ["backend"], dueDate: "Apr 12" },
+      { id: "t2", title: "Add rate limit headers", priority: "low", assignee: "AP", labels: ["api"], dueDate: "Apr 14" },
+    ],
+    todo: [
+      { id: "t3", title: "OAuth2 token refresh flow", priority: "high", assignee: "JM", labels: ["auth", "backend"], dueDate: "Apr 8" },
+      { id: "t4", title: "API versioning strategy doc", priority: "medium", assignee: "MJ", labels: ["docs"], dueDate: "Apr 10" },
+      { id: "t5", title: "Load testing with k6", priority: "medium", assignee: "AP", labels: ["testing"], dueDate: "Apr 11" },
+    ],
+    inProgress: [
+      { id: "t6", title: "Migrate to gRPC for internal services", priority: "high", assignee: "JM", labels: ["backend", "infra"], dueDate: "Apr 7" },
+      { id: "t7", title: "GraphQL schema for v2 endpoints", priority: "high", assignee: "AP", labels: ["api"], dueDate: "Apr 9" },
+    ],
+    review: [
+      { id: "t8", title: "JWT rotation implementation", priority: "high", assignee: "MJ", labels: ["auth", "security"], dueDate: "Apr 6" },
+    ],
+    done: [
+      { id: "t9", title: "Set up API Gateway infrastructure", priority: "high", assignee: "JM", labels: ["infra"], dueDate: "Mar 28" },
+      { id: "t10", title: "Database connection pooling", priority: "medium", assignee: "AP", labels: ["backend"], dueDate: "Mar 30" },
+      { id: "t11", title: "Swagger/OpenAPI spec generation", priority: "medium", assignee: "MJ", labels: ["docs", "api"], dueDate: "Apr 1" },
+      { id: "t12", title: "CI/CD pipeline for gateway", priority: "high", assignee: "JM", labels: ["devops"], dueDate: "Apr 2" },
+    ],
+  },
+  p2: {
+    backlog: [
+      { id: "t20", title: "Accessibility audit", priority: "high", assignee: "SC", labels: ["a11y"], dueDate: "Apr 28" },
+      { id: "t21", title: "Dark mode color tokens", priority: "medium", assignee: "LW", labels: ["design"], dueDate: "Apr 30" },
+    ],
+    todo: [
+      { id: "t22", title: "Hero section redesign", priority: "high", assignee: "SC", labels: ["design", "frontend"], dueDate: "Apr 15" },
+      { id: "t23", title: "Mobile responsive nav", priority: "high", assignee: "LW", labels: ["frontend"], dueDate: "Apr 18" },
+    ],
+    inProgress: [
+      { id: "t24", title: "New brand color system", priority: "high", assignee: "SC", labels: ["design"], dueDate: "Apr 12" },
+      { id: "t25", title: "Landing page copy rewrite", priority: "medium", assignee: "LW", labels: ["content"], dueDate: "Apr 14" },
+    ],
+    review: [
+      { id: "t26", title: "Figma component library v2", priority: "medium", assignee: "SC", labels: ["design"], dueDate: "Apr 10" },
+    ],
+    done: [
+      { id: "t27", title: "Competitor analysis report", priority: "low", assignee: "LW", labels: ["research"], dueDate: "Mar 25" },
+      { id: "t28", title: "User interviews (10 users)", priority: "high", assignee: "SC", labels: ["research"], dueDate: "Mar 30" },
+      { id: "t29", title: "Wireframes for key pages", priority: "high", assignee: "SC", labels: ["design"], dueDate: "Apr 3" },
+    ],
+  },
+  p3: {
+    backlog: [],
+    todo: [],
+    inProgress: [],
+    review: [],
+    done: [
+      { id: "t30", title: "Revenue reconciliation", priority: "high", assignee: "TG", labels: ["finance"], dueDate: "Mar 10" },
+      { id: "t31", title: "AP/AR balance verification", priority: "high", assignee: "RK", labels: ["finance"], dueDate: "Mar 11" },
+      { id: "t32", title: "Tax provision calculation", priority: "high", assignee: "TG", labels: ["tax"], dueDate: "Mar 12" },
+      { id: "t33", title: "Intercompany eliminations", priority: "medium", assignee: "RK", labels: ["finance"], dueDate: "Mar 13" },
+      { id: "t34", title: "Final P&L review", priority: "high", assignee: "TG", labels: ["reporting"], dueDate: "Mar 14" },
+      { id: "t35", title: "Board presentation prep", priority: "medium", assignee: "RK", labels: ["reporting"], dueDate: "Mar 15" },
+    ],
+  },
+  p4: {
+    backlog: [
+      { id: "t40", title: "Push notification system", priority: "high", assignee: "AP", labels: ["mobile", "backend"], dueDate: "Apr 25" },
+      { id: "t41", title: "Offline mode sync", priority: "high", assignee: "JM", labels: ["mobile"], dueDate: "Apr 28" },
+      { id: "t42", title: "App Store metadata", priority: "low", assignee: "SC", labels: ["marketing"], dueDate: "Apr 30" },
+      { id: "t43", title: "Biometric auth integration", priority: "medium", assignee: "MJ", labels: ["security", "mobile"], dueDate: "Apr 26" },
+    ],
+    todo: [
+      { id: "t44", title: "Camera module for document scan", priority: "medium", assignee: "AP", labels: ["mobile"], dueDate: "Apr 20" },
+      { id: "t45", title: "Performance profiling", priority: "high", assignee: "JM", labels: ["mobile", "testing"], dueDate: "Apr 18" },
+      { id: "t46", title: "Deep linking setup", priority: "medium", assignee: "MJ", labels: ["mobile"], dueDate: "Apr 22" },
+    ],
+    inProgress: [
+      { id: "t47", title: "User onboarding flow", priority: "high", assignee: "SC", labels: ["design", "mobile"], dueDate: "Apr 15" },
+      { id: "t48", title: "API integration layer", priority: "high", assignee: "JM", labels: ["mobile", "api"], dueDate: "Apr 16" },
+    ],
+    review: [
+      { id: "t49", title: "Login / signup screens", priority: "high", assignee: "AP", labels: ["mobile", "frontend"], dueDate: "Apr 12" },
+    ],
+    done: [
+      { id: "t50", title: "React Native project setup", priority: "high", assignee: "JM", labels: ["mobile", "infra"], dueDate: "Mar 20" },
+      { id: "t51", title: "Navigation architecture", priority: "high", assignee: "AP", labels: ["mobile"], dueDate: "Mar 25" },
+      { id: "t52", title: "Design system for mobile", priority: "medium", assignee: "SC", labels: ["design"], dueDate: "Mar 28" },
+    ],
+  },
+};
+
+interface KanbanTask {
+  id: string;
+  title: string;
+  priority: "high" | "medium" | "low";
+  assignee: string;
+  labels: string[];
+  dueDate: string;
+}
+
 // ─── Mock Employees ─────────────────────────────────────────────────────────
 
 const mockEmployees = [
@@ -542,6 +641,7 @@ export default function DemoPage() {
   const [editingNewReason, setEditingNewReason] = useState(false);
   const [newReasonLabel, setNewReasonLabel] = useState("");
   const [supportTab, setSupportTab] = useState<"mydevice" | "selfservice" | "submit" | "tickets">("mydevice");
+  const [viewingBoard, setViewingBoard] = useState<string | null>(null);
 
   const onlineCount = mockDevices.filter((d) => d.status === "ONLINE").length;
   const totalCves = mockDevices.reduce((s, d) => s + d.openCves, 0);
@@ -926,32 +1026,66 @@ export default function DemoPage() {
           )}
 
           {/* ═══ PROJECTS ═══ */}
-          {activeSection === "projects" && (
+          {activeSection === "projects" && (() => {
+            const statusColors: Record<string, string> = {
+              "In Progress": "bg-blue-100 text-blue-800",
+              "Completed": "bg-green-100 text-green-800",
+              "At Risk": "bg-orange-100 text-orange-800",
+            };
+            const barColors: Record<string, string> = {
+              blue: "bg-blue-500", purple: "bg-purple-500", green: "bg-green-500", orange: "bg-orange-500",
+            };
+            const priorityColors: Record<string, string> = {
+              high: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+              medium: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+              low: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+            };
+            const labelColors = ["bg-blue-100 text-blue-700", "bg-purple-100 text-purple-700", "bg-emerald-100 text-emerald-700", "bg-pink-100 text-pink-700", "bg-cyan-100 text-cyan-700", "bg-amber-100 text-amber-700", "bg-indigo-100 text-indigo-700", "bg-rose-100 text-rose-700"];
+            const getLabelColor = (label: string) => labelColors[Math.abs(label.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) % labelColors.length];
+
+            const boardProject = viewingBoard ? mockProjects.find(p => p.id === viewingBoard) : null;
+            const boardTasks = viewingBoard ? mockKanbanTasks[viewingBoard] : null;
+
+            const columns = boardTasks ? [
+              { key: "backlog", label: "Backlog", color: "border-t-gray-400", tasks: boardTasks.backlog },
+              { key: "todo", label: "To Do", color: "border-t-blue-400", tasks: boardTasks.todo },
+              { key: "inProgress", label: "In Progress", color: "border-t-amber-400", tasks: boardTasks.inProgress },
+              { key: "review", label: "In Review", color: "border-t-purple-400", tasks: boardTasks.review },
+              { key: "done", label: "Done", color: "border-t-green-400", tasks: boardTasks.done },
+            ] : [];
+
+            return (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div><h1 className="text-2xl font-bold flex items-center gap-2"><FolderKanban className="h-6 w-6" /> Projects</h1>
-                <p className="text-muted-foreground text-sm">Active projects and task progress</p></div>
-                <Button className="bg-blue-600 hover:bg-blue-700"><FolderKanban className="h-4 w-4 mr-2" /> New Project</Button>
-              </div>
+              {/* Breadcrumbs */}
+              <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <button onClick={() => { setActiveSection("dashboard"); setViewingBoard(null); }} className="hover:text-foreground transition-colors">Dashboard</button>
+                <ChevronRight className="h-3.5 w-3.5" />
+                <button onClick={() => setViewingBoard(null)} className="hover:text-foreground transition-colors">Projects</button>
+                {boardProject && (
+                  <>
+                    <ChevronRight className="h-3.5 w-3.5" />
+                    <span className="text-foreground font-medium">{boardProject.name}</span>
+                  </>
+                )}
+              </nav>
 
-              <div className="grid gap-4 md:grid-cols-4">
-                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Active Projects</div><div className="text-2xl font-bold">3</div></CardContent></Card>
-                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Completed</div><div className="text-2xl font-bold text-green-600">1</div></CardContent></Card>
-                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">At Risk</div><div className="text-2xl font-bold text-orange-600">1</div></CardContent></Card>
-                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Total Tasks</div><div className="text-2xl font-bold">86</div></CardContent></Card>
-              </div>
+              {/* ── PROJECT LIST VIEW ─── */}
+              {!viewingBoard && (<>
+                <div className="flex items-center justify-between">
+                  <div><h1 className="text-2xl font-bold flex items-center gap-2"><FolderKanban className="h-6 w-6" /> Projects</h1>
+                  <p className="text-muted-foreground text-sm">Active projects and task progress</p></div>
+                  <Button className="bg-blue-600 hover:bg-blue-700"><FolderKanban className="h-4 w-4 mr-2" /> New Project</Button>
+                </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                {mockProjects.map((project) => {
-                  const statusColors: Record<string, string> = {
-                    "In Progress": "bg-blue-100 text-blue-800",
-                    "Completed": "bg-green-100 text-green-800",
-                    "At Risk": "bg-orange-100 text-orange-800",
-                  };
-                  const barColors: Record<string, string> = {
-                    blue: "bg-blue-500", purple: "bg-purple-500", green: "bg-green-500", orange: "bg-orange-500",
-                  };
-                  return (
+                <div className="grid gap-4 md:grid-cols-4">
+                  <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Active Projects</div><div className="text-2xl font-bold">3</div></CardContent></Card>
+                  <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Completed</div><div className="text-2xl font-bold text-green-600">1</div></CardContent></Card>
+                  <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">At Risk</div><div className="text-2xl font-bold text-orange-600">1</div></CardContent></Card>
+                  <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Total Tasks</div><div className="text-2xl font-bold">86</div></CardContent></Card>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {mockProjects.map((project) => (
                     <Card key={project.id} className="hover:shadow-md transition-shadow">
                       <CardContent className="pt-6 pb-4">
                         <div className="flex items-start justify-between mb-3">
@@ -978,15 +1112,104 @@ export default function DemoPage() {
                               </div>
                             ))}
                           </div>
-                          <Button size="sm" variant="outline">View Board</Button>
+                          <Button size="sm" variant="outline" onClick={() => setViewingBoard(project.id)}>View Board</Button>
                         </div>
                       </CardContent>
                     </Card>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              </>)}
+
+              {/* ── KANBAN BOARD VIEW ─── */}
+              {viewingBoard && boardProject && boardTasks && (<>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <h1 className="text-2xl font-bold">{boardProject.name}</h1>
+                      <Badge className={statusColors[boardProject.status] || ""}>{boardProject.status}</Badge>
+                    </div>
+                    <p className="text-muted-foreground text-sm mt-0.5">
+                      Due: {boardProject.dueDate} &bull; {boardProject.tasks.done}/{boardProject.tasks.total} tasks complete &bull; {boardProject.progress}%
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex -space-x-2 mr-2">
+                      {boardProject.team.map((initials) => (
+                        <div key={initials} className="h-7 w-7 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-[10px] font-bold border-2 border-background">
+                          {initials}
+                        </div>
+                      ))}
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => setViewingBoard(null)}>
+                      <ChevronRight className="h-3.5 w-3.5 mr-1 rotate-180" /> Back to Projects
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div>
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                    <span>{boardProject.tasks.done}/{boardProject.tasks.total} tasks</span>
+                    <span>{boardProject.progress}%</span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${barColors[boardProject.color]}`} style={{ width: `${boardProject.progress}%` }} />
+                  </div>
+                </div>
+
+                {/* Kanban columns */}
+                <div className="grid grid-cols-5 gap-3" style={{ minHeight: 500 }}>
+                  {columns.map((col) => (
+                    <div key={col.key} className={`rounded-xl border-t-4 ${col.color} bg-muted/30 p-2 space-y-2`}>
+                      <div className="flex items-center justify-between px-1 py-1">
+                        <h3 className="text-sm font-semibold">{col.label}</h3>
+                        <Badge variant="outline" className="text-[10px] h-5 px-1.5">{col.tasks.length}</Badge>
+                      </div>
+
+                      {col.tasks.map((task) => (
+                        <div key={task.id} className="rounded-lg border bg-background p-3 space-y-2 hover:shadow-sm transition-shadow cursor-pointer">
+                          <div className="flex items-start justify-between gap-1">
+                            <p className="text-sm font-medium leading-snug">{task.title}</p>
+                          </div>
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {task.labels.map((label) => (
+                              <span key={label} className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${getLabelColor(label)}`}>
+                                {label}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Badge className={`text-[9px] px-1.5 ${priorityColors[task.priority]}`}>
+                                {task.priority === "high" ? "!" : task.priority === "medium" ? "!!" : "..."} {task.priority}
+                              </Badge>
+                              <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                                <Calendar className="h-2.5 w-2.5" /> {task.dueDate}
+                              </span>
+                            </div>
+                            <div className="h-6 w-6 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-[8px] font-bold">
+                              {task.assignee}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {col.tasks.length === 0 && (
+                        <div className="rounded-lg border border-dashed p-4 text-center">
+                          <p className="text-[11px] text-muted-foreground">No tasks</p>
+                        </div>
+                      )}
+
+                      <button className="w-full rounded-lg border border-dashed p-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex items-center justify-center gap-1">
+                        <Plus className="h-3 w-3" /> Add Task
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>)}
             </div>
-          )}
+            );
+          })()}
 
           {/* ═══ MY ACCOUNT ═══ */}
           {activeSection === "my-account" && (
