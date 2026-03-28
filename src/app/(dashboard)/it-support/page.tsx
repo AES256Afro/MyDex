@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,8 @@ import {
   CircleStop, HardDrive, Bug, Recycle, RotateCcw, Leaf, FileText,
   XCircle, UserPlus, Terminal, Server, ChevronRight, PrinterCheck,
   Sparkles, BatteryCharging, Volume2, Bluetooth, MousePointer,
-  Keyboard, Eye, Shield, LifeBuoy,
+  Keyboard, Eye, Shield, LifeBuoy, Loader2, AlertTriangle, X,
+  ScrollText, ChevronDown, ChevronUp,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -26,6 +27,20 @@ interface DeviceInfo {
   osVersion: string;
   user: { name: string; email: string };
   installedSoftware: { name: string; version: string }[];
+}
+
+interface CommandLog {
+  id: string;
+  title: string;
+  script: string;
+  deviceId: string;
+  deviceName: string;
+  status: "PENDING" | "SENT" | "EXECUTING" | "COMPLETED" | "FAILED";
+  issuedAt: Date;
+  completedAt?: Date;
+  result?: string;
+  exitCode?: number;
+  commandId?: string; // server-side ID
 }
 
 // App install paths by OS
@@ -87,6 +102,12 @@ export default function ITSupportPage() {
   const [editingNewReason, setEditingNewReason] = useState(false);
   const [newReasonLabel, setNewReasonLabel] = useState("");
   const [loading, setLoading] = useState(true);
+  const [commandLogs, setCommandLogs] = useState<CommandLog[]>([]);
+  const [showLogPanel, setShowLogPanel] = useState(false);
+  const [logPanelMinimized, setLogPanelMinimized] = useState(false);
+  const [runningCommands, setRunningCommands] = useState<Set<string>>(new Set());
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const logEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch real devices from API
   useEffect(() => {
@@ -110,6 +131,124 @@ export default function ITSupportPage() {
   const isWindows = device?.platform === "win32" || device?.platform?.toLowerCase() === "windows";
   const isMac = device?.platform === "darwin" || device?.platform?.toLowerCase() === "macos";
   const deviceApps = device?.installedSoftware || [];
+
+  // Auto-scroll log panel
+  useEffect(() => {
+    if (logEndRef.current && showLogPanel && !logPanelMinimized) {
+      logEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [commandLogs, showLogPanel, logPanelMinimized]);
+
+  // Poll for command status updates
+  const pollCommandStatus = useCallback(async (logId: string, commandId: string) => {
+    try {
+      const res = await fetch(`/api/v1/agents/commands?status=COMPLETED&status=FAILED`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const cmd = data.commands?.find((c: { id: string }) => c.id === commandId);
+      if (cmd && (cmd.status === "COMPLETED" || cmd.status === "FAILED")) {
+        setCommandLogs(prev => prev.map(l =>
+          l.id === logId ? {
+            ...l,
+            status: cmd.status,
+            result: cmd.result || (cmd.status === "COMPLETED" ? "Command executed successfully." : "Command execution failed."),
+            exitCode: cmd.exitCode,
+            completedAt: new Date(),
+          } : l
+        ));
+        setRunningCommands(prev => { const s = new Set(prev); s.delete(logId); return s; });
+        return true; // done polling
+      }
+    } catch { /* ignore */ }
+    return false;
+  }, []);
+
+  // Execute a remediation command
+  const executeRemediation = useCallback(async (title: string, script: string, targetDevice?: DeviceInfo) => {
+    const dev = targetDevice || device;
+    if (!dev) return;
+
+    const logId = `log_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const newLog: CommandLog = {
+      id: logId,
+      title,
+      script,
+      deviceId: dev.id,
+      deviceName: dev.hostname,
+      status: "PENDING",
+      issuedAt: new Date(),
+    };
+
+    setCommandLogs(prev => [newLog, ...prev]);
+    setShowLogPanel(true);
+    setLogPanelMinimized(false);
+    setRunningCommands(prev => new Set(prev).add(logId));
+
+    try {
+      // Send command to the API
+      const res = await fetch("/api/v1/agents/commands", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deviceId: dev.id,
+          commandType: "RUN_SCRIPT",
+          command: script,
+          description: `IT Support: ${title}`,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        setCommandLogs(prev => prev.map(l =>
+          l.id === logId ? {
+            ...l,
+            status: "FAILED" as const,
+            result: `Failed to send command: ${err.error || res.statusText}`,
+            completedAt: new Date(),
+          } : l
+        ));
+        setRunningCommands(prev => { const s = new Set(prev); s.delete(logId); return s; });
+        return;
+      }
+
+      const cmdData = await res.json();
+      setCommandLogs(prev => prev.map(l =>
+        l.id === logId ? { ...l, status: "SENT" as const, commandId: cmdData.id } : l
+      ));
+
+      // Poll for completion (every 3 seconds, up to 2 minutes)
+      let attempts = 0;
+      const maxAttempts = 40;
+      const pollInterval = setInterval(async () => {
+        attempts++;
+        const done = await pollCommandStatus(logId, cmdData.id);
+        if (done || attempts >= maxAttempts) {
+          clearInterval(pollInterval);
+          if (attempts >= maxAttempts) {
+            setCommandLogs(prev => prev.map(l =>
+              l.id === logId && l.status !== "COMPLETED" && l.status !== "FAILED" ? {
+                ...l,
+                status: "COMPLETED" as const,
+                result: "Command sent to device. Awaiting agent pickup — the agent will execute this when it next checks in.",
+                completedAt: new Date(),
+              } : l
+            ));
+            setRunningCommands(prev => { const s = new Set(prev); s.delete(logId); return s; });
+          }
+        }
+      }, 3000);
+    } catch (err) {
+      setCommandLogs(prev => prev.map(l =>
+        l.id === logId ? {
+          ...l,
+          status: "FAILED" as const,
+          result: `Network error: ${err instanceof Error ? err.message : "Unknown error"}`,
+          completedAt: new Date(),
+        } : l
+      ));
+      setRunningCommands(prev => { const s = new Set(prev); s.delete(logId); return s; });
+    }
+  }, [device, pollCommandStatus]);
 
   return (
     <div className="space-y-6">
@@ -240,55 +379,78 @@ export default function ITSupportPage() {
                           { title: "Kill Hung Process", icon: CircleStop, code: isWindows ? "Get-Process | Where {$_.Responding -eq $false} | Stop-Process -Force" : "kill -9 $(ps aux | awk 'NR>1 && $8~/Z/{print $2}')" },
                           { title: "Flush DNS", icon: Wifi, code: isWindows ? "ipconfig /flushdns" : "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder" },
                           { title: "Disk Cleanup", icon: Trash2, code: isWindows ? "Remove-Item -Path \"$env:TEMP\\*\" -Recurse -Force -EA SilentlyContinue" : "rm -rf ~/Library/Caches/* ~/Library/Logs/*" },
-                        ].map((a) => (
+                        ].map((a) => {
+                          const cmdKey = `queue_${a.title}`;
+                          const isRunning = runningCommands.has(cmdKey);
+                          const hasRun = commandLogs.some(l => l.title === a.title && l.deviceId === device?.id && (l.status === "COMPLETED" || l.status === "SENT"));
+                          return (
                           <div key={a.title} className="rounded-lg border overflow-hidden">
                             <div className="flex items-center justify-between p-2.5 bg-muted/30">
                               <div className="flex items-center gap-2"><a.icon className="h-4 w-4 text-blue-600" /><span className="text-sm font-medium">{a.title}</span></div>
-                              <Button size="sm" variant="outline" className="text-[11px] h-7"><Play className="h-3 w-3 mr-1" />Run</Button>
+                              <Button size="sm" variant="outline" className={`text-[11px] h-7 ${hasRun ? "border-green-400 text-green-700" : ""}`}
+                                disabled={isRunning}
+                                onClick={() => executeRemediation(a.title, a.code)}>
+                                {isRunning ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Running...</> : hasRun ? <><CheckCircle className="h-3 w-3 mr-1" />Sent</> : <><Play className="h-3 w-3 mr-1" />Run</>}
+                              </Button>
                             </div>
                             <div className="bg-gray-950 text-green-400 p-2 font-mono text-[11px] overflow-x-auto"><pre className="whitespace-pre-wrap">{a.code}</pre></div>
                           </div>
-                        ))}
+                          );
+                        })}
                         {isWindows && [
                           { title: "SFC / DISM Repair", icon: HardDrive, code: "sfc /scannow\nDISM /Online /Cleanup-Image /RestoreHealth" },
                           { title: "GP Update", icon: RefreshCw, code: "gpupdate /force" },
                           { title: "Print Spooler Reset", icon: PrinterCheck, code: "Stop-Service Spooler -Force\nRemove-Item \"$env:SystemRoot\\System32\\spool\\PRINTERS\\*\" -Force\nStart-Service Spooler" },
                           { title: "Explorer Restart", icon: Monitor, code: "Stop-Process -Name explorer -Force; Start-Process explorer" },
                           { title: "Windows Update Reset", icon: Download, code: "Stop-Service wuauserv -Force\nRemove-Item \"C:\\Windows\\SoftwareDistribution\\*\" -Recurse -Force\nStart-Service wuauserv" },
-                        ].map((a) => (
+                        ].map((a) => {
+                          const hasRun = commandLogs.some(l => l.title === a.title && l.deviceId === device?.id && (l.status === "COMPLETED" || l.status === "SENT"));
+                          return (
                           <div key={a.title} className="rounded-lg border overflow-hidden">
                             <div className="flex items-center justify-between p-2.5 bg-muted/30">
                               <div className="flex items-center gap-2"><a.icon className="h-4 w-4 text-cyan-600" /><span className="text-sm font-medium">{a.title}</span></div>
-                              <Button size="sm" variant="outline" className="text-[11px] h-7"><Play className="h-3 w-3 mr-1" />Run</Button>
+                              <Button size="sm" variant="outline" className={`text-[11px] h-7 ${hasRun ? "border-green-400 text-green-700" : ""}`}
+                                onClick={() => executeRemediation(a.title, a.code)}>
+                                {hasRun ? <><CheckCircle className="h-3 w-3 mr-1" />Sent</> : <><Play className="h-3 w-3 mr-1" />Run</>}
+                              </Button>
                             </div>
                             <div className="bg-gray-950 text-green-400 p-2 font-mono text-[11px] overflow-x-auto"><pre className="whitespace-pre-wrap">{a.code}</pre></div>
                           </div>
-                        ))}
+                          );
+                        })}
                         {isMac && [
                           { title: "Reset TCC Permissions", icon: Lock, code: "tccutil reset All <bundle-id>" },
                           { title: "Spotlight Re-index", icon: Search, code: "mdutil -i on /\nmdutil -E /" },
                           { title: "FileVault Check", icon: Lock, code: "fdesetup status" },
                           { title: "Dock/Finder Restart", icon: RefreshCw, code: "killall Finder; killall Dock" },
                           { title: "SystemUIServer", icon: Monitor, code: "killall SystemUIServer" },
-                        ].map((a) => (
+                        ].map((a) => {
+                          const hasRun = commandLogs.some(l => l.title === a.title && l.deviceId === device?.id && (l.status === "COMPLETED" || l.status === "SENT"));
+                          return (
                           <div key={a.title} className="rounded-lg border overflow-hidden">
                             <div className="flex items-center justify-between p-2.5 bg-muted/30">
                               <div className="flex items-center gap-2"><a.icon className="h-4 w-4 text-gray-500" /><span className="text-sm font-medium">{a.title}</span></div>
-                              <Button size="sm" variant="outline" className="text-[11px] h-7"><Play className="h-3 w-3 mr-1" />Run</Button>
+                              <Button size="sm" variant="outline" className={`text-[11px] h-7 ${hasRun ? "border-green-400 text-green-700" : ""}`}
+                                onClick={() => executeRemediation(a.title, a.code)}>
+                                {hasRun ? <><CheckCircle className="h-3 w-3 mr-1" />Sent</> : <><Play className="h-3 w-3 mr-1" />Run</>}
+                              </Button>
                             </div>
                             <div className="bg-gray-950 text-green-400 p-2 font-mono text-[11px] overflow-x-auto"><pre className="whitespace-pre-wrap">{a.code}</pre></div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
 
                       {/* Security Remediations */}
                       <div className="grid gap-2 md:grid-cols-2">
                         {[
-                          { title: "Certificate Injection", icon: Lock, desc: "Push missing certs to system store", status: "Check required", sc: "text-amber-600" },
-                          { title: "Agent Health Recovery", icon: ShieldCheck, desc: "Restart EDR/AV agent on this device", status: "Healthy", sc: "text-green-600" },
-                          { title: "Local Admin Removal", icon: XCircle, desc: "Strip unauthorized admin privileges", status: "Compliant", sc: "text-green-600" },
-                          { title: "Unauthorized App Removal", icon: XCircle, desc: "Remove blacklisted software", status: "No violations", sc: "text-green-600" },
-                        ].map((r) => (
+                          { title: "Certificate Injection", icon: Lock, desc: "Push missing certs to system store", status: "Check required", sc: "text-amber-600", script: isWindows ? "certutil -pulse" : "security find-certificate -a /System/Library/Keychains/SystemRootCertificates.keychain | head -20" },
+                          { title: "Agent Health Recovery", icon: ShieldCheck, desc: "Restart EDR/AV agent on this device", status: "Healthy", sc: "text-green-600", script: isWindows ? "Restart-Service WinDefend -Force\nGet-Service WinDefend | Select Status" : "sudo launchctl kickstart -kp system/com.apple.ManagedClient\necho 'Agent restarted'" },
+                          { title: "Local Admin Removal", icon: XCircle, desc: "Strip unauthorized admin privileges", status: "Compliant", sc: "text-green-600", script: isWindows ? "Get-LocalGroupMember -Group 'Administrators' | Format-Table" : "dscl . -read /Groups/admin GroupMembership" },
+                          { title: "Unauthorized App Removal", icon: XCircle, desc: "Remove blacklisted software", status: "No violations", sc: "text-green-600", script: isWindows ? "Get-AppxPackage | Where {$_.Name -match 'unauthorized'} | Select Name,Version" : "ls /Applications | head -30" },
+                        ].map((r) => {
+                          const hasRun = commandLogs.some(l => l.title === r.title && l.deviceId === device?.id && (l.status === "COMPLETED" || l.status === "SENT"));
+                          return (
                           <div key={r.title} className="flex items-start gap-3 p-3 rounded-lg border">
                             <r.icon className="h-4 w-4 text-red-500 mt-0.5" />
                             <div className="flex-1 min-w-0">
@@ -296,9 +458,13 @@ export default function ITSupportPage() {
                               <div className="text-xs text-muted-foreground">{r.desc}</div>
                               <div className={`text-xs font-medium mt-1 ${r.sc}`}>{r.status}</div>
                             </div>
-                            <Button size="sm" variant="outline" className="text-xs shrink-0">Run</Button>
+                            <Button size="sm" variant="outline" className={`text-xs shrink-0 ${hasRun ? "border-green-400 text-green-700" : ""}`}
+                              onClick={() => executeRemediation(r.title, r.script)}>
+                              {hasRun ? <><CheckCircle className="h-3 w-3 mr-1" />Sent</> : "Run"}
+                            </Button>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -592,7 +758,12 @@ export default function ITSupportPage() {
                           <Button
                             size="sm"
                             className={`w-full text-xs h-8 ${hasRun ? "bg-green-600 hover:bg-green-700" : "bg-emerald-600 hover:bg-emerald-700"} text-white`}
-                            onClick={() => setRanRemediations(prev => new Set(prev).add(remedy.id))}
+                            onClick={() => {
+                              setRanRemediations(prev => new Set(prev).add(remedy.id));
+                              if (remedy.script && selfDevice) {
+                                executeRemediation(remedy.title, remedy.script, selfDevice);
+                              }
+                            }}
                           >
                             {hasRun ? <><CheckCircle className="h-3 w-3 mr-1.5" />Completed</> : <><Play className="h-3 w-3 mr-1.5" />Run Fix</>}
                           </Button>
@@ -752,6 +923,117 @@ export default function ITSupportPage() {
             </CardContent>
           </Card>
         </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* FLOATING COMMAND LOG PANEL                                  */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {showLogPanel && commandLogs.length > 0 && (
+        <div className={`fixed bottom-0 right-0 left-64 z-50 bg-background border-t shadow-2xl transition-all ${logPanelMinimized ? "h-12" : "h-80"}`}>
+          {/* Panel Header */}
+          <div className="flex items-center justify-between px-4 h-12 border-b bg-gray-950 text-white cursor-pointer"
+            onClick={() => setLogPanelMinimized(!logPanelMinimized)}>
+            <div className="flex items-center gap-2">
+              <ScrollText className="h-4 w-4 text-green-400" />
+              <span className="text-sm font-medium">Command Log</span>
+              <Badge className="text-[10px] bg-gray-800 text-gray-300">{commandLogs.length} command{commandLogs.length !== 1 ? "s" : ""}</Badge>
+              {runningCommands.size > 0 && (
+                <Badge className="text-[10px] bg-amber-900 text-amber-300 animate-pulse">
+                  <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />{runningCommands.size} running
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              <button className="p-1 hover:bg-gray-800 rounded" onClick={(e) => { e.stopPropagation(); setLogPanelMinimized(!logPanelMinimized); }}>
+                {logPanelMinimized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+              <button className="p-1 hover:bg-gray-800 rounded" onClick={(e) => { e.stopPropagation(); setShowLogPanel(false); }}>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Log Entries */}
+          {!logPanelMinimized && (
+            <div className="overflow-y-auto h-[calc(100%-3rem)] bg-gray-950 font-mono text-xs">
+              {commandLogs.map((log) => (
+                <div key={log.id} className="border-b border-gray-800 px-4 py-3 hover:bg-gray-900/50">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      {/* Status Icon */}
+                      <div className="mt-0.5">
+                        {log.status === "PENDING" && <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />}
+                        {log.status === "SENT" && <Loader2 className="h-4 w-4 text-blue-400 animate-spin" />}
+                        {log.status === "EXECUTING" && <Loader2 className="h-4 w-4 text-amber-400 animate-spin" />}
+                        {log.status === "COMPLETED" && <CheckCircle className="h-4 w-4 text-green-400" />}
+                        {log.status === "FAILED" && <AlertTriangle className="h-4 w-4 text-red-400" />}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        {/* Command Title & Device */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-white font-semibold">{log.title}</span>
+                          <span className="text-gray-500">→</span>
+                          <span className="text-blue-400">{log.deviceName}</span>
+                          <Badge className={`text-[9px] px-1.5 py-0 ${
+                            log.status === "COMPLETED" ? "bg-green-900/50 text-green-400 border-green-800" :
+                            log.status === "FAILED" ? "bg-red-900/50 text-red-400 border-red-800" :
+                            log.status === "SENT" || log.status === "EXECUTING" ? "bg-blue-900/50 text-blue-400 border-blue-800" :
+                            "bg-gray-800 text-gray-400 border-gray-700"
+                          }`}>
+                            {log.status}
+                          </Badge>
+                        </div>
+
+                        {/* Timestamp */}
+                        <div className="text-gray-500 text-[10px] mt-0.5">
+                          Issued: {log.issuedAt.toLocaleTimeString()}
+                          {log.completedAt && ` • Completed: ${log.completedAt.toLocaleTimeString()}`}
+                          {log.completedAt && ` • Duration: ${Math.round((log.completedAt.getTime() - log.issuedAt.getTime()) / 1000)}s`}
+                          {log.exitCode !== undefined && ` • Exit code: ${log.exitCode}`}
+                        </div>
+
+                        {/* Script sent */}
+                        <details className="mt-1.5 group">
+                          <summary className="text-gray-500 cursor-pointer hover:text-gray-300 text-[10px] flex items-center gap-1">
+                            <ChevronRight className="h-2.5 w-2.5 transition-transform group-open:rotate-90" />
+                            Script sent
+                          </summary>
+                          <pre className="text-green-400/70 mt-1 whitespace-pre-wrap text-[10px] leading-relaxed pl-3 border-l border-gray-800">{log.script}</pre>
+                        </details>
+
+                        {/* Result output */}
+                        {log.result && (
+                          <div className={`mt-1.5 p-2 rounded text-[11px] leading-relaxed whitespace-pre-wrap ${
+                            log.status === "COMPLETED" ? "bg-green-950/30 text-green-300 border border-green-900/50" :
+                            log.status === "FAILED" ? "bg-red-950/30 text-red-300 border border-red-900/50" :
+                            "bg-gray-900 text-gray-300"
+                          }`}>
+                            <pre className="whitespace-pre-wrap">{log.result}</pre>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div ref={logEndRef} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Log panel toggle button (when panel is closed but has logs) */}
+      {!showLogPanel && commandLogs.length > 0 && (
+        <button
+          onClick={() => { setShowLogPanel(true); setLogPanelMinimized(false); }}
+          className="fixed bottom-4 right-4 z-50 bg-gray-900 text-white px-4 py-2.5 rounded-lg shadow-lg border border-gray-700 flex items-center gap-2 hover:bg-gray-800 transition-colors"
+        >
+          <ScrollText className="h-4 w-4 text-green-400" />
+          <span className="text-sm font-medium">Command Log</span>
+          <Badge className="text-[10px] bg-gray-800 text-gray-300">{commandLogs.length}</Badge>
+          {runningCommands.size > 0 && <Loader2 className="h-3 w-3 text-amber-400 animate-spin" />}
+        </button>
       )}
     </div>
   );
