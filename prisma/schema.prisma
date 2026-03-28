@@ -1055,6 +1055,18 @@ model SupportTicket {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
+  // SLA tracking
+  firstResponseAt  DateTime?    // when IT first replied
+  slaResponseDue   DateTime?    // deadline for first response
+  slaResolutionDue DateTime?    // deadline for resolution
+  slaResponseBreached  Boolean  @default(false)
+  slaResolutionBreached Boolean @default(false)
+
+  // Satisfaction rating (1-5 stars, submitted by user after resolution)
+  satisfactionRating  Int?       // 1-5
+  satisfactionComment String?
+  ratedAt             DateTime?
+
   submitter User            @relation("TicketSubmitter", fields: [submittedBy], references: [id])
   assignee  User?           @relation("TicketAssignee", fields: [assignedTo], references: [id])
   device    AgentDevice?    @relation(fields: [deviceId], references: [id])

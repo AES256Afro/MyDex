@@ -94,11 +94,26 @@ export async function POST(
     const isSubmitter = ticket.submittedBy === session.user.id;
     const newStatus = isSubmitter ? "WAITING_ON_IT" : "IN_PROGRESS";
 
-    // Only update if currently in a waiting state or open
+    const ticketUpdate: Record<string, unknown> = {};
+
+    // Track first response time (when IT first replies, not internal notes)
+    if (!isSubmitter && !isInternal && !ticket.firstResponseAt) {
+      ticketUpdate.firstResponseAt = new Date();
+      // Check if SLA response was breached
+      if (ticket.slaResponseDue && new Date() > ticket.slaResponseDue) {
+        ticketUpdate.slaResponseBreached = true;
+      }
+    }
+
+    // Only update status if currently in a waiting state or open
     if (["OPEN", "WAITING_ON_USER", "WAITING_ON_IT"].includes(ticket.status)) {
+      ticketUpdate.status = newStatus;
+    }
+
+    if (Object.keys(ticketUpdate).length > 0) {
       await prisma.supportTicket.update({
         where: { id: ticketId },
-        data: { status: newStatus },
+        data: ticketUpdate,
       });
     }
 

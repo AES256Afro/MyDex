@@ -13,7 +13,7 @@ import {
   Sparkles, BatteryCharging, Volume2, Bluetooth, MousePointer,
   Keyboard, Eye, Loader2, ClipboardList, UserPlus, PrinterCheck,
   AlertTriangle, ChevronDown, ChevronUp, X, ScrollText, Bug,
-  Package, HardDrive, Cpu, Activity, Wrench, MessageCircle, Send, ArrowLeft,
+  Package, HardDrive, Cpu, Activity, Wrench, MessageCircle, Send, ArrowLeft, Star, ThumbsUp,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -68,6 +68,13 @@ interface TicketData {
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string;
+  slaResponseDue?: string;
+  slaResolutionDue?: string;
+  slaResponseBreached?: boolean;
+  slaResolutionBreached?: boolean;
+  firstResponseAt?: string;
+  satisfactionRating?: number | null;
+  satisfactionComment?: string | null;
   submitter: { id: string; name: string; email: string };
   assignee?: { id: string; name: string; email: string } | null;
   device?: { id: string; hostname: string; platform: string } | null;
@@ -145,6 +152,10 @@ export default function SupportPage() {
   const [ticketMessages, setTicketMessages] = useState<TicketMessageData[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [ratingStars, setRatingStars] = useState(0);
+  const [ratingHover, setRatingHover] = useState(0);
+  const [ratingComment, setRatingComment] = useState("");
+  const [submittingRating, setSubmittingRating] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -405,6 +416,40 @@ export default function SupportPage() {
     } catch { /* ignore */ } finally {
       setSendingMessage(false);
     }
+  };
+
+  // Submit satisfaction rating
+  const submitRating = async (ticketId: string) => {
+    if (!ratingStars) return;
+    setSubmittingRating(true);
+    try {
+      await fetch("/api/v1/tickets", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: ticketId,
+          satisfactionRating: ratingStars,
+          satisfactionComment: ratingComment || undefined,
+        }),
+      });
+      fetchTickets();
+      setRatingStars(0);
+      setRatingComment("");
+    } catch { /* ignore */ } finally {
+      setSubmittingRating(false);
+    }
+  };
+
+  // Confirm issue resolved (user closes ticket)
+  const confirmResolved = async (ticketId: string) => {
+    try {
+      await fetch("/api/v1/tickets", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: ticketId, confirmResolved: true }),
+      });
+      fetchTickets();
+    } catch { /* ignore */ }
   };
 
   // Scroll messages to bottom
@@ -1048,9 +1093,60 @@ export default function SupportPage() {
                       </div>
                     )}
 
-                    {["RESOLVED", "CLOSED"].includes(ticket.status) && (
+                    {/* Resolution confirmation + rating */}
+                    {ticket.status === "RESOLVED" && !ticket.satisfactionRating && (
+                      <div className="border-t p-4 space-y-3 bg-green-50/50 dark:bg-green-950/20">
+                        <div className="text-sm font-medium text-center flex items-center justify-center gap-2">
+                          <ThumbsUp className="h-4 w-4 text-green-600" />
+                          IT has marked this ticket as resolved. Is your issue fixed?
+                        </div>
+                        <div className="flex justify-center gap-3">
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => confirmResolved(ticket.id)}>
+                            <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Yes, issue is fixed
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-orange-600 border-orange-300" onClick={async () => {
+                            await fetch("/api/v1/tickets", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: ticket.id, status: "WAITING_ON_IT" }) });
+                            fetchTickets();
+                          }}>
+                            No, still having issues
+                          </Button>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-muted-foreground mb-2">Rate your support experience</div>
+                          <div className="flex justify-center gap-1 mb-2">
+                            {[1, 2, 3, 4, 5].map(star => (
+                              <button key={star}
+                                onMouseEnter={() => setRatingHover(star)}
+                                onMouseLeave={() => setRatingHover(0)}
+                                onClick={() => setRatingStars(star)}
+                                className="p-0.5 transition-transform hover:scale-110">
+                                <Star className={`h-6 w-6 ${(ratingHover || ratingStars) >= star ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                              </button>
+                            ))}
+                          </div>
+                          {ratingStars > 0 && (
+                            <div className="space-y-2 max-w-sm mx-auto">
+                              <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value)}
+                                placeholder="Any feedback? (optional)" className="w-full h-16 rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-500" />
+                              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" disabled={submittingRating}
+                                onClick={() => submitRating(ticket.id)}>
+                                {submittingRating ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Star className="h-3.5 w-3.5 mr-1.5" />}
+                                Submit Rating & Close
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {ticket.status === "CLOSED" && (
                       <div className="border-t p-3 text-center text-sm text-muted-foreground">
-                        This ticket has been {ticket.status.toLowerCase()}.
+                        This ticket has been closed.
+                        {ticket.satisfactionRating && (
+                          <span className="ml-2">Your rating: {[1,2,3,4,5].map(s => (
+                            <Star key={s} className={`inline h-3.5 w-3.5 ${s <= ticket.satisfactionRating! ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                          ))}</span>
+                        )}
                       </div>
                     )}
                   </div>
