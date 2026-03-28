@@ -141,7 +141,7 @@ const defaultRemediationGroups = [
 
 export default function ITSupportPage() {
   const { data: session } = useSession();
-  const [activeTab, setActiveTab] = useState<"queue" | "tickets" | "submit" | "selfservice" | "metrics" | "config">("queue");
+  const [activeTab, setActiveTab] = useState<"queue" | "tickets" | "submit" | "selfservice" | "metrics" | "config">("tickets");
   const [selfServiceFilter, setSelfServiceFilter] = useState<"all" | "performance" | "network" | "display" | "apps" | "security" | "peripherals">("all");
   const [ranRemediations, setRanRemediations] = useState<Set<string>>(new Set());
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
