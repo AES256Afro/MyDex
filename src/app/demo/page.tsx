@@ -642,6 +642,8 @@ export default function DemoPage() {
   const [newReasonLabel, setNewReasonLabel] = useState("");
   const [supportTab, setSupportTab] = useState<"mydevice" | "selfservice" | "submit" | "tickets">("mydevice");
   const [viewingBoard, setViewingBoard] = useState<string | null>(null);
+  const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null);
+  const [expandedPolicy, setExpandedPolicy] = useState<string | null>(null);
 
   const onlineCount = mockDevices.filter((d) => d.status === "ONLINE").length;
   const totalCves = mockDevices.reduce((s, d) => s + d.openCves, 0);
@@ -1942,8 +1944,7 @@ export default function DemoPage() {
               { id: "dlp2", name: "API Key Leak Prevention", status: "Active", desc: "Detects exposed API keys, tokens, and private keys in file transfers", created: "2026-03-01", rules: "Patterns: AWS keys (AKIA...), GitHub tokens (ghp_...), OpenAI keys (sk-...)\nChannels: Git push, File sharing, Chat messages\nAction: Block transfer, Notify developer, Auto-rotate if possible" },
             ];
 
-            const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null);
-            const [expandedPolicy, setExpandedPolicy] = useState<string | null>(null);
+            // expandedTemplate and expandedPolicy state moved to top level
 
             return (
             <div className="space-y-6">
