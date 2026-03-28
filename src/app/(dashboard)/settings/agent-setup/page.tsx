@@ -47,6 +47,7 @@ import {
   RotateCcw,
   Search,
   ArrowRight,
+  X,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -400,19 +401,55 @@ export default function AgentSetupPage() {
     }
   };
 
-  const fetchDevices = useCallback(async () => {
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshLog, setRefreshLog] = useState<{ time: string; msg: string; type: "info" | "success" | "error" | "warn" }[]>([]);
+  const [showRefreshConsole, setShowRefreshConsole] = useState(false);
+
+  const addLog = useCallback((msg: string, type: "info" | "success" | "error" | "warn" = "info") => {
+    const time = new Date().toLocaleTimeString();
+    setRefreshLog(prev => [...prev, { time, msg, type }]);
+  }, []);
+
+  const fetchDevices = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+      setRefreshLog([]);
+      setShowRefreshConsole(true);
+      addLog("Starting fleet health check...");
+    }
     try {
+      if (isRefresh) addLog("Querying /api/v1/agents/devices...");
       const res = await fetch("/api/v1/agents/devices");
       if (res.ok) {
         const data = await res.json();
-        setDevices(data.devices || []);
+        const devs = data.devices || [];
+        setDevices(devs);
+        if (isRefresh) {
+          addLog(`Received ${devs.length} device(s) from API`, "success");
+          const online = devs.filter((d: AgentDevice) => d.status === "ONLINE").length;
+          const offline = devs.length - online;
+          addLog(`Status: ${online} online, ${offline} offline`, online > 0 ? "success" : "warn");
+          devs.forEach((d: AgentDevice) => {
+            const q = assessAgentQuality(d);
+            const issues = q.issues.length;
+            addLog(
+              `${d.hostname} — Score: ${q.score}% (${qualityLabel(q.score)})${issues > 0 ? `, ${issues} issue(s)` : ""}`,
+              q.score >= 70 ? "success" : q.score >= 50 ? "warn" : "error"
+            );
+          });
+          addLog("Fleet health check complete ✓", "success");
+        }
+      } else {
+        if (isRefresh) addLog(`API returned ${res.status} ${res.statusText}`, "error");
       }
     } catch (err) {
       console.error("Failed to fetch devices:", err);
+      if (isRefresh) addLog(`Failed to fetch devices: ${err}`, "error");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, []);
+  }, [addLog]);
 
   useEffect(() => {
     fetchDevices();
@@ -906,11 +943,53 @@ services:
                     Quality assessment for all enrolled devices based on connectivity, security posture, and agent status.
                   </CardDescription>
                 </div>
-                <Button variant="outline" size="sm" onClick={fetchDevices}>
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  Refresh
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => fetchDevices(true)} disabled={refreshing}>
+                    <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? "animate-spin" : ""}`} />
+                    {refreshing ? "Refreshing..." : "Refresh"}
+                  </Button>
+                  {refreshLog.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={() => setShowRefreshConsole(!showRefreshConsole)} className="text-xs">
+                      <Terminal className="h-3.5 w-3.5 mr-1" />
+                      {showRefreshConsole ? "Hide" : "Show"} Console
+                    </Button>
+                  )}
+                </div>
               </div>
+
+              {/* Refresh Console */}
+              {showRefreshConsole && refreshLog.length > 0 && (
+                <div className="mt-3 rounded-lg border bg-gray-950 text-gray-100 font-mono text-xs overflow-hidden">
+                  <div className="flex items-center justify-between px-3 py-1.5 bg-gray-900 border-b border-gray-800">
+                    <div className="flex items-center gap-2">
+                      <Terminal className="h-3.5 w-3.5 text-green-400" />
+                      <span className="text-gray-400">Agent Health Check</span>
+                    </div>
+                    <button onClick={() => setShowRefreshConsole(false)} className="text-gray-500 hover:text-gray-300">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto p-3 space-y-0.5">
+                    {refreshLog.map((log, i) => (
+                      <div key={i} className="flex gap-2">
+                        <span className="text-gray-500 shrink-0">[{log.time}]</span>
+                        <span className={
+                          log.type === "success" ? "text-green-400" :
+                          log.type === "error" ? "text-red-400" :
+                          log.type === "warn" ? "text-yellow-400" :
+                          "text-gray-300"
+                        }>{log.msg}</span>
+                      </div>
+                    ))}
+                    {refreshing && (
+                      <div className="flex gap-2 animate-pulse">
+                        <span className="text-gray-500">[{new Date().toLocaleTimeString()}]</span>
+                        <span className="text-blue-400">Processing...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               {loading ? (
