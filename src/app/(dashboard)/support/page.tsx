@@ -156,6 +156,8 @@ export default function SupportPage() {
   const [ratingHover, setRatingHover] = useState(0);
   const [ratingComment, setRatingComment] = useState("");
   const [submittingRating, setSubmittingRating] = useState(false);
+  const [showResolvePrompt, setShowResolvePrompt] = useState(false);
+  const [resolveComment, setResolveComment] = useState("");
   const logEndRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -1076,7 +1078,7 @@ export default function SupportPage() {
                   </div>
 
                   {/* User status actions */}
-                  {!["RESOLVED", "CLOSED"].includes(ticket.status) && (
+                  {!["RESOLVED", "CLOSED"].includes(ticket.status) && !showResolvePrompt && (
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground mr-1">Update status:</span>
                       {ticket.status !== "IN_PROGRESS" && (
@@ -1087,12 +1089,49 @@ export default function SupportPage() {
                           <Wrench className="h-3.5 w-3.5 mr-1.5" /> Mark as Working
                         </Button>
                       )}
-                      <Button size="sm" variant="outline" className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950" onClick={async () => {
-                        await fetch("/api/v1/tickets", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: ticket.id, status: "RESOLVED" }) });
-                        fetchTickets();
+                      <Button size="sm" variant="outline" className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950" onClick={() => {
+                        setShowResolvePrompt(true);
+                        setResolveComment("");
                       }}>
                         <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Mark as Resolved
                       </Button>
+                    </div>
+                  )}
+
+                  {/* Resolve comment prompt */}
+                  {showResolvePrompt && !["RESOLVED", "CLOSED"].includes(ticket.status) && (
+                    <div className="rounded-lg border border-green-200 bg-green-50/50 dark:bg-green-950/20 dark:border-green-800 p-4 space-y-3">
+                      <div className="text-sm font-medium flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        How was this issue resolved?
+                      </div>
+                      <textarea
+                        value={resolveComment}
+                        onChange={(e) => setResolveComment(e.target.value)}
+                        placeholder="Describe how the issue was resolved (e.g., 'Restarted the service and cleared cache')..."
+                        className="w-full h-20 rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" disabled={!resolveComment.trim()} onClick={async () => {
+                          // Send resolution comment as a message first
+                          await fetch(`/api/v1/tickets/${ticket.id}/messages`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ message: `✅ Resolved: ${resolveComment}` }),
+                          });
+                          // Then update status
+                          await fetch("/api/v1/tickets", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: ticket.id, status: "RESOLVED" }) });
+                          setShowResolvePrompt(false);
+                          setResolveComment("");
+                          fetchTickets();
+                          fetchMessages(ticket.id);
+                        }}>
+                          <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Confirm Resolved
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setShowResolvePrompt(false)}>
+                          Cancel
+                        </Button>
+                      </div>
                     </div>
                   )}
 
@@ -1116,14 +1155,20 @@ export default function SupportPage() {
                         ticketMessages.map((msg) => {
                           const isMe = msg.user.id === session?.user?.id;
                           const isIT = msg.user.role === "ADMIN" || msg.user.role === "SUPER_ADMIN";
+                          const isReporter = msg.user.id === ticket.submitter.id;
                           return (
-                            <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-                              <div className={`max-w-[75%] rounded-xl px-3 py-2 ${isMe ? "bg-blue-600 text-white" : "bg-muted"}`}>
-                                <div className={`text-[10px] font-medium mb-0.5 ${isMe ? "text-blue-200" : "text-muted-foreground"}`}>
-                                  {isMe ? "You" : msg.user.name} {isIT && !isMe && <Badge className="text-[8px] ml-1 bg-green-100 text-green-700 px-1 py-0">IT</Badge>}
+                            <div key={msg.id} className={`flex ${isReporter ? "justify-end" : "justify-start"}`}>
+                              <div className={`max-w-[75%] rounded-xl px-3 py-2 ${isReporter ? "bg-blue-600 text-white" : "bg-muted"}`}>
+                                <div className={`text-[10px] font-medium mb-0.5 flex items-center gap-1.5 ${isReporter ? "text-blue-200" : "text-muted-foreground"}`}>
+                                  <span>{msg.user.name}</span>
+                                  {isReporter ? (
+                                    <Badge className="text-[8px] bg-blue-500/30 text-blue-100 px-1 py-0 border-0">Reporter</Badge>
+                                  ) : isIT ? (
+                                    <Badge className="text-[8px] bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 px-1 py-0 border-0">IT Support</Badge>
+                                  ) : null}
                                 </div>
                                 <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
-                                <div className={`text-[9px] mt-1 ${isMe ? "text-blue-200" : "text-muted-foreground"}`}>{new Date(msg.createdAt).toLocaleString()}</div>
+                                <div className={`text-[9px] mt-1 ${isReporter ? "text-blue-200" : "text-muted-foreground"}`}>{new Date(msg.createdAt).toLocaleString()}</div>
                               </div>
                             </div>
                           );
