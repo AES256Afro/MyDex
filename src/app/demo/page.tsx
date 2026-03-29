@@ -2080,60 +2080,275 @@ function DemoPage() {
           )}
 
           {/* ═══ SECURITY ═══ */}
-          {activeSection === "security" && (
+          {activeSection === "security" && (() => {
+            const secKpis = [
+              { label: "Total Events", value: "12,847", change: "+18%", up: true, color: "text-blue-600" },
+              { label: "Critical Alerts", value: "7", change: "-3 vs last week", up: false, color: "text-red-600" },
+              { label: "CVEs Detected", value: String(totalCves), change: `${totalCves > 3 ? "+" : ""}${totalCves - 3} vs baseline`, up: totalCves > 3, color: "text-orange-600" },
+              { label: "IOC Matches", value: String(totalIocs), change: "0 new today", up: false, color: "text-purple-600" },
+              { label: "Firewall Compliance", value: "75%", change: "+5% this month", up: true, color: "text-green-600" },
+            ];
+            const severityData = [
+              { label: "Critical", count: 7, color: "bg-red-600", pct: 5 },
+              { label: "High", count: 23, color: "bg-orange-500", pct: 16 },
+              { label: "Medium", count: 58, color: "bg-yellow-500", pct: 40 },
+              { label: "Low", count: 41, color: "bg-blue-400", pct: 28 },
+              { label: "Info", count: 16, color: "bg-gray-400", pct: 11 },
+            ];
+            const eventsBySource = [
+              { source: "Windows Event Log", pct: 38, color: "bg-blue-600" },
+              { source: "Firewall", pct: 24, color: "bg-orange-500" },
+              { source: "Endpoint Agent", pct: 19, color: "bg-green-500" },
+              { source: "Active Directory", pct: 12, color: "bg-purple-500" },
+              { source: "Cloud Apps", pct: 7, color: "bg-cyan-500" },
+            ];
+            const recentAlerts = [
+              { severity: "CRITICAL", title: "Brute-force login detected — 47 attempts in 5 min", device: "DC-PRIMARY", time: ago(8), type: "AUTH_ATTACK" },
+              { severity: "HIGH", type: "UNAUTHORIZED_APP", title: "Unauthorized P2P application detected", device: "WS-TGARCIA", time: ago(120) },
+              { severity: "HIGH", type: "MALWARE", title: "Trojan.GenericKD blocked by AV", device: "LAPTOP-MJONES", time: ago(180) },
+              { severity: "MEDIUM", type: "POLICY_VIOLATION", title: "Blocked domain access attempt: gambling-site.com", device: "LAPTOP-SCHEN", time: ago(360) },
+              { severity: "MEDIUM", type: "USB_VIOLATION", title: "Unauthorized USB mass storage connected", device: "WS-DLEE", time: ago(480) },
+              { severity: "LOW", type: "LOGIN_ANOMALY", title: "Login from new IP address 45.33.21.8", device: "MACBOOK-APATEL", time: ago(720) },
+              { severity: "LOW", type: "CONFIG_CHANGE", title: "Firewall rule modified by admin", device: "FW-EDGE-01", time: ago(900) },
+            ];
+            // SVG event trend (24h)
+            const eventTrend = [320,410,380,290,180,120,95,210,480,620,710,680,590,520,640,730,810,680,520,390,280,210,180,150];
+            const etMax = Math.max(...eventTrend);
+            const etPoints = eventTrend.map((v, i) => `${(i / 23) * 380 + 10},${140 - (v / etMax) * 120}`).join(" ");
+
+            return (
             <div className="space-y-6">
-              <div><h1 className="text-2xl font-bold flex items-center gap-2"><Shield className="h-6 w-6" /> Security Center</h1></div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Open Alerts</div><div className="text-2xl font-bold text-red-600">3</div></CardContent></Card>
-                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">CVEs Detected</div><div className="text-2xl font-bold text-orange-600">{totalCves}</div></CardContent></Card>
-                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">IOC Matches</div><div className="text-2xl font-bold">{totalIocs}</div></CardContent></Card>
-                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Firewall Compliance</div><div className="text-2xl font-bold text-green-600">75%</div></CardContent></Card>
+              <div><h1 className="text-2xl font-bold flex items-center gap-2"><Shield className="h-6 w-6" /> Security Operations Center</h1>
+              <p className="text-sm text-muted-foreground">Real-time security event monitoring, threat detection, and compliance overview</p></div>
+
+              {/* KPI Row */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {secKpis.map(k => (
+                  <Card key={k.label}><CardContent className="pt-4 pb-3">
+                    <div className="text-xs text-muted-foreground">{k.label}</div>
+                    <div className={`text-2xl font-bold ${k.color}`}>{k.value}</div>
+                    <div className={`text-[11px] mt-1 ${k.up ? "text-red-500" : "text-green-600"}`}>{k.change}</div>
+                  </CardContent></Card>
+                ))}
               </div>
-              <Card>
-                <CardHeader><CardTitle>Recent Security Alerts</CardTitle></CardHeader>
-                <CardContent className="space-y-3">
-                  {[
-                    { severity: "HIGH", type: "UNAUTHORIZED_APP", title: "Unauthorized P2P application detected", device: "WS-TGARCIA", time: ago(120) },
-                    { severity: "MEDIUM", type: "POLICY_VIOLATION", title: "Blocked domain access attempt: gambling-site.com", device: "LAPTOP-SCHEN", time: ago(360) },
-                    { severity: "LOW", type: "LOGIN_ANOMALY", title: "Login from new IP address 45.33.21.8", device: "MACBOOK-APATEL", time: ago(720) },
-                  ].map((alert, i) => (
-                    <div key={i} className="flex items-center justify-between border rounded-lg p-3">
-                      <div className="flex items-center gap-3">
-                        <AlertTriangle className={`h-5 w-5 ${alert.severity === "HIGH" ? "text-red-500" : alert.severity === "MEDIUM" ? "text-orange-500" : "text-yellow-500"}`} />
-                        <div>
-                          <div className="text-sm font-medium">{alert.title}</div>
-                          <div className="text-xs text-muted-foreground">{alert.device} &middot; {formatTimeAgo(alert.time)}</div>
+
+              {/* Event Trend + Severity Breakdown */}
+              <div className="grid md:grid-cols-3 gap-4">
+                <Card className="md:col-span-2">
+                  <CardHeader className="pb-2"><CardTitle className="text-base">Security Events — Last 24 Hours</CardTitle></CardHeader>
+                  <CardContent>
+                    <svg viewBox="0 0 400 160" className="w-full">
+                      <defs>
+                        <linearGradient id="secGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
+                          <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.02" />
+                        </linearGradient>
+                      </defs>
+                      {[0,1,2,3,4].map(i => <line key={i} x1="10" x2="390" y1={20 + i * 30} y2={20 + i * 30} stroke="currentColor" strokeOpacity="0.08" />)}
+                      <polygon points={`10,140 ${etPoints} 390,140`} fill="url(#secGrad)" />
+                      <polyline points={etPoints} fill="none" stroke="#3b82f6" strokeWidth="2" />
+                      {eventTrend.map((v, i) => (
+                        <circle key={i} cx={(i / 23) * 380 + 10} cy={140 - (v / etMax) * 120} r="2.5" fill="#3b82f6" />
+                      ))}
+                      {[0,4,8,12,16,20].map(i => (
+                        <text key={i} x={(i / 23) * 380 + 10} y="155" textAnchor="middle" fontSize="9" fill="currentColor" opacity="0.5">{`${i}:00`}</text>
+                      ))}
+                      <text x="5" y="24" fontSize="8" fill="currentColor" opacity="0.4">{etMax}</text>
+                      <text x="5" y="144" fontSize="8" fill="currentColor" opacity="0.4">0</text>
+                    </svg>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-base">Severity Breakdown</CardTitle></CardHeader>
+                  <CardContent>
+                    {/* Donut chart */}
+                    <div className="flex justify-center mb-4">
+                      <svg viewBox="0 0 120 120" className="w-28 h-28">
+                        {(() => {
+                          let offset = 0;
+                          const total = severityData.reduce((s, d) => s + d.count, 0);
+                          return severityData.map(d => {
+                            const pct = (d.count / total) * 100;
+                            const dash = (pct / 100) * 314;
+                            const gap = 314 - dash;
+                            const r = <circle key={d.label} cx="60" cy="60" r="50" fill="none" strokeWidth="14"
+                              className={d.color.replace("bg-", "stroke-")} strokeDasharray={`${dash} ${gap}`}
+                              strokeDashoffset={-offset * 3.14} transform="rotate(-90 60 60)" />;
+                            offset += pct;
+                            return r;
+                          });
+                        })()}
+                        <text x="60" y="57" textAnchor="middle" fontSize="18" fontWeight="bold" fill="currentColor">145</text>
+                        <text x="60" y="70" textAnchor="middle" fontSize="8" fill="currentColor" opacity="0.6">Total</text>
+                      </svg>
+                    </div>
+                    <div className="space-y-2">
+                      {severityData.map(d => (
+                        <div key={d.label} className="flex items-center gap-2 text-sm">
+                          <div className={`h-2.5 w-2.5 rounded-full ${d.color}`} />
+                          <span className="flex-1 text-muted-foreground">{d.label}</span>
+                          <span className="font-medium">{d.count}</span>
+                          <span className="text-xs text-muted-foreground w-8 text-right">{d.pct}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Recent Alerts + Events by Source */}
+              <div className="grid md:grid-cols-3 gap-4">
+                <Card className="md:col-span-2">
+                  <CardHeader className="pb-2"><CardTitle className="text-base">Recent Alerts</CardTitle></CardHeader>
+                  <CardContent className="space-y-2">
+                    {recentAlerts.map((alert, i) => {
+                      const sev = alert.severity;
+                      const sevColor = sev === "CRITICAL" ? "bg-red-600 text-white" : sev === "HIGH" ? "bg-orange-100 text-orange-800" : sev === "MEDIUM" ? "bg-yellow-100 text-yellow-800" : "bg-blue-100 text-blue-800";
+                      const iconColor = sev === "CRITICAL" ? "text-red-600" : sev === "HIGH" ? "text-orange-500" : sev === "MEDIUM" ? "text-yellow-500" : "text-blue-400";
+                      return (
+                        <div key={i} className="flex items-start gap-3 border rounded-lg p-3 hover:bg-muted/30 transition-colors">
+                          <AlertTriangle className={`h-4 w-4 mt-0.5 flex-shrink-0 ${iconColor}`} />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium leading-tight">{alert.title}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5">{alert.device} &middot; {formatTimeAgo(alert.time)} &middot; <span className="font-mono text-[10px]">{alert.type}</span></div>
+                          </div>
+                          <Badge className={`text-[10px] flex-shrink-0 ${sevColor}`}>{sev}</Badge>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-base">Events by Source</CardTitle></CardHeader>
+                  <CardContent className="space-y-3">
+                    {eventsBySource.map(e => (
+                      <div key={e.source}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-muted-foreground">{e.source}</span>
+                          <span className="font-medium">{e.pct}%</span>
+                        </div>
+                        <div className="h-2.5 bg-muted rounded-full">
+                          <div className={`h-2.5 rounded-full ${e.color}`} style={{ width: `${e.pct}%` }} />
                         </div>
                       </div>
-                      <Badge className={alert.severity === "HIGH" ? "bg-red-100 text-red-800" : alert.severity === "MEDIUM" ? "bg-orange-100 text-orange-800" : "bg-yellow-100 text-yellow-800"}>{alert.severity}</Badge>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Device Security Posture Table */}
               <Card>
-                <CardHeader><CardTitle>Device Security Posture</CardTitle></CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="text-base">Device Security Posture</CardTitle></CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
-                      <thead><tr className="border-b"><th className="text-left pb-3">Device</th><th className="text-center pb-3">AV</th><th className="text-center pb-3">Firewall</th><th className="text-center pb-3">Updates</th><th className="text-center pb-3">CVEs</th><th className="text-center pb-3">Status</th></tr></thead>
+                      <thead><tr className="border-b bg-muted/30"><th className="text-left p-3">Device</th><th className="text-center p-3">AV</th><th className="text-center p-3">Firewall</th><th className="text-center p-3">Encryption</th><th className="text-center p-3">Updates</th><th className="text-center p-3">CVEs</th><th className="text-center p-3">Risk</th><th className="text-center p-3">Status</th></tr></thead>
                       <tbody>
-                        {mockDevices.map((d) => (
-                          <tr key={d.id} className="border-b last:border-0">
-                            <td className="py-3 font-medium">{d.hostname}</td>
-                            <td className="py-3 text-center"><CheckCircle className="h-4 w-4 text-green-500 mx-auto" /></td>
-                            <td className="py-3 text-center">{Object.values(d.firewallStatus).every(Boolean) ? <CheckCircle className="h-4 w-4 text-green-500 mx-auto" /> : <AlertTriangle className="h-4 w-4 text-yellow-500 mx-auto" />}</td>
-                            <td className="py-3 text-center">{d.pendingUpdates.length === 0 ? <CheckCircle className="h-4 w-4 text-green-500 mx-auto" /> : <Badge variant="outline" className="text-yellow-600">{d.pendingUpdates.length}</Badge>}</td>
-                            <td className="py-3 text-center">{d.openCves > 0 ? <Badge variant="outline" className="text-orange-600">{d.openCves}</Badge> : <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />}</td>
-                            <td className="py-3 text-center"><StatusBadge status={d.status} /></td>
-                          </tr>
-                        ))}
+                        {mockDevices.map((d) => {
+                          const fwOk = Object.values(d.firewallStatus).every(Boolean);
+                          const risk = d.openCves > 2 ? "High" : d.openCves > 0 || !fwOk ? "Medium" : d.pendingUpdates.length > 2 ? "Low" : "None";
+                          const riskColor = risk === "High" ? "bg-red-100 text-red-700" : risk === "Medium" ? "bg-yellow-100 text-yellow-700" : risk === "Low" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700";
+                          return (
+                            <tr key={d.id} className="border-b last:border-0 hover:bg-muted/20">
+                              <td className="p-3 font-medium">{d.hostname}</td>
+                              <td className="p-3 text-center"><CheckCircle className="h-4 w-4 text-green-500 mx-auto" /></td>
+                              <td className="p-3 text-center">{fwOk ? <CheckCircle className="h-4 w-4 text-green-500 mx-auto" /> : <AlertTriangle className="h-4 w-4 text-yellow-500 mx-auto" />}</td>
+                              <td className="p-3 text-center"><CheckCircle className="h-4 w-4 text-green-500 mx-auto" /></td>
+                              <td className="p-3 text-center">{d.pendingUpdates.length === 0 ? <CheckCircle className="h-4 w-4 text-green-500 mx-auto" /> : <Badge variant="outline" className="text-yellow-600">{d.pendingUpdates.length}</Badge>}</td>
+                              <td className="p-3 text-center">{d.openCves > 0 ? <Badge variant="outline" className="text-orange-600">{d.openCves}</Badge> : <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />}</td>
+                              <td className="p-3 text-center"><Badge className={`text-[10px] ${riskColor}`}>{risk}</Badge></td>
+                              <td className="p-3 text-center"><StatusBadge status={d.status} /></td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Security Event Log + Network Activity */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-base">Security Event Log</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead><tr className="border-b bg-muted/30"><th className="text-left p-2">Time</th><th className="text-left p-2">Source</th><th className="text-left p-2">Event</th><th className="text-center p-2">Severity</th></tr></thead>
+                        <tbody>
+                          {[
+                            { time: "14:23:18", source: "AD", event: "Failed login: admin@corp.local (bad password)", sev: "MEDIUM" },
+                            { time: "14:21:05", source: "FW", event: "Blocked outbound: 10.0.1.42 → 185.22.174.8:443", sev: "HIGH" },
+                            { time: "14:18:42", source: "Agent", event: "Process blocked: mimikatz.exe (WS-TGARCIA)", sev: "CRITICAL" },
+                            { time: "14:15:11", source: "AD", event: "Account lockout: j.martinez@corp.local", sev: "HIGH" },
+                            { time: "14:12:33", source: "Agent", event: "USB mass storage plugged: WS-DLEE", sev: "MEDIUM" },
+                            { time: "14:08:59", source: "Cloud", event: "Impossible travel: login from US then EU in 2min", sev: "HIGH" },
+                            { time: "14:05:21", source: "FW", event: "Port scan detected from 192.168.1.105", sev: "MEDIUM" },
+                            { time: "14:01:44", source: "Agent", event: "AV definitions updated on 4 devices", sev: "INFO" },
+                          ].map((e, i) => {
+                            const sc = e.sev === "CRITICAL" ? "bg-red-600 text-white" : e.sev === "HIGH" ? "bg-orange-100 text-orange-700" : e.sev === "MEDIUM" ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-600";
+                            return (
+                              <tr key={i} className="border-b last:border-0 hover:bg-muted/20">
+                                <td className="p-2 font-mono text-muted-foreground">{e.time}</td>
+                                <td className="p-2"><Badge variant="outline" className="text-[9px]">{e.source}</Badge></td>
+                                <td className="p-2">{e.event}</td>
+                                <td className="p-2 text-center"><Badge className={`text-[9px] ${sc}`}>{e.sev}</Badge></td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-base">Network Activity Overview</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Mini bar chart — traffic by protocol */}
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-2 font-medium">Traffic by Protocol</div>
+                        <div className="flex gap-1 h-24 items-end">
+                          {[
+                            { proto: "HTTPS", val: 68, color: "bg-blue-500" },
+                            { proto: "HTTP", val: 12, color: "bg-yellow-500" },
+                            { proto: "DNS", val: 42, color: "bg-green-500" },
+                            { proto: "SSH", val: 8, color: "bg-purple-500" },
+                            { proto: "RDP", val: 15, color: "bg-orange-500" },
+                            { proto: "SMTP", val: 22, color: "bg-cyan-500" },
+                            { proto: "FTP", val: 3, color: "bg-red-500" },
+                            { proto: "Other", val: 18, color: "bg-gray-400" },
+                          ].map(p => (
+                            <div key={p.proto} className="flex-1 flex flex-col items-center gap-1">
+                              <div className={`w-full rounded-t ${p.color}`} style={{ height: `${(p.val / 68) * 100}%` }} title={`${p.proto}: ${p.val}%`} />
+                              <span className="text-[8px] text-muted-foreground">{p.proto}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {/* Connection stats */}
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { label: "Active Connections", value: "1,247", color: "text-blue-600" },
+                          { label: "Blocked Requests", value: "83", color: "text-red-600" },
+                          { label: "Bandwidth (Mbps)", value: "342", color: "text-green-600" },
+                          { label: "Unique IPs", value: "89", color: "text-purple-600" },
+                        ].map(s => (
+                          <div key={s.label} className="bg-muted/30 rounded-lg p-2.5">
+                            <div className="text-[10px] text-muted-foreground">{s.label}</div>
+                            <div className={`text-lg font-bold ${s.color}`}>{s.value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
-          )}
+          ); })()}
 
           {/* ═══ DLP POLICIES ═══ */}
           {activeSection === "dlp" && (() => {
