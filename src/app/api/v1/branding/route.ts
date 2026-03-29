@@ -20,6 +20,7 @@ export async function GET() {
     return NextResponse.json({
       companyName: (settings.companyName as string) || org.name || "MyDex",
       logoUrl: (settings.logoUrl as string) || "",
+      bannerUrl: (settings.bannerUrl as string) || "",
       primaryColor: (settings.primaryColor as string) || "",
       favicon: (settings.favicon as string) || "",
       brandingMode: (settings.brandingMode as string) || "replace",

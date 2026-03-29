@@ -26,7 +26,7 @@ import {
   Thermometer, WifiOff, PrinterIcon, FolderCog, FileCheck,
   LifeBuoy, Sparkles, BatteryCharging, Volume2, Bluetooth, MousePointer,
   Keyboard as KeyboardIcon, Info, ArrowUpRight, ArrowDownRight,
-  AlertCircle, Loader2,
+  AlertCircle, Loader2, Megaphone, User,
 } from "lucide-react";
 import {
   PieChart as RechartsPieChart, Pie, Cell, Tooltip as RechartsTooltip,
@@ -621,6 +621,7 @@ const sectionGroups = [
     items: [
       { id: "cost-optimization", label: "Cost Optimization", icon: TrendingUp },
       { id: "sustainability", label: "Sustainability", icon: Leaf },
+      { id: "patch-notes", label: "Patch Notes", icon: Megaphone },
     ],
   },
 ];
@@ -5700,6 +5701,90 @@ function DemoPage() {
           </div>
           );
         })()}
+
+          {/* ═══ PATCH NOTES ═══ */}
+          {activeSection === "patch-notes" && (() => {
+            const demoNotes = [
+              {
+                id: "pn5", title: "DEX Scores, Analytics Dashboards & Dark Theme", version: "v0.4.0",
+                date: "March 28, 2026", author: "System", tags: ["feature", "ui", "security"],
+                content: `Per-device DEX scores (0-100) computed from 9+ health signals. Security Operations Center dashboard with event trends and severity breakdown. IT Financial Analytics with budget forecasting. Dark / Light / System theme toggle with slate gray palette. Monitoring modes (Always, Clocked-In Only, User-Controlled). Device ownership classification. Agent-gated clock-in. Employee drill-down with KPIs, device info, activity timeline, and compliance.`,
+              },
+              {
+                id: "pn4", title: "Ticketing Improvements & Homepage Redesign", version: "v0.3.1",
+                date: "March 28, 2026", author: "System", tags: ["improvement", "ui", "bugfix"],
+                content: `Ticket sections (Open/Resolved/Closed) with assignment. Resolution flow with ratings and required feedback. Complete homepage redesign with feature showcase. Custom branding per organization. Contact page with captcha. MDM integration schema for Intune, Jamf Pro, and Kandji.`,
+              },
+              {
+                id: "pn3", title: "IT Support, Compliance & Project Management", version: "v0.3.0",
+                date: "March 27, 2026", author: "System", tags: ["feature", "compliance"],
+                content: `Two-way ticketing with SLA tracking and satisfaction ratings. Self-service remediation portal with 20+ scripts. SOC 2 compliance dashboard mapped to AICPA Trust Service Criteria. Kanban project board with drag-and-drop. Fleet Health with Digital Friction scoring.`,
+              },
+              {
+                id: "pn2", title: "Endpoint Agent & Device Management", version: "v0.2.0",
+                date: "March 27, 2026", author: "System", tags: ["feature", "agent", "security"],
+                content: `Cross-platform Go agent for Windows and macOS with JWT auth. Real-time device heartbeat and hardware inventory. Security posture: AV, firewall, Defender, updates, BSOD tracking. Host Groups with policy assignment. Domain blocklists. MFA (TOTP) and SSO. DLP policy engine with templates. Software Inventory with CVE tracking.`,
+              },
+              {
+                id: "pn1", title: "MyDex Platform Launch", version: "v0.1.0",
+                date: "March 27, 2026", author: "System", tags: ["feature", "infrastructure"],
+                content: `Initial release. Multi-tenant SaaS with RBAC. Authentication with credentials and OAuth. Dashboard shell with responsive sidebar. Clock in/out with timesheets. Attendance calendar and leave management. App usage, website visits, file activity tracking. Productivity scoring.`,
+              },
+            ];
+            const tagColors: Record<string, string> = {
+              feature: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+              bugfix: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+              security: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+              improvement: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+              infrastructure: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+              ui: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300",
+              agent: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+              compliance: "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300",
+            };
+
+            return (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold flex items-center gap-2"><Megaphone className="h-6 w-6" /> Patch Notes</h1>
+                  <p className="text-muted-foreground text-sm">Platform updates, new features, and improvements</p>
+                </div>
+                <Button className="gap-2"><Plus className="h-4 w-4" /> New Patch Note</Button>
+              </div>
+
+              <div className="space-y-4">
+                {demoNotes.map((note) => (
+                  <Card key={note.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="pt-5 pb-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-base font-semibold">{note.title}</h3>
+                            <Badge variant="outline" className="text-xs font-mono">{note.version}</Badge>
+                          </div>
+                          <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {note.date}</span>
+                            <span className="flex items-center gap-1"><User className="h-3 w-3" /> {note.author}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {note.tags.map((tag) => (
+                          <span key={tag} className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${tagColors[tag] || "bg-gray-100 text-gray-700"}`}>{tag}</span>
+                        ))}
+                      </div>
+                      <div className="mt-3 text-sm text-muted-foreground leading-relaxed">{note.content}</div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+            );
+          })()}
 
         </div>
       </main>

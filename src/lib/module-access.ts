@@ -277,6 +277,15 @@ export const MODULE_REGISTRY: ModuleConfig[] = [
     configurable: false,
     category: "admin",
   },
+  {
+    id: "patch-notes",
+    label: "Patch Notes",
+    href: "/patch-notes",
+    description: "View and manage platform patch notes and release updates",
+    minRole: "EMPLOYEE",
+    configurable: false,
+    category: "core",
+  },
 ];
 
 const ROLE_LEVEL: Record<Role, number> = {
