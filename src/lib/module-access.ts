@@ -16,7 +16,7 @@ export interface ModuleConfig {
   /** Can this module be enabled for lower roles by admin? */
   configurable: boolean;
   /** Category for grouping in the admin config UI */
-  category: "core" | "monitoring" | "management" | "security" | "compliance" | "it-support" | "admin";
+  category: "core" | "monitoring" | "management" | "security" | "compliance" | "it-support" | "insights" | "admin";
 }
 
 export const MODULE_REGISTRY: ModuleConfig[] = [
@@ -277,6 +277,25 @@ export const MODULE_REGISTRY: ModuleConfig[] = [
     configurable: false,
     category: "admin",
   },
+  // Insights
+  {
+    id: "cost-optimization",
+    label: "Cost Optimization",
+    href: "/cost-optimization",
+    description: "IT financial analytics, budget forecasting, and ROI tracking",
+    minRole: "ADMIN",
+    configurable: true,
+    category: "insights",
+  },
+  {
+    id: "sustainability",
+    label: "Sustainability",
+    href: "/sustainability",
+    description: "Green IT metrics, carbon tracking, and sustainability scoring",
+    minRole: "ADMIN",
+    configurable: true,
+    category: "insights",
+  },
   {
     id: "patch-notes",
     label: "Patch Notes",
@@ -284,7 +303,7 @@ export const MODULE_REGISTRY: ModuleConfig[] = [
     description: "View and manage platform patch notes and release updates",
     minRole: "EMPLOYEE",
     configurable: false,
-    category: "core",
+    category: "insights",
   },
 ];
 
