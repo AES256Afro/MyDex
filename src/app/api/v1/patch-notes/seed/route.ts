@@ -173,6 +173,54 @@ export async function POST() {
 - Click any employee for detailed metrics view
 - KPIs, device info, activity timeline, 14-day trend, tickets, compliance`,
     },
+    {
+      title: "Branding, Patch Notes & Logo Upload",
+      version: "v0.4.1",
+      tags: ["feature", "ui", "improvement"],
+      createdAt: new Date("2026-03-28T22:00:00-05:00"),
+      content: `Organization branding customization and platform changelog system.
+
+**Branding**
+- Upload company logo (PNG/JPEG/SVG/WebP/GIF, max 512KB)
+- Upload sidebar banner image with option to keep default
+- Fetch favicon from any website URL
+- Company name and brand color customization
+- Display mode: replace MyDex or show alongside
+- Live sidebar preview on settings page
+
+**Patch Notes**
+- Full changelog system with CRUD API
+- Timeline UI grouped by month with expand/collapse
+- 9 color-coded tags (feature, bugfix, security, improvement, etc.)
+- Authorship tracking with edit/delete for admins
+- Seed endpoint for initial platform history`,
+    },
+    {
+      title: "Cost Optimization & Sustainability Dashboards",
+      version: "v0.5.0",
+      tags: ["feature", "infrastructure", "compliance"],
+      createdAt: new Date("2026-03-29T02:00:00-05:00"),
+      content: `Real, functional IT cost tracking and sustainability dashboards with full CRUD.
+
+**Cost Optimization**
+- Software license management: add, edit, delete licenses with seat tracking
+- Auto-calculated utilization rates, waste identification, and potential savings
+- IT budget tracking: actual spend, planned budget, and forecasts by category
+- Budget vs actual visualization with category breakdown
+- License table with per-seat cost, utilization bars, and waste calculations
+
+**Sustainability & Green IT**
+- Monthly energy reading input with kWh, cost, and source tracking
+- Auto-calculated carbon emissions using EPA emission factors
+- Energy consumption and carbon trend charts
+- Sustainability goal setting with progress tracking
+- Support for energy reduction, carbon reduction, sleep compliance, and green score goals
+- Year-over-year filtering and month-over-month trend analysis
+
+**Insights Category**
+- New sidebar category grouping Cost Optimization, Sustainability, and Patch Notes
+- TrendingUp and Leaf icons for quick visual identification`,
+    },
   ];
 
   try {

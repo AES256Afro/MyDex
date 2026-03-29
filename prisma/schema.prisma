@@ -36,6 +36,10 @@ model Organization {
   ssoProviders     SsoProvider[]
   mdmProviders     MdmProvider[]
   patchNotes       PatchNote[]
+  softwareLicenses SoftwareLicense[]
+  itBudgetEntries  ItBudgetEntry[]
+  energyReadings   EnergyReading[]
+  sustainabilityGoals SustainabilityGoal[]
 }
 
 model User {
@@ -1362,4 +1366,88 @@ model PatchNote {
 
   @@index([organizationId, createdAt])
   @@index([authorId])
+}
+
+// ============================================
+// COST OPTIMIZATION
+// ============================================
+
+model SoftwareLicense {
+  id             String   @id @default(cuid())
+  organizationId String
+  application    String   // e.g. "Microsoft 365 E5"
+  vendor         String?  // e.g. "Microsoft"
+  totalSeats     Int
+  usedSeats      Int      @default(0)
+  costPerSeat    Float    // monthly cost per seat
+  billingCycle   String   @default("monthly") // monthly, annual
+  renewalDate    DateTime?
+  category       String?  // e.g. "productivity", "security", "development"
+  notes          String?  @db.Text
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+}
+
+model ItBudgetEntry {
+  id             String   @id @default(cuid())
+  organizationId String
+  category       String   // "software", "hardware", "services", "personnel", "infrastructure", "other"
+  description    String
+  amount         Float    // dollar amount
+  type           String   // "actual", "forecast", "budget"
+  period         String   // "2026-01", "2026-Q1", "2026" (month, quarter, or year)
+  isRecurring    Boolean  @default(false)
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, period])
+}
+
+// ============================================
+// SUSTAINABILITY
+// ============================================
+
+model EnergyReading {
+  id             String   @id @default(cuid())
+  organizationId String
+  month          Int      // 1-12
+  year           Int
+  kwhUsed        Float
+  costDollars    Float?
+  source         String?  // "utility_bill", "smart_meter", "estimate"
+  carbonKg       Float?   // calculated CO2 in kg (kWh * emission factor)
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, month, year])
+  @@index([organizationId])
+}
+
+model SustainabilityGoal {
+  id             String   @id @default(cuid())
+  organizationId String
+  metric         String   // "energy_reduction", "carbon_reduction", "sleep_compliance", "green_score"
+  targetValue    Float
+  currentValue   Float    @default(0)
+  unit           String   // "%", "kWh", "tCO2e", "score"
+  deadline       DateTime?
+  status         String   @default("active") // "active", "achieved", "missed"
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
 }
