@@ -1,283 +1,514 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { TrendingUp, Plus, Trash2, X, Pencil, DollarSign, Package, BarChart3 } from "lucide-react";
 
-const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const budgetData = [80, 82, 85, 88, 87, 90, 92, 94, 95, 97, 98, 100];
-const forecastData = [null, null, null, null, null, null, null, 94, 96, 98, 99, 101];
-const itSpend = [20, 21, 22, 21.5, 22, 23, 22.5, 24, 23.5, 25, 24, 26];
-const revenue = [22, 23, 22.5, 24, 24.5, 25, 24, 25.5, 26, 25, 26, 26.5];
-const ticketVol = [240, 280, 320, 350, 310, 290, 260, 300, 340, 280, 250, 220];
-const resEff = [55, 52, 48, 45, 50, 55, 60, 58, 54, 62, 65, 70];
+interface License {
+  id: string;
+  application: string;
+  vendor: string | null;
+  totalSeats: number;
+  usedSeats: number;
+  costPerSeat: number;
+  billingCycle: string;
+  renewalDate: string | null;
+  category: string | null;
+  notes: string | null;
+  isActive: boolean;
+}
+
+interface BudgetEntry {
+  id: string;
+  category: string;
+  description: string;
+  amount: number;
+  type: string;
+  period: string;
+  isRecurring: boolean;
+  notes: string | null;
+}
+
+const BUDGET_CATEGORIES = ["software", "hardware", "services", "personnel", "infrastructure", "other"];
+const LICENSE_CATEGORIES = ["productivity", "security", "development", "communication", "design", "analytics", "other"];
 
 export default function CostOptimizationPage() {
+  const [licenses, setLicenses] = useState<License[]>([]);
+  const [budgetEntries, setBudgetEntries] = useState<BudgetEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"overview" | "licenses" | "budget">("overview");
+
+  // License form
+  const [showLicenseForm, setShowLicenseForm] = useState(false);
+  const [editingLicense, setEditingLicense] = useState<License | null>(null);
+  const [licApp, setLicApp] = useState("");
+  const [licVendor, setLicVendor] = useState("");
+  const [licTotal, setLicTotal] = useState("");
+  const [licUsed, setLicUsed] = useState("");
+  const [licCost, setLicCost] = useState("");
+  const [licCycle, setLicCycle] = useState("monthly");
+  const [licCategory, setLicCategory] = useState("");
+  const [licRenewal, setLicRenewal] = useState("");
+  const [licSaving, setLicSaving] = useState(false);
+
+  // Budget form
+  const [showBudgetForm, setShowBudgetForm] = useState(false);
+  const [budCat, setBudCat] = useState("software");
+  const [budDesc, setBudDesc] = useState("");
+  const [budAmount, setBudAmount] = useState("");
+  const [budType, setBudType] = useState("actual");
+  const [budPeriod, setBudPeriod] = useState(new Date().toISOString().slice(0, 7));
+  const [budRecurring, setBudRecurring] = useState(false);
+  const [budSaving, setBudSaving] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [licRes, budRes] = await Promise.all([
+        fetch("/api/v1/cost-optimization/licenses"),
+        fetch("/api/v1/cost-optimization/budget"),
+      ]);
+      if (licRes.ok) { const d = await licRes.json(); setLicenses(d.licenses); }
+      if (budRes.ok) { const d = await budRes.json(); setBudgetEntries(d.entries); }
+    } catch { /* ignore */ } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const resetLicenseForm = () => {
+    setLicApp(""); setLicVendor(""); setLicTotal(""); setLicUsed("");
+    setLicCost(""); setLicCycle("monthly"); setLicCategory(""); setLicRenewal("");
+    setEditingLicense(null); setShowLicenseForm(false);
+  };
+
+  const startEditLicense = (l: License) => {
+    setLicApp(l.application); setLicVendor(l.vendor || "");
+    setLicTotal(String(l.totalSeats)); setLicUsed(String(l.usedSeats));
+    setLicCost(String(l.costPerSeat)); setLicCycle(l.billingCycle);
+    setLicCategory(l.category || ""); setLicRenewal(l.renewalDate?.slice(0, 10) || "");
+    setEditingLicense(l); setShowLicenseForm(true);
+  };
+
+  const saveLicense = async () => {
+    if (!licApp || !licTotal || !licCost) return;
+    setLicSaving(true);
+    try {
+      const payload = {
+        application: licApp, vendor: licVendor || undefined,
+        totalSeats: parseInt(licTotal), usedSeats: parseInt(licUsed) || 0,
+        costPerSeat: parseFloat(licCost), billingCycle: licCycle,
+        category: licCategory || undefined, renewalDate: licRenewal || undefined,
+      };
+      const res = editingLicense
+        ? await fetch("/api/v1/cost-optimization/licenses", {
+            method: "PATCH", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: editingLicense.id, ...payload }),
+          })
+        : await fetch("/api/v1/cost-optimization/licenses", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+      if (res.ok) { resetLicenseForm(); fetchData(); }
+    } catch { /* ignore */ } finally { setLicSaving(false); }
+  };
+
+  const deleteLicense = async (id: string) => {
+    if (!confirm("Delete this license entry?")) return;
+    try {
+      const res = await fetch(`/api/v1/cost-optimization/licenses?id=${id}`, { method: "DELETE" });
+      if (res.ok) fetchData();
+    } catch { /* ignore */ }
+  };
+
+  const saveBudgetEntry = async () => {
+    if (!budDesc || !budAmount) return;
+    setBudSaving(true);
+    try {
+      const res = await fetch("/api/v1/cost-optimization/budget", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: budCat, description: budDesc,
+          amount: parseFloat(budAmount), type: budType,
+          period: budPeriod, isRecurring: budRecurring,
+        }),
+      });
+      if (res.ok) {
+        setBudDesc(""); setBudAmount(""); setShowBudgetForm(false); fetchData();
+      }
+    } catch { /* ignore */ } finally { setBudSaving(false); }
+  };
+
+  const deleteBudgetEntry = async (id: string) => {
+    if (!confirm("Delete this budget entry?")) return;
+    try {
+      const res = await fetch(`/api/v1/cost-optimization/budget?id=${id}`, { method: "DELETE" });
+      if (res.ok) fetchData();
+    } catch { /* ignore */ }
+  };
+
+  // Calculations
+  const totalLicenseSpend = licenses.filter(l => l.isActive).reduce((sum, l) => {
+    const monthly = l.billingCycle === "annual" ? l.costPerSeat / 12 : l.costPerSeat;
+    return sum + monthly * l.totalSeats;
+  }, 0);
+  const unusedLicenses = licenses.filter(l => l.isActive).reduce((sum, l) => sum + (l.totalSeats - l.usedSeats), 0);
+  const potentialSavings = licenses.filter(l => l.isActive).reduce((sum, l) => {
+    const monthly = l.billingCycle === "annual" ? l.costPerSeat / 12 : l.costPerSeat;
+    return sum + monthly * (l.totalSeats - l.usedSeats);
+  }, 0);
+  const avgUtilization = licenses.length > 0
+    ? Math.round(licenses.filter(l => l.isActive).reduce((sum, l) => sum + (l.usedSeats / l.totalSeats) * 100, 0) / Math.max(licenses.filter(l => l.isActive).length, 1))
+    : 0;
+
+  const totalBudgetActual = budgetEntries.filter(e => e.type === "actual").reduce((s, e) => s + e.amount, 0);
+  const totalBudgetForecast = budgetEntries.filter(e => e.type === "forecast").reduce((s, e) => s + e.amount, 0);
+  const totalBudgetPlanned = budgetEntries.filter(e => e.type === "budget").reduce((s, e) => s + e.amount, 0);
+
+  const budgetByCategory = BUDGET_CATEGORIES.map(cat => ({
+    category: cat,
+    actual: budgetEntries.filter(e => e.category === cat && e.type === "actual").reduce((s, e) => s + e.amount, 0),
+    budget: budgetEntries.filter(e => e.category === cat && e.type === "budget").reduce((s, e) => s + e.amount, 0),
+  })).filter(c => c.actual > 0 || c.budget > 0);
+
+  if (loading) return <div className="p-6 text-center text-muted-foreground">Loading...</div>;
+
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <TrendingUp className="h-6 w-6" /> IT Analytics & Cost Optimization
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          From compliance, costs, and tickets to performance, security, and SLAs — analytics drives excellence across IT.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <TrendingUp className="h-6 w-6" /> IT Cost Optimization
+          </h1>
+          <p className="text-muted-foreground text-sm">Track software licenses, IT budgets, and identify cost savings</p>
+        </div>
       </div>
 
-      {/* Service Intelligence */}
-      <Card>
-        <CardHeader><CardTitle className="text-lg">Service Intelligence</CardTitle></CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-3 sm:grid-cols-5">
+      {/* Tabs */}
+      <div className="flex gap-1 border-b">
+        {(["overview", "licenses", "budget"] as const).map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >{tab === "overview" ? "Overview" : tab === "licenses" ? "Software Licenses" : "IT Budget"}</button>
+        ))}
+      </div>
+
+      {/* Overview Tab */}
+      {activeTab === "overview" && (
+        <div className="space-y-6">
+          <div className="grid gap-3 sm:grid-cols-4">
             {[
-              { label: "Technician to ticket ratio", value: "1:40", sub: "Last quarter: 1:25", color: "text-blue-600" },
-              { label: "Ticket resolution efficiency", value: "65%", sub: "Last quarter: 60%", color: "text-green-500" },
-              { label: "IT spend per employee", value: "$2,400", sub: "Last quarter: $2,000", color: "text-orange-500" },
-              { label: "Cost per incident", value: "$16", sub: "Last quarter: $18", color: "text-green-600" },
-              { label: "Happiness index", value: "82%", sub: "Last quarter: 81%", color: "text-pink-500" },
-            ].map((kpi) => (
-              <div key={kpi.label} className="rounded-xl border p-4 text-center">
-                <div className="text-[11px] font-medium text-muted-foreground mb-2">{kpi.label}</div>
-                <div className={`text-3xl font-bold ${kpi.color}`}>{kpi.value}</div>
-                <div className="text-[10px] text-muted-foreground mt-1">{kpi.sub}</div>
-              </div>
+              { label: "Total license spend", value: `$${totalLicenseSpend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/mo`, color: "text-blue-600", icon: DollarSign },
+              { label: "Unused licenses", value: String(unusedLicenses), color: "text-red-500", icon: Package },
+              { label: "Potential savings", value: `$${potentialSavings.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/mo`, color: "text-green-600", icon: TrendingUp },
+              { label: "Avg utilization", value: `${avgUtilization}%`, color: "text-orange-500", icon: BarChart3 },
+            ].map(kpi => (
+              <Card key={kpi.label}>
+                <CardContent className="pt-5 text-center">
+                  <kpi.icon className={`h-5 w-5 mx-auto mb-2 ${kpi.color}`} />
+                  <div className={`text-3xl font-bold ${kpi.color}`}>{kpi.value}</div>
+                  <div className="text-[11px] text-muted-foreground mt-1">{kpi.label}</div>
+                </CardContent>
+              </Card>
             ))}
           </div>
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-xl border p-4">
-              <div className="text-sm font-semibold mb-1">Effect of ticket volume on efficiency</div>
-              <div className="flex gap-4 text-[10px] text-muted-foreground mb-3">
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-green-400 inline-block" /> Resolution efficiency (%)</span>
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-blue-400 inline-block" /> Ticket volume</span>
-              </div>
-              <div className="flex items-end gap-[3px] h-40">
-                {months.map((m, i) => (
-                  <div key={m} className="flex-1 flex flex-col items-center gap-0.5" title={`${m}: ${ticketVol[i]} tickets, ${resEff[i]}% eff`}>
-                    <div className="w-full flex gap-[1px]">
-                      <div className="flex-1 bg-blue-400 rounded-t" style={{ height: `${(ticketVol[i] / 400) * 140}px` }} />
-                      <div className="flex-1 bg-green-400 rounded-t" style={{ height: `${(resEff[i] / 100) * 140}px` }} />
-                    </div>
-                    <span className="text-[8px] text-muted-foreground">{m}</span>
+
+          {licenses.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="text-lg">License Utilization</CardTitle></CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/30">
+                        <th className="text-left p-3 font-medium text-muted-foreground">Application</th>
+                        <th className="text-center p-3 font-medium text-muted-foreground">Total</th>
+                        <th className="text-center p-3 font-medium text-muted-foreground">Used</th>
+                        <th className="text-center p-3 font-medium text-muted-foreground">Unused</th>
+                        <th className="text-center p-3 font-medium text-muted-foreground">Utilization</th>
+                        <th className="text-right p-3 font-medium text-muted-foreground">Cost/seat</th>
+                        <th className="text-right p-3 font-medium text-muted-foreground">Waste/mo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {licenses.filter(l => l.isActive).map(l => {
+                        const unused = l.totalSeats - l.usedSeats;
+                        const util = Math.round((l.usedSeats / l.totalSeats) * 100);
+                        const monthly = l.billingCycle === "annual" ? l.costPerSeat / 12 : l.costPerSeat;
+                        return (
+                          <tr key={l.id} className="border-b last:border-0 hover:bg-muted/50">
+                            <td className="p-3">
+                              <div className="font-medium">{l.application}</div>
+                              {l.vendor && <div className="text-xs text-muted-foreground">{l.vendor}</div>}
+                            </td>
+                            <td className="p-3 text-center">{l.totalSeats}</td>
+                            <td className="p-3 text-center text-green-600">{l.usedSeats}</td>
+                            <td className="p-3 text-center text-red-500">{unused}</td>
+                            <td className="p-3 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <div className="w-16 bg-muted rounded-full h-1.5">
+                                  <div className={`h-1.5 rounded-full ${util >= 80 ? "bg-green-500" : util >= 60 ? "bg-yellow-500" : "bg-red-500"}`} style={{ width: `${util}%` }} />
+                                </div>
+                                <span className="text-xs">{util}%</span>
+                              </div>
+                            </td>
+                            <td className="p-3 text-right">${l.costPerSeat}{l.billingCycle === "annual" ? "/yr" : "/mo"}</td>
+                            <td className="p-3 text-right font-medium text-red-500">${(unused * monthly).toFixed(0)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {budgetByCategory.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="text-lg">Budget by Category</CardTitle></CardHeader>
+              <CardContent>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border p-4 text-center">
+                    <div className="text-[11px] text-muted-foreground mb-1">Total Actual Spend</div>
+                    <div className="text-2xl font-bold text-blue-600">${totalBudgetActual.toLocaleString()}</div>
                   </div>
-                ))}
-              </div>
-            </div>
-            <div className="rounded-xl border p-4">
-              <div className="text-sm font-semibold mb-1">IT spend vs productivity</div>
-              <div className="flex gap-4 text-[10px] text-muted-foreground mb-3">
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-blue-400 inline-block" /> IT spend (%)</span>
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-pink-400 inline-block" /> Productivity (%)</span>
-              </div>
-              <div className="relative h-40">
-                <svg viewBox="0 0 480 160" className="w-full h-full" preserveAspectRatio="none">
-                  <polyline fill="none" stroke="#60a5fa" strokeWidth="2" points={months.map((_, i) => `${i * (480 / 11)},${160 - (itSpend[i] - 18) * 18}`).join(" ")} />
-                  <polyline fill="none" stroke="#f472b6" strokeWidth="2" points={months.map((_, i) => `${i * (480 / 11)},${160 - (revenue[i] - 18) * 18}`).join(" ")} />
-                  {itSpend.map((v, i) => <circle key={`s${i}`} cx={i * (480 / 11)} cy={160 - (v - 18) * 18} r="3" fill="#60a5fa" />)}
-                  {revenue.map((v, i) => <circle key={`r${i}`} cx={i * (480 / 11)} cy={160 - (v - 18) * 18} r="3" fill="#f472b6" />)}
-                </svg>
-                <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[8px] text-muted-foreground px-1">
-                  {months.map((m) => <span key={m}>{m}</span>)}
+                  <div className="rounded-xl border p-4 text-center">
+                    <div className="text-[11px] text-muted-foreground mb-1">Total Budget</div>
+                    <div className="text-2xl font-bold text-green-600">${totalBudgetPlanned.toLocaleString()}</div>
+                  </div>
+                  <div className="rounded-xl border p-4 text-center">
+                    <div className="text-[11px] text-muted-foreground mb-1">Forecast</div>
+                    <div className="text-2xl font-bold text-orange-500">${totalBudgetForecast.toLocaleString()}</div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* IT Financial Analytics */}
-      <Card>
-        <CardHeader><CardTitle className="text-lg">IT Financial Analytics</CardTitle></CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid gap-3 sm:grid-cols-5">
-            {[
-              { label: "Predicted budget overshoot", value: "-$27K", sub: "YTD Last year: -$16.4K", color: "text-red-500" },
-              { label: "IT spend rate", value: "$226/day", sub: "Last quarter: $214/day", color: "text-orange-500" },
-              { label: "IT spend to value ratio", value: "1:3", sub: "Last quarter: 1:2", color: "text-green-500" },
-              { label: "Infra replacement frequency", value: "3 years", sub: "", color: "text-blue-600" },
-              { label: "ROI index", value: "7.6", sub: "Last quarter: 6.4", color: "text-green-600" },
-            ].map((kpi) => (
-              <div key={kpi.label} className="rounded-xl border p-4 text-center">
-                <div className="text-[11px] font-medium text-muted-foreground mb-2">{kpi.label}</div>
-                <div className={`text-3xl font-bold ${kpi.color}`}>{kpi.value}</div>
-                {kpi.sub && <div className="text-[10px] text-muted-foreground mt-1">{kpi.sub}</div>}
-              </div>
-            ))}
-          </div>
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-xl border p-4">
-              <div className="text-sm font-semibold mb-1">IT budget usage forecast</div>
-              <div className="flex gap-4 text-[10px] text-muted-foreground mb-3">
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-indigo-400 inline-block" /> Total IT budget usage</span>
-                <span className="flex items-center gap-1"><span className="h-[1px] w-3 bg-blue-300 inline-block" /> Forecasted usage</span>
-              </div>
-              <div className="relative h-40">
-                <svg viewBox="0 0 480 160" className="w-full h-full" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="budgetFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#818cf8" stopOpacity="0.3" />
-                      <stop offset="100%" stopColor="#818cf8" stopOpacity="0.05" />
-                    </linearGradient>
-                  </defs>
-                  <polygon fill="url(#budgetFill)" points={`0,160 ${budgetData.map((v, i) => `${i * (480 / 11)},${160 - (v - 75) * 5.5}`).join(" ")} ${11 * (480 / 11)},160`} />
-                  <polyline fill="none" stroke="#818cf8" strokeWidth="2.5" points={budgetData.map((v, i) => `${i * (480 / 11)},${160 - (v - 75) * 5.5}`).join(" ")} />
-                  <polyline fill="none" stroke="#93c5fd" strokeWidth="1.5" strokeDasharray="4,3" points={forecastData.map((v, i) => v !== null ? `${i * (480 / 11)},${160 - (v - 75) * 5.5}` : "").filter(Boolean).join(" ")} />
-                  {budgetData.map((v, i) => <circle key={i} cx={i * (480 / 11)} cy={160 - (v - 75) * 5.5} r="2.5" fill="#818cf8" />)}
-                </svg>
-                <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[8px] text-muted-foreground px-1">
-                  {months.map((m) => <span key={m}>{m}</span>)}
-                </div>
-                <div className="absolute left-0 top-0 bottom-4 flex flex-col justify-between text-[8px] text-muted-foreground">
-                  <span>$100K</span><span>$90K</span><span>$80K</span>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl border p-4">
-              <div className="text-sm font-semibold mb-1">IT spend vs revenue per employee</div>
-              <div className="flex gap-4 text-[10px] text-muted-foreground mb-3">
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-pink-400 inline-block" /> IT spend ($)</span>
-                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-green-400 inline-block" /> Revenue per employee ($)</span>
-              </div>
-              <div className="relative h-40">
-                <svg viewBox="0 0 480 160" className="w-full h-full" preserveAspectRatio="none">
-                  <polyline fill="none" stroke="#f472b6" strokeWidth="2" points={itSpend.map((v, i) => `${i * (480 / 11)},${160 - (v - 18) * 18}`).join(" ")} />
-                  <polyline fill="none" stroke="#4ade80" strokeWidth="2" points={revenue.map((v, i) => `${i * (480 / 11)},${160 - (v - 18) * 18}`).join(" ")} />
-                  {itSpend.map((v, i) => <circle key={`s${i}`} cx={i * (480 / 11)} cy={160 - (v - 18) * 18} r="3" fill="#f472b6" />)}
-                  {revenue.map((v, i) => <circle key={`r${i}`} cx={i * (480 / 11)} cy={160 - (v - 18) * 18} r="3" fill="#4ade80" />)}
-                </svg>
-                <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[8px] text-muted-foreground px-1">
-                  {months.map((m) => <span key={m}>{m}</span>)}
-                </div>
-                <div className="absolute left-0 top-0 bottom-4 flex flex-col justify-between text-[8px] text-muted-foreground">
-                  <span>$26K</span><span>$22K</span><span>$18K</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* License Optimization */}
-      <Card>
-        <CardHeader><CardTitle className="text-lg">Software License Optimization</CardTitle></CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-4 mb-6">
-            {[
-              { label: "Total license spend", value: "$14.2K/mo", sub: "Last quarter: $12.8K/mo", color: "text-blue-600" },
-              { label: "Unused licenses", value: "47", sub: "Across 12 applications", color: "text-red-500" },
-              { label: "Potential monthly savings", value: "$860", sub: "$10,320/year", color: "text-green-600" },
-              { label: "License utilization", value: "78%", sub: "Last quarter: 74%", color: "text-orange-500" },
-            ].map((kpi) => (
-              <div key={kpi.label} className="rounded-xl border p-4 text-center">
-                <div className="text-[11px] font-medium text-muted-foreground mb-2">{kpi.label}</div>
-                <div className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</div>
-                <div className="text-[10px] text-muted-foreground mt-1">{kpi.sub}</div>
-              </div>
-            ))}
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/30">
-                  <th className="text-left p-3 font-medium text-muted-foreground">Application</th>
-                  <th className="text-center p-3 font-medium text-muted-foreground">Total</th>
-                  <th className="text-center p-3 font-medium text-muted-foreground">Used</th>
-                  <th className="text-center p-3 font-medium text-muted-foreground">Unused</th>
-                  <th className="text-center p-3 font-medium text-muted-foreground">Utilization</th>
-                  <th className="text-right p-3 font-medium text-muted-foreground">Cost/seat</th>
-                  <th className="text-right p-3 font-medium text-muted-foreground">Savings/mo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { app: "Microsoft 365 E5", total: 35, used: 28, cost: 38 },
-                  { app: "Adobe Creative Cloud", total: 15, used: 9, cost: 55 },
-                  { app: "Slack Business+", total: 40, used: 32, cost: 12.5 },
-                  { app: "Zoom Business", total: 25, used: 18, cost: 20 },
-                  { app: "Jira Software", total: 30, used: 27, cost: 8 },
-                  { app: "Figma Organization", total: 12, used: 10, cost: 45 },
-                ].map((lic) => {
-                  const unused = lic.total - lic.used;
-                  const util = Math.round((lic.used / lic.total) * 100);
-                  return (
-                    <tr key={lic.app} className="border-b last:border-0 hover:bg-muted/50">
-                      <td className="p-3 font-medium">{lic.app}</td>
-                      <td className="p-3 text-center">{lic.total}</td>
-                      <td className="p-3 text-center text-green-600">{lic.used}</td>
-                      <td className="p-3 text-center text-red-500">{unused}</td>
-                      <td className="p-3 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-16 bg-muted rounded-full h-1.5">
-                            <div className={`h-1.5 rounded-full ${util >= 80 ? "bg-green-500" : util >= 60 ? "bg-yellow-500" : "bg-red-500"}`} style={{ width: `${util}%` }} />
-                          </div>
-                          <span className="text-xs">{util}%</span>
+                <div className="mt-4 space-y-2">
+                  {budgetByCategory.map(c => {
+                    const max = Math.max(c.actual, c.budget, 1);
+                    return (
+                      <div key={c.category} className="flex items-center gap-3">
+                        <span className="text-sm w-28 capitalize text-muted-foreground">{c.category}</span>
+                        <div className="flex-1 bg-muted rounded-full h-3 relative">
+                          {c.budget > 0 && <div className="absolute h-3 rounded-full bg-green-200 dark:bg-green-900" style={{ width: `${(c.budget / max) * 100}%` }} />}
+                          <div className={`relative h-3 rounded-full ${c.actual > c.budget && c.budget > 0 ? "bg-red-500" : "bg-blue-500"}`} style={{ width: `${(c.actual / max) * 100}%` }} />
                         </div>
-                      </td>
-                      <td className="p-3 text-right">${lic.cost}</td>
-                      <td className="p-3 text-right font-medium text-green-600">${unused * lic.cost}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Hardware Lifecycle */}
-      <Card>
-        <CardHeader><CardTitle className="text-lg">Hardware Lifecycle & Replacement</CardTitle></CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-4 mb-6">
-            {[
-              { label: "Avg device age", value: "2.1 yrs", sub: "Last year: 1.8 yrs", color: "text-blue-600" },
-              { label: "Devices due for refresh", value: "5", sub: "Within 6 months", color: "text-orange-500" },
-              { label: "Replacement budget", value: "$18K", sub: "Estimated annual", color: "text-red-500" },
-              { label: "Fleet health score", value: "84%", sub: "Last quarter: 81%", color: "text-green-600" },
-            ].map((kpi) => (
-              <div key={kpi.label} className="rounded-xl border p-4 text-center">
-                <div className="text-[11px] font-medium text-muted-foreground mb-2">{kpi.label}</div>
-                <div className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</div>
-                <div className="text-[10px] text-muted-foreground mt-1">{kpi.sub}</div>
-              </div>
-            ))}
-          </div>
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-xl border p-4">
-              <div className="text-sm font-semibold mb-4">Device age distribution</div>
-              <div className="space-y-3">
-                {[
-                  { age: "0-1 years", count: 12, pct: 30, color: "bg-green-500" },
-                  { age: "1-2 years", count: 15, pct: 38, color: "bg-blue-500" },
-                  { age: "2-3 years", count: 8, pct: 20, color: "bg-yellow-500" },
-                  { age: "3-4 years", count: 3, pct: 8, color: "bg-orange-500" },
-                  { age: "4+ years", count: 2, pct: 5, color: "bg-red-500" },
-                ].map((item) => (
-                  <div key={item.age} className="flex items-center gap-3">
-                    <span className="text-sm w-20 text-muted-foreground">{item.age}</span>
-                    <div className="flex-1 bg-muted rounded-full h-4">
-                      <div className={`h-4 rounded-full ${item.color} flex items-center justify-end pr-2`} style={{ width: `${Math.max(item.pct, 10)}%` }}>
-                        {item.pct > 15 && <span className="text-[9px] text-white font-medium">{item.count}</span>}
+                        <span className="text-sm w-20 text-right font-medium">${c.actual.toLocaleString()}</span>
                       </div>
-                    </div>
-                    <span className="text-sm w-10 text-right font-medium">{item.pct}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="rounded-xl border p-4">
-              <div className="text-sm font-semibold mb-4">Replacement forecast (next 12 months)</div>
-              <div className="flex items-end gap-1 h-36">
-                {[2, 1, 0, 3, 1, 2, 0, 1, 4, 2, 1, 0].map((v, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                    {v > 0 && <span className="text-[9px] font-medium">{v}</span>}
-                    <div className="w-full bg-orange-400 rounded-t" style={{ height: `${Math.max(v * 25, 2)}px` }} />
-                    <span className="text-[8px] text-muted-foreground">{months[i]}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {licenses.length === 0 && budgetEntries.length === 0 && (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <TrendingUp className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
+                <p className="text-muted-foreground">No cost data yet. Add software licenses or budget entries to get started.</p>
+                <div className="flex gap-2 justify-center mt-4">
+                  <Button variant="outline" onClick={() => { setActiveTab("licenses"); setShowLicenseForm(true); }}>
+                    <Plus className="h-4 w-4 mr-1" /> Add License
+                  </Button>
+                  <Button variant="outline" onClick={() => { setActiveTab("budget"); setShowBudgetForm(true); }}>
+                    <Plus className="h-4 w-4 mr-1" /> Add Budget Entry
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Licenses Tab */}
+      {activeTab === "licenses" && (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            {!showLicenseForm && (
+              <Button onClick={() => setShowLicenseForm(true)}><Plus className="h-4 w-4 mr-1" /> Add License</Button>
+            )}
           </div>
-        </CardContent>
-      </Card>
+
+          {showLicenseForm && (
+            <Card className="border-blue-200 dark:border-blue-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">{editingLicense ? "Edit License" : "Add Software License"}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div><Label>Application *</Label><Input value={licApp} onChange={e => setLicApp(e.target.value)} placeholder="e.g. Microsoft 365 E5" /></div>
+                  <div><Label>Vendor</Label><Input value={licVendor} onChange={e => setLicVendor(e.target.value)} placeholder="e.g. Microsoft" /></div>
+                </div>
+                <div className="grid sm:grid-cols-4 gap-4">
+                  <div><Label>Total Seats *</Label><Input type="number" value={licTotal} onChange={e => setLicTotal(e.target.value)} placeholder="35" /></div>
+                  <div><Label>Used Seats</Label><Input type="number" value={licUsed} onChange={e => setLicUsed(e.target.value)} placeholder="28" /></div>
+                  <div><Label>Cost per Seat *</Label><Input type="number" step="0.01" value={licCost} onChange={e => setLicCost(e.target.value)} placeholder="38.00" /></div>
+                  <div>
+                    <Label>Billing Cycle</Label>
+                    <select value={licCycle} onChange={e => setLicCycle(e.target.value)} className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                      <option value="monthly">Monthly</option>
+                      <option value="annual">Annual</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Category</Label>
+                    <select value={licCategory} onChange={e => setLicCategory(e.target.value)} className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                      <option value="">Select...</option>
+                      {LICENSE_CATEGORIES.map(c => <option key={c} value={c} className="capitalize">{c}</option>)}
+                    </select>
+                  </div>
+                  <div><Label>Renewal Date</Label><Input type="date" value={licRenewal} onChange={e => setLicRenewal(e.target.value)} /></div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={saveLicense} disabled={licSaving || !licApp || !licTotal || !licCost}>
+                    {licSaving ? "Saving..." : editingLicense ? "Update" : "Add License"}
+                  </Button>
+                  <Button variant="outline" onClick={resetLicenseForm}><X className="h-4 w-4 mr-1" /> Cancel</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {licenses.length === 0 ? (
+            <Card><CardContent className="py-8 text-center text-muted-foreground">No software licenses added yet.</CardContent></Card>
+          ) : (
+            <div className="space-y-2">
+              {licenses.map(l => {
+                const unused = l.totalSeats - l.usedSeats;
+                const util = Math.round((l.usedSeats / l.totalSeats) * 100);
+                const monthly = l.billingCycle === "annual" ? l.costPerSeat / 12 : l.costPerSeat;
+                return (
+                  <Card key={l.id} className={!l.isActive ? "opacity-50" : ""}>
+                    <CardContent className="py-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">{l.application}</span>
+                            {l.vendor && <span className="text-xs text-muted-foreground">by {l.vendor}</span>}
+                            {l.category && <Badge variant="outline" className="text-[10px]">{l.category}</Badge>}
+                            {!l.isActive && <Badge className="bg-gray-100 text-gray-600 text-[10px]">Inactive</Badge>}
+                          </div>
+                          <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                            <span>{l.usedSeats}/{l.totalSeats} seats</span>
+                            <span className="flex items-center gap-1">
+                              <div className="w-12 bg-muted rounded-full h-1.5">
+                                <div className={`h-1.5 rounded-full ${util >= 80 ? "bg-green-500" : util >= 60 ? "bg-yellow-500" : "bg-red-500"}`} style={{ width: `${util}%` }} />
+                              </div>
+                              {util}%
+                            </span>
+                            <span>${l.costPerSeat}/{l.billingCycle === "annual" ? "yr" : "mo"}/seat</span>
+                            {unused > 0 && <span className="text-red-500">Wasting ${(unused * monthly).toFixed(0)}/mo</span>}
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditLicense(l)}><Pencil className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteLicense(l.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Budget Tab */}
+      {activeTab === "budget" && (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            {!showBudgetForm && (
+              <Button onClick={() => setShowBudgetForm(true)}><Plus className="h-4 w-4 mr-1" /> Add Entry</Button>
+            )}
+          </div>
+
+          {showBudgetForm && (
+            <Card className="border-blue-200 dark:border-blue-800">
+              <CardHeader className="pb-3"><CardTitle className="text-lg">Add Budget Entry</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <div>
+                    <Label>Category *</Label>
+                    <select value={budCat} onChange={e => setBudCat(e.target.value)} className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                      {BUDGET_CATEGORIES.map(c => <option key={c} value={c} className="capitalize">{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Type *</Label>
+                    <select value={budType} onChange={e => setBudType(e.target.value)} className="w-full mt-1 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                      <option value="actual">Actual Spend</option>
+                      <option value="budget">Budget (Planned)</option>
+                      <option value="forecast">Forecast</option>
+                    </select>
+                  </div>
+                  <div><Label>Period *</Label><Input type="month" value={budPeriod} onChange={e => setBudPeriod(e.target.value)} /></div>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div><Label>Description *</Label><Input value={budDesc} onChange={e => setBudDesc(e.target.value)} placeholder="e.g. AWS hosting costs" /></div>
+                  <div><Label>Amount ($) *</Label><Input type="number" step="0.01" value={budAmount} onChange={e => setBudAmount(e.target.value)} placeholder="5000" /></div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="recurring" checked={budRecurring} onChange={e => setBudRecurring(e.target.checked)} className="rounded" />
+                  <Label htmlFor="recurring" className="text-sm cursor-pointer">Recurring monthly</Label>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={saveBudgetEntry} disabled={budSaving || !budDesc || !budAmount}>
+                    {budSaving ? "Saving..." : "Add Entry"}
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowBudgetForm(false)}><X className="h-4 w-4 mr-1" /> Cancel</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {budgetEntries.length === 0 ? (
+            <Card><CardContent className="py-8 text-center text-muted-foreground">No budget entries yet.</CardContent></Card>
+          ) : (
+            <Card>
+              <CardContent className="pt-4">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/30">
+                      <th className="text-left p-3 font-medium text-muted-foreground">Description</th>
+                      <th className="text-left p-3 font-medium text-muted-foreground">Category</th>
+                      <th className="text-center p-3 font-medium text-muted-foreground">Type</th>
+                      <th className="text-center p-3 font-medium text-muted-foreground">Period</th>
+                      <th className="text-right p-3 font-medium text-muted-foreground">Amount</th>
+                      <th className="text-right p-3 font-medium text-muted-foreground"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {budgetEntries.map(e => (
+                      <tr key={e.id} className="border-b last:border-0 hover:bg-muted/50">
+                        <td className="p-3">
+                          <div className="font-medium">{e.description}</div>
+                          {e.isRecurring && <span className="text-[10px] text-muted-foreground">Recurring</span>}
+                        </td>
+                        <td className="p-3 capitalize">{e.category}</td>
+                        <td className="p-3 text-center">
+                          <Badge variant="outline" className={e.type === "actual" ? "text-blue-600" : e.type === "budget" ? "text-green-600" : "text-orange-500"}>
+                            {e.type}
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-center text-muted-foreground">{e.period}</td>
+                        <td className="p-3 text-right font-medium">${e.amount.toLocaleString()}</td>
+                        <td className="p-3 text-right">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteBudgetEntry(e.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   );
 }
