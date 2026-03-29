@@ -35,6 +35,8 @@ import {
   HeartPulse,
   Bell,
   Megaphone,
+  TrendingUp,
+  Leaf,
   type LucideIcon,
 } from "lucide-react";
 
@@ -67,11 +69,13 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   "mdm-providers": Smartphone,
   branding: Palette,
   "alert-thresholds": Bell,
+  "cost-optimization": TrendingUp,
+  sustainability: Leaf,
   "patch-notes": Megaphone,
 };
 
 // Category labels and order
-const CATEGORY_ORDER = ["core", "monitoring", "management", "security", "compliance", "it-support", "admin"];
+const CATEGORY_ORDER = ["core", "monitoring", "management", "security", "compliance", "it-support", "insights", "admin"];
 const CATEGORY_LABELS: Record<string, string> = {
   core: "",
   monitoring: "Monitoring",
@@ -79,6 +83,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   security: "Security",
   "compliance": "Compliance",
   "it-support": "IT Support",
+  insights: "Insights",
   admin: "Administration",
 };
 

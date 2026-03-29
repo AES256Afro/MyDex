@@ -44,6 +44,8 @@ import {
   Sun,
   Moon,
   Megaphone,
+  TrendingUp,
+  Leaf,
   type LucideIcon,
 } from "lucide-react";
 
@@ -75,6 +77,8 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   "mdm-providers": Smartphone,
   branding: Palette,
   "alert-thresholds": Bell,
+  "cost-optimization": TrendingUp,
+  sustainability: Leaf,
   "patch-notes": Megaphone,
 };
 
