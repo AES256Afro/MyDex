@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { useBranding } from "@/components/branding-provider";
 import { getVisibleModules } from "@/lib/module-access";
@@ -40,6 +41,8 @@ import {
   Palette,
   Smartphone,
   HeartPulse,
+  Sun,
+  Moon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -79,6 +82,7 @@ export function Topbar() {
   const branding = useBranding();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   const role = (session?.user?.role as Role) || "EMPLOYEE";
   const visibleModules = getVisibleModules(role);
@@ -103,6 +107,15 @@ export function Topbar() {
         </Button>
 
         <div className="flex-1" />
+
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        </Button>
 
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />

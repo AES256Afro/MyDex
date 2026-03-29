@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Fragment, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTheme } from "next-themes";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -673,6 +674,8 @@ function DemoPage() {
   const [viewingBoard, setViewingBoard] = useState<string | null>(null);
   const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null);
   const [expandedPolicy, setExpandedPolicy] = useState<string | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
+  const { theme, setTheme } = useTheme();
 
   const onlineCount = mockDevices.filter((d) => d.status === "ONLINE").length;
   const totalCves = mockDevices.reduce((s, d) => s + d.openCves, 0);
@@ -1340,15 +1343,18 @@ function DemoPage() {
                 <CardContent>
                   <div className="flex gap-4">
                     {[
-                      { label: "Light", icon: Sun, active: true },
-                      { label: "Dark", icon: Moon, active: false },
-                      { label: "System", icon: Laptop, active: false },
-                    ].map((theme) => (
-                      <div key={theme.label} className={`flex-1 p-4 rounded-lg border-2 text-center cursor-pointer transition-colors ${theme.active ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20" : "border-muted hover:border-muted-foreground/30"}`}>
-                        <theme.icon className={`h-6 w-6 mx-auto mb-2 ${theme.active ? "text-blue-600" : "text-muted-foreground"}`} />
-                        <div className={`text-sm font-medium ${theme.active ? "text-blue-600" : "text-muted-foreground"}`}>{theme.label}</div>
+                      { label: "Light", value: "light", icon: Sun },
+                      { label: "Dark", value: "dark", icon: Moon },
+                      { label: "System", value: "system", icon: Laptop },
+                    ].map((t) => {
+                      const isActive = theme === t.value;
+                      return (
+                      <div key={t.label} onClick={() => setTheme(t.value)} className={`flex-1 p-4 rounded-lg border-2 text-center cursor-pointer transition-colors ${isActive ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20" : "border-muted hover:border-muted-foreground/30"}`}>
+                        <t.icon className={`h-6 w-6 mx-auto mb-2 ${isActive ? "text-blue-600" : "text-muted-foreground"}`} />
+                        <div className={`text-sm font-medium ${isActive ? "text-blue-600" : "text-muted-foreground"}`}>{t.label}</div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
@@ -1809,16 +1815,19 @@ function DemoPage() {
                     <table className="w-full text-sm">
                       <thead><tr className="border-b"><th className="text-left pb-3">Employee</th><th className="text-left pb-3">Department</th><th className="text-center pb-3">Score</th><th className="text-center pb-3">Active Hrs</th><th className="text-left pb-3">Top App</th><th className="text-right pb-3">Trend</th></tr></thead>
                       <tbody>
-                        {[...mockProductivity].sort((a, b) => b.score - a.score).map((p) => (
-                          <tr key={p.name} className="border-b last:border-0 hover:bg-muted/50">
-                            <td className="py-3 font-medium">{p.name}</td>
+                        {[...mockProductivity].sort((a, b) => b.score - a.score).map((p) => {
+                          const emp = mockEmployees.find(e => e.name === p.name);
+                          return (
+                          <tr key={p.name} className="border-b last:border-0 hover:bg-muted/50 cursor-pointer" onClick={() => { if (emp) { setSelectedEmployee(emp.id); setActiveSection("employees"); } }}>
+                            <td className="py-3 font-medium text-primary hover:underline">{p.name}</td>
                             <td className="py-3 text-muted-foreground">{p.dept}</td>
                             <td className="py-3 text-center"><Badge variant={p.score >= 80 ? "success" : p.score >= 70 ? "warning" : "destructive"}>{p.score}%</Badge></td>
                             <td className="py-3 text-center text-muted-foreground">{p.activeHrs}h</td>
                             <td className="py-3">{p.topApp}</td>
                             <td className={`py-3 text-right ${p.trend.startsWith("+") ? "text-green-600" : "text-red-600"}`}>{p.trend}</td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -2694,7 +2703,180 @@ function DemoPage() {
           )}
 
           {/* ═══ EMPLOYEES ═══ */}
-          {activeSection === "employees" && (
+          {activeSection === "employees" && (() => {
+            const selEmp = selectedEmployee ? mockEmployees.find(e => e.id === selectedEmployee) : null;
+            const selProd = selEmp ? mockProductivity.find(p => p.name === selEmp.name) : null;
+            const selDevice = selEmp ? mockDevices.find(d => d.user.name === selEmp.name) : null;
+
+            if (selEmp) {
+              return (
+                <div className="space-y-6">
+                  {/* Breadcrumb */}
+                  <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    <span className="cursor-pointer hover:text-foreground" onClick={() => setSelectedEmployee(null)}>Employees</span>
+                    <ChevronRight className="h-3 w-3" />
+                    <span className="text-foreground font-medium">{selEmp.name}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedEmployee(null)} className="gap-1"><ChevronRight className="h-4 w-4 rotate-180" /> Back</Button>
+                  </div>
+
+                  {/* Profile Header */}
+                  <Card>
+                    <CardContent className="pt-6 pb-5">
+                      <div className="flex items-start gap-4">
+                        <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-xl font-bold flex-shrink-0">{selEmp.avatar}</div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3">
+                            <h2 className="text-xl font-bold">{selEmp.name}</h2>
+                            <Badge className={selEmp.status === "Active" ? "bg-green-100 text-green-800" : selEmp.status === "On Leave" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}>{selEmp.status}</Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground">{selEmp.role} &middot; {selEmp.dept}</div>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {selEmp.email}</span>
+                            <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {selEmp.phone}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Metrics Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <Card><CardContent className="pt-4 pb-3">
+                      <div className="text-xs text-muted-foreground">Productivity Score</div>
+                      <div className={`text-2xl font-bold ${(selProd?.score ?? 0) >= 80 ? "text-green-600" : (selProd?.score ?? 0) >= 70 ? "text-yellow-600" : "text-red-600"}`}>{selProd?.score ?? "—"}%</div>
+                      <div className="text-[11px] text-muted-foreground">{selProd?.trend ?? ""} vs last period</div>
+                    </CardContent></Card>
+                    <Card><CardContent className="pt-4 pb-3">
+                      <div className="text-xs text-muted-foreground">Avg Active Hours</div>
+                      <div className="text-2xl font-bold">{selProd?.activeHrs ?? "—"}h</div>
+                      <div className="text-[11px] text-muted-foreground">per day</div>
+                    </CardContent></Card>
+                    <Card><CardContent className="pt-4 pb-3">
+                      <div className="text-xs text-muted-foreground">Attendance Rate</div>
+                      <div className="text-2xl font-bold text-green-600">{selEmp.status === "Active" ? "96%" : "72%"}</div>
+                      <div className="text-[11px] text-muted-foreground">last 30 days</div>
+                    </CardContent></Card>
+                    <Card><CardContent className="pt-4 pb-3">
+                      <div className="text-xs text-muted-foreground">Security Alerts</div>
+                      <div className="text-2xl font-bold">{selEmp.name === "Tom Garcia" ? "1" : "0"}</div>
+                      <div className="text-[11px] text-muted-foreground">open alerts</div>
+                    </CardContent></Card>
+                  </div>
+
+                  {/* Device & Activity */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Monitor className="h-4 w-4" /> Assigned Device</CardTitle></CardHeader>
+                      <CardContent>
+                        {selDevice ? (
+                          <div className="space-y-2">
+                            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Hostname</span><span className="text-sm font-medium">{selDevice.hostname}</span></div>
+                            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Platform</span><span className="text-sm font-medium">{selDevice.platform === "win32" ? "Windows" : "macOS"}</span></div>
+                            <div className="flex justify-between"><span className="text-sm text-muted-foreground">OS Version</span><span className="text-sm font-medium">{selDevice.osVersion}</span></div>
+                            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Status</span><StatusBadge status={selDevice.status} /></div>
+                            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Security Grade</span><span className="text-sm font-bold">{(selDevice as Record<string, unknown>).securityGrade as string ?? "—"}</span></div>
+                            <div className="flex justify-between"><span className="text-sm text-muted-foreground">Agent Version</span><span className="text-sm font-medium">{selDevice.agentVersion}</span></div>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-muted-foreground py-4 text-center">No device assigned</div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Activity className="h-4 w-4" /> Recent Activity</CardTitle></CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {[
+                            { action: "Clocked in", time: "9:02 AM", icon: Clock },
+                            { action: `Opened ${selProd?.topApp ?? "app"}`, time: "9:05 AM", icon: Eye },
+                            { action: "Visited github.com", time: "9:12 AM", icon: Globe },
+                            { action: "File modified: report.xlsx", time: "10:30 AM", icon: FileText },
+                            { action: "Break started", time: "12:01 PM", icon: Coffee },
+                            { action: "Break ended", time: "12:32 PM", icon: Coffee },
+                            { action: `Switched to ${selProd?.topApp ?? "app"}`, time: "12:33 PM", icon: ArrowRightLeft },
+                          ].map((a, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                              <a.icon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                              <span className="text-sm flex-1">{a.action}</span>
+                              <span className="text-xs text-muted-foreground">{a.time}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* 14-day productivity trend */}
+                  <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-base">14-Day Productivity Trend</CardTitle></CardHeader>
+                    <CardContent>
+                      <div className="flex items-end gap-1 h-32">
+                        {Array.from({ length: 14 }, (_, i) => {
+                          const base = selProd?.score ?? 75;
+                          const val = Math.max(40, Math.min(100, base + Math.floor(Math.sin(i * 0.8) * 12) - 5 + i));
+                          return (
+                            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                              <div className={`w-full rounded-t ${val >= 80 ? "bg-green-500" : val >= 70 ? "bg-yellow-500" : "bg-red-500"}`} style={{ height: `${val}%` }} title={`${val}%`} />
+                              <span className="text-[8px] text-muted-foreground">{14 - i}d</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Tickets & Compliance */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><LifeBuoy className="h-4 w-4" /> Support Tickets</CardTitle></CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {[
+                            { id: "TK-201", title: "VPN connection drops", status: "Open", priority: "High" },
+                            { id: "TK-189", title: "Outlook sync issue", status: "Resolved", priority: "Medium" },
+                          ].map(t => (
+                            <div key={t.id} className="flex items-center justify-between border rounded-lg p-2.5">
+                              <div>
+                                <div className="text-sm font-medium">{t.title}</div>
+                                <div className="text-xs text-muted-foreground">{t.id} &middot; {t.priority}</div>
+                              </div>
+                              <Badge className={t.status === "Open" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}>{t.status}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Compliance Status</CardTitle></CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {[
+                            { check: "Disk Encryption", pass: true },
+                            { check: "Antivirus Active", pass: true },
+                            { check: "Firewall Enabled", pass: selEmp.name !== "Tom Garcia" },
+                            { check: "OS Up to Date", pass: selEmp.name !== "Sarah Chen" },
+                            { check: "MFA Enabled", pass: true },
+                            { check: "Screen Lock", pass: selEmp.name !== "Lisa Wong" },
+                          ].map(c => (
+                            <div key={c.check} className="flex items-center justify-between">
+                              <span className="text-sm">{c.check}</span>
+                              {c.pass ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-red-500" />}
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div><h1 className="text-2xl font-bold flex items-center gap-2"><Users className="h-6 w-6" /> Employees</h1>
@@ -2717,13 +2899,13 @@ function DemoPage() {
                   const statusColor = emp.status === "Active" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : emp.status === "On Leave" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
                   const deptColors: Record<string, string> = { Engineering: "border-l-blue-500", Design: "border-l-purple-500", Finance: "border-l-yellow-500", Sales: "border-l-green-500", HR: "border-l-pink-500" };
                   return (
-                    <Card key={emp.id} className={`border-l-4 ${deptColors[emp.dept] || "border-l-gray-500"} hover:shadow-md transition-shadow`}>
+                    <Card key={emp.id} className={`border-l-4 ${deptColors[emp.dept] || "border-l-gray-500"} hover:shadow-md transition-shadow cursor-pointer`} onClick={() => setSelectedEmployee(emp.id)}>
                       <CardContent className="pt-5 pb-4">
                         <div className="flex items-start gap-3">
                           <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold flex-shrink-0">{emp.avatar}</div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between">
-                              <div className="font-semibold truncate">{emp.name}</div>
+                              <div className="font-semibold truncate text-primary hover:underline">{emp.name}</div>
                               <Badge className={statusColor}>{emp.status}</Badge>
                             </div>
                             <div className="text-sm text-muted-foreground">{emp.role}</div>
@@ -2742,7 +2924,8 @@ function DemoPage() {
                 })}
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* ═══ USER MANAGEMENT ═══ */}
           {activeSection === "user-management" && (

@@ -44,7 +44,34 @@ export async function POST() {
         timeEntry: updatedEntry,
       });
     } else {
-      // Clock in: create a new time entry
+      // Clock in: check if agent must be running first
+      const org = await prisma.organization.findUnique({
+        where: { id: orgId },
+        select: { requireAgentForClock: true },
+      });
+
+      if (org?.requireAgentForClock) {
+        // Check for an online agent device for this user
+        const onlineDevice = await prisma.agentDevice.findFirst({
+          where: {
+            userId,
+            organizationId: orgId,
+            status: "ONLINE",
+          },
+        });
+
+        if (!onlineDevice) {
+          return NextResponse.json(
+            {
+              error: "Agent required",
+              message:
+                "Your monitoring agent must be running before you can clock in. Please start the MyDex agent on your device and try again.",
+            },
+            { status: 403 }
+          );
+        }
+      }
+
       const newEntry = await prisma.timeEntry.create({
         data: {
           userId,

@@ -17,10 +17,13 @@ model Organization {
   slug      String   @unique
   plan      String   @default("free")
   settings  Json     @default("{}")
+  requireAgentForClock Boolean @default(false)
+  defaultMonitoringMode MonitoringMode @default(ALWAYS)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   users            User[]
+  monitoringChangeLogs MonitoringChangeLog[]
   projects         Project[]
   dlpPolicies      DlpPolicy[]
   scheduledReports ScheduledReport[]
@@ -48,6 +51,8 @@ model User {
   managerId      String?
   monitoringPaused Boolean  @default(false)
   monitoringPausedAt DateTime?
+  monitoringMode MonitoringMode @default(ALWAYS)
+  canToggleMonitoring Boolean @default(false)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
@@ -77,6 +82,8 @@ model User {
   boardingTasks     BoardingTask[]   @relation("BoardingUser")
   boardingCompleted BoardingTask[]   @relation("BoardingCompletedBy")
   generatedReports  ReportHistory[]  @relation("generatedReports")
+  monitoringChangeLogs MonitoringChangeLog[] @relation("MonitoringUser")
+  monitoringChangesBy  MonitoringChangeLog[] @relation("MonitoringChangedBy")
 
   @@index([organizationId])
   @@index([email])
@@ -94,6 +101,18 @@ enum UserStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
+}
+
+enum MonitoringMode {
+  ALWAYS           // Always monitored when agent is running
+  CLOCKED_IN_ONLY  // Only monitored while clocked in
+  USER_CONTROLLED  // User can toggle monitoring on/off
+}
+
+enum DeviceOwnership {
+  BUSINESS    // Company-owned device
+  CONTRACTOR  // Contractor device
+  BYOD        // Employee personal device
 }
 
 model Account {
@@ -735,6 +754,7 @@ model AgentDevice {
   ipAddress      String?
   osVersion      String?
   serialNumber   String?
+  deviceOwnership DeviceOwnership @default(BUSINESS)
   installedSoftware Json?
   runningSoftware   Json?     // Currently running processes
   createdAt      DateTime     @default(now())
@@ -1298,4 +1318,25 @@ enum MdmActionStatus {
   COMPLETED
   FAILED
   CANCELLED
+}
+
+// ─── Monitoring Change Log ──────────────────────────────────────────────────
+
+model MonitoringChangeLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String   // The user whose monitoring settings changed
+  changedById    String   // The admin/manager who made the change
+  field          String   // e.g. "monitoringMode", "monitoringPaused", "canToggleMonitoring", "deviceOwnership"
+  oldValue       String?
+  newValue       String
+  reason         String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User         @relation("MonitoringUser", fields: [userId], references: [id])
+  changedBy    User         @relation("MonitoringChangedBy", fields: [changedById], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([userId])
 }

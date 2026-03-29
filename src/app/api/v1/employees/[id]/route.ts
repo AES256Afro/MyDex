@@ -11,6 +11,9 @@ const updateEmployeeSchema = z.object({
   jobTitle: z.string().max(100).nullable().optional(),
   managerId: z.string().nullable().optional(),
   status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"]).optional(),
+  monitoringMode: z.enum(["ALWAYS", "CLOCKED_IN_ONLY", "USER_CONTROLLED"]).optional(),
+  canToggleMonitoring: z.boolean().optional(),
+  monitoringPaused: z.boolean().optional(),
 });
 
 export async function GET(
@@ -42,9 +45,16 @@ export async function GET(
         department: true,
         jobTitle: true,
         managerId: true,
+        monitoringMode: true,
+        monitoringPaused: true,
+        monitoringPausedAt: true,
+        canToggleMonitoring: true,
         createdAt: true,
         updatedAt: true,
         manager: { select: { id: true, name: true } },
+        agentDevices: {
+          select: { id: true, hostname: true, status: true, deviceOwnership: true, lastSeenAt: true },
+        },
         directReports: {
           select: { id: true, name: true, role: true, status: true },
         },
@@ -146,9 +156,31 @@ export async function PATCH(
       }
     }
 
+    // Track monitoring field changes for change log
+    const monitoringFields = ["monitoringMode", "canToggleMonitoring", "monitoringPaused"] as const;
+    const changeLogs: { field: string; oldValue: string | null; newValue: string }[] = [];
+
+    for (const field of monitoringFields) {
+      if (updates[field] !== undefined) {
+        changeLogs.push({
+          field,
+          oldValue: String(existing[field]),
+          newValue: String(updates[field]),
+        });
+      }
+    }
+
+    // Handle monitoringPausedAt
+    const data: Record<string, unknown> = { ...updates };
+    if (updates.monitoringPaused === true) {
+      data.monitoringPausedAt = new Date();
+    } else if (updates.monitoringPaused === false) {
+      data.monitoringPausedAt = null;
+    }
+
     const employee = await prisma.user.update({
       where: { id },
-      data: updates,
+      data,
       select: {
         id: true,
         email: true,
@@ -159,10 +191,27 @@ export async function PATCH(
         department: true,
         jobTitle: true,
         managerId: true,
+        monitoringMode: true,
+        monitoringPaused: true,
+        canToggleMonitoring: true,
         createdAt: true,
         updatedAt: true,
       },
     });
+
+    // Write monitoring change logs
+    if (changeLogs.length > 0) {
+      await prisma.monitoringChangeLog.createMany({
+        data: changeLogs.map((log) => ({
+          organizationId: orgId,
+          userId: id,
+          changedById: session.user.id,
+          field: log.field,
+          oldValue: log.oldValue,
+          newValue: log.newValue,
+        })),
+      });
+    }
 
     return NextResponse.json({ employee });
   } catch (error) {
