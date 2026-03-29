@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { hasPermission } from "@/lib/permissions";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -368,13 +369,15 @@ export default async function ProductivityPage() {
                   {employees.map((emp, index) => (
                     <tr
                       key={emp.user.id}
-                      className="border-b last:border-0 hover:bg-muted/50 transition-colors"
+                      className="border-b last:border-0 hover:bg-muted/50 transition-colors cursor-pointer"
                     >
                       <td className="py-3 pr-4 text-muted-foreground">
                         {index + 1}
                       </td>
                       <td className="py-3 pr-4 font-medium">
-                        {emp.user.name}
+                        <Link href={`/employees/${emp.user.id}`} className="text-primary hover:underline">
+                          {emp.user.name}
+                        </Link>
                       </td>
                       <td className="py-3 pr-4 text-muted-foreground">
                         {emp.user.department ?? "\u2014"}

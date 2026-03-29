@@ -37,6 +37,10 @@ import {
   ChevronDown,
   ChevronRight,
   AppWindow,
+  Brain,
+  ShieldAlert,
+  TrendingUp,
+  AlertTriangle,
 } from "lucide-react";
 
 type Role = "SUPER_ADMIN" | "ADMIN" | "MANAGER" | "EMPLOYEE";
@@ -120,6 +124,23 @@ interface Props {
     completedAt: string | null;
     completedBy: { id: string; name: string } | null;
     dueDate: string | null;
+  }[];
+  activitySummaries: {
+    id: string;
+    date: string;
+    totalActiveSeconds: number;
+    totalIdleSeconds: number;
+    productivityScore: number | null;
+  }[];
+  securityAlerts: {
+    id: string;
+    alertType: string;
+    severity: string;
+    title: string;
+    description: string;
+    status: string;
+    createdAt: string;
+    resolvedAt: string | null;
   }[];
   canWrite: boolean;
   currentUserId: string;
@@ -219,6 +240,8 @@ export default function EmployeeDetailClient({
   usbEvents,
   mdmDevices,
   boardingTasks: initialBoardingTasks,
+  activitySummaries,
+  securityAlerts,
   canWrite,
   currentUserId,
 }: Props) {
@@ -601,61 +624,326 @@ export default function EmployeeDetailClient({
       </div>
 
       {/* Tab Content */}
-      {activeTab === "overview" && (
+      {activeTab === "overview" && (() => {
+        // Productivity metrics
+        const scores = activitySummaries.filter((s) => s.productivityScore !== null).map((s) => s.productivityScore!);
+        const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+        const totalActive = activitySummaries.reduce((sum, s) => sum + s.totalActiveSeconds, 0);
+        const totalIdle = activitySummaries.reduce((sum, s) => sum + s.totalIdleSeconds, 0);
+        const daysTracked = activitySummaries.length;
+        const avgActivePerDay = daysTracked > 0 ? Math.round((totalActive / daysTracked / 3600) * 10) / 10 : 0;
+
+        // Attendance
+        const totalAttendance = attendanceRecords.length;
+        const presentCount = attendanceSummary.PRESENT + attendanceSummary.HALF_DAY;
+        const attendanceRate = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
+
+        // Tickets
+        const openTickets = tickets.filter((t) => t.status === "OPEN" || t.status === "IN_PROGRESS" || t.status === "WAITING_ON_IT").length;
+        const resolvedTickets = tickets.filter((t) => t.status === "RESOLVED" || t.status === "CLOSED").length;
+
+        // Security
+        const openAlerts = securityAlerts.filter((a) => a.status === "OPEN" || a.status === "INVESTIGATING").length;
+        const criticalAlerts = securityAlerts.filter((a) => a.severity === "CRITICAL" || a.severity === "HIGH").length;
+
+        return (
         <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Attendance Summary */}
+          {/* KPI Cards */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-1.5">
+                  <Brain className="h-3.5 w-3.5" /> Productivity Score
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  {avgScore !== null ? (
+                    <span className={avgScore >= 80 ? "text-green-600" : avgScore >= 60 ? "text-yellow-600" : "text-red-600"}>
+                      {avgScore}%
+                    </span>
+                  ) : "—"}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {daysTracked} day{daysTracked !== 1 ? "s" : ""} tracked (30d)
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" /> Avg Active Hours/Day
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{avgActivePerDay}h</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatDuration(totalActive)} total active
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-1.5">
+                  <CalendarCheck className="h-3.5 w-3.5" /> Attendance Rate
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-3xl font-bold ${attendanceRate >= 90 ? "text-green-600" : attendanceRate >= 75 ? "text-yellow-600" : attendanceRate > 0 ? "text-red-600" : ""}`}>
+                  {attendanceRate > 0 ? `${attendanceRate}%` : "—"}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {presentCount} of {totalAttendance} days present
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-1.5">
+                  <ShieldAlert className="h-3.5 w-3.5" /> Security Alerts
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-3xl font-bold ${openAlerts > 0 ? "text-red-600" : "text-green-600"}`}>
+                  {openAlerts > 0 ? openAlerts : securityAlerts.length > 0 ? "0 open" : "—"}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {securityAlerts.length} total alert{securityAlerts.length !== 1 ? "s" : ""}
+                  {criticalAlerts > 0 && <span className="text-red-600 font-medium"> ({criticalAlerts} critical/high)</span>}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Attendance Breakdown */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <CalendarCheck className="h-5 w-5" /> Attendance Summary (30 days)
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <CalendarCheck className="h-4 w-4" /> Attendance Breakdown (30 days)
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {attendanceRecords.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No attendance records in the last 30 days.</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">No attendance records.</p>
                 ) : (
-                  <div className="grid grid-cols-3 gap-4">
-                    {(["PRESENT", "ABSENT", "HALF_DAY", "LEAVE", "HOLIDAY", "WEEKEND"] as AttendanceStatus[]).map((s) => (
-                      <div key={s} className="text-center">
-                        <div className={`text-2xl font-bold ${s === "PRESENT" ? "text-green-600" : s === "ABSENT" ? "text-red-600" : s === "HALF_DAY" ? "text-yellow-600" : s === "LEAVE" ? "text-blue-600" : "text-muted-foreground"}`}>
-                          {attendanceSummary[s]}
+                  <div className="space-y-3">
+                    {(["PRESENT", "ABSENT", "HALF_DAY", "LEAVE", "HOLIDAY", "WEEKEND"] as AttendanceStatus[]).map((s) => {
+                      const count = attendanceSummary[s];
+                      const pct = totalAttendance > 0 ? Math.round((count / totalAttendance) * 100) : 0;
+                      const color = s === "PRESENT" ? "bg-green-500" : s === "ABSENT" ? "bg-red-500" : s === "HALF_DAY" ? "bg-yellow-500" : s === "LEAVE" ? "bg-blue-500" : "bg-gray-300";
+                      return (
+                        <div key={s} className="flex items-center gap-3">
+                          <span className="text-sm w-24 text-muted-foreground">{s.replace("_", " ")}</span>
+                          <div className="flex-1 bg-muted rounded-full h-2">
+                            <div className={`h-2 rounded-full ${color}`} style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-sm font-medium w-8 text-right">{count}</span>
                         </div>
-                        <div className="text-xs text-muted-foreground">{s.replace("_", " ")}</div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Productivity Trend */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <TrendingUp className="h-4 w-4" /> Productivity Trend (30 days)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {activitySummaries.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No productivity data available.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {/* Simple bar chart */}
+                    <div className="flex items-end gap-1 h-32">
+                      {[...activitySummaries].reverse().slice(-14).map((s, i) => {
+                        const score = s.productivityScore ?? 0;
+                        const height = Math.max(4, (score / 100) * 100);
+                        return (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-1" title={`${format(new Date(s.date), "MMM d")}: ${score}%`}>
+                            <div
+                              className={`w-full rounded-t ${score >= 80 ? "bg-green-500" : score >= 60 ? "bg-yellow-500" : score > 0 ? "bg-red-500" : "bg-gray-200"}`}
+                              style={{ height: `${height}%` }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      {[...activitySummaries].reverse().slice(-14).length > 0 && (
+                        <>
+                          <span>{format(new Date([...activitySummaries].reverse().slice(-14)[0]?.date), "MMM d")}</span>
+                          <span>{format(new Date([...activitySummaries][0]?.date), "MMM d")}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
+                      <div className="text-center">
+                        <div className="text-lg font-bold">{formatDuration(totalActive)}</div>
+                        <div className="text-xs text-muted-foreground">Active Time</div>
                       </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold">{formatDuration(totalIdle)}</div>
+                        <div className="text-xs text-muted-foreground">Idle Time</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold">{recentTimeEntries.length}</div>
+                        <div className="text-xs text-muted-foreground">Sessions</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Recent Tickets */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <LifeBuoy className="h-4 w-4" /> Support Tickets
+                </CardTitle>
+                <CardDescription>
+                  {openTickets} open, {resolvedTickets} resolved
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {tickets.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">No tickets submitted.</p>
+                ) : (
+                  <div className="space-y-2 max-h-[280px] overflow-y-auto">
+                    {tickets.slice(0, 10).map((ticket) => (
+                      <Link
+                        key={ticket.id}
+                        href={`/support?ticket=${ticket.id}`}
+                        className="flex items-center gap-2 p-2 rounded-lg border hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{ticket.subject}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {format(new Date(ticket.createdAt), "MMM d")} &middot; {ticket.category}
+                          </div>
+                        </div>
+                        <div className="flex gap-1.5 flex-shrink-0">
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${ticketStatusColor(ticket.status)}`}>
+                            {ticket.status.replace(/_/g, " ")}
+                          </span>
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${priorityColor(ticket.priority)}`}>
+                            {ticket.priority}
+                          </span>
+                        </div>
+                      </Link>
                     ))}
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Hours Summary */}
+            {/* Security Alerts */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Clock className="h-5 w-5" /> Time Summary (30 days)
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ShieldAlert className="h-4 w-4" /> Security Alerts
                 </CardTitle>
+                <CardDescription>
+                  {openAlerts} open{criticalAlerts > 0 ? `, ${criticalAlerts} critical/high` : ""}
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">{formatDuration(totalHoursWorked)}</div>
-                    <div className="text-xs text-muted-foreground">Total Time</div>
+                {securityAlerts.length === 0 ? (
+                  <div className="text-center py-4">
+                    <CheckCircle2 className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No security alerts.</p>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">{recentTimeEntries.length}</div>
-                    <div className="text-xs text-muted-foreground">Sessions</div>
+                ) : (
+                  <div className="space-y-2 max-h-[280px] overflow-y-auto">
+                    {securityAlerts.map((alert) => (
+                      <div
+                        key={alert.id}
+                        className="flex items-start gap-2 p-2 rounded-lg border"
+                      >
+                        <AlertTriangle className={`h-4 w-4 mt-0.5 flex-shrink-0 ${
+                          alert.severity === "CRITICAL" ? "text-red-600" :
+                          alert.severity === "HIGH" ? "text-orange-600" :
+                          alert.severity === "MEDIUM" ? "text-yellow-600" : "text-blue-600"
+                        }`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium">{alert.title}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {format(new Date(alert.createdAt), "MMM d, h:mm a")} &middot; {alert.alertType.replace(/_/g, " ")}
+                          </div>
+                        </div>
+                        <div className="flex gap-1.5 flex-shrink-0">
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            alert.severity === "CRITICAL" ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" :
+                            alert.severity === "HIGH" ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300" :
+                            alert.severity === "MEDIUM" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300" :
+                            "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                          }`}>
+                            {alert.severity}
+                          </span>
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                            alert.status === "OPEN" ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" :
+                            alert.status === "INVESTIGATING" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300" :
+                            "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                          }`}>
+                            {alert.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
+          {/* File Activity Summary */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FileText className="h-4 w-4" /> Recent File Activity
+              </CardTitle>
+              <CardDescription>
+                {fileActivities.length} file event{fileActivities.length !== 1 ? "s" : ""} in the last 30 days
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {fileActivities.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No file activity recorded.</p>
+              ) : (
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {fileActivities.slice(0, 20).map((event) => (
+                    <div key={event.id} className="flex items-start gap-2 py-1.5 border-b last:border-0">
+                      {activityIcon(event.eventType)}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium">{activityLabel(event.eventType)}</div>
+                        {event.windowTitle && (
+                          <div className="text-xs text-muted-foreground truncate">{event.windowTitle}</div>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatDistanceToNow(new Date(event.timestamp), { addSuffix: true })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Recent Time Entries */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Clock className="h-5 w-5" /> Recent Time Entries
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Clock className="h-4 w-4" /> Recent Time Entries
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -697,7 +985,8 @@ export default function EmployeeDetailClient({
             </CardContent>
           </Card>
         </div>
-      )}
+        );
+      })()}
 
       {activeTab === "boarding" && (
         <div className="space-y-6">
