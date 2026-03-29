@@ -3,38 +3,38 @@ import Link from "next/link";
 
 const features = [
   {
-    title: "Device Management & MDM",
-    desc: "Connect Microsoft Intune, Jamf Pro, or Kandji to auto-assign devices, monitor compliance, and execute remote actions — lock, wipe, restart — all from one dashboard.",
-    screenshot: "/screenshots/devices.png",
-    demoSection: "devices",
-  },
-  {
-    title: "IT Support & Ticketing",
-    desc: "Built-in help desk with SLA tracking, priority routing, satisfaction ratings, and a self-service portal for employees to submit and track requests.",
-    screenshot: "/screenshots/it-support.png",
-    demoSection: "it-support",
-  },
-  {
-    title: "Employee Onboarding & Offboarding",
-    desc: "Automate checklists for IT setup, access provisioning, HR paperwork, and security tasks. Track progress per employee with one-click template initialization.",
-    screenshot: "/screenshots/employees.png",
-    demoSection: "employees",
-  },
-  {
-    title: "Fleet Health & Diagnostics",
-    desc: "Real-time hardware diagnostics, disk health, Windows update status, BSOD tracking, antivirus status, and performance alerts across your entire fleet.",
+    title: "Real-Time Monitoring & DEX Scores",
+    desc: "Continuous, real-time data collection across all devices and locations. DEX scores quantify the digital employee experience, populating live dashboards with proactive alerts prioritized by impact.",
     screenshot: "/screenshots/fleet-health.png",
     demoSection: "fleet-health",
   },
   {
-    title: "SOC 2 Compliance",
-    desc: "Map your security posture to SOC 2 controls with automated scoring, audit recommendations, evidence collection, and continuous monitoring dashboards.",
+    title: "Device Management & MDM",
+    desc: "Connect Microsoft Intune, Jamf Pro, or Kandji to auto-assign devices. Real-time agent visibility across Windows and macOS, with OS compliance cross-checking and automated remediation.",
+    screenshot: "/screenshots/devices.png",
+    demoSection: "devices",
+  },
+  {
+    title: "Proactive Issue Resolution",
+    desc: "Identify the context, scope, and impact of issues before they escalate. Automated recommendations diagnose problems across affected users, with one-click remediation for common IT issues.",
+    screenshot: "/screenshots/it-support.png",
+    demoSection: "it-support",
+  },
+  {
+    title: "Fleet Health & OS Compliance",
+    desc: "All-in-one view of your OS landscape across Windows and macOS. Cross-check patch compatibility, monitor agent status, and eliminate blind spots from faulty agents hiding devices from management.",
+    screenshot: "/screenshots/fleet-health.png",
+    demoSection: "fleet-health",
+  },
+  {
+    title: "SOC 2 Compliance & Security",
+    desc: "Map your security posture to SOC 2 controls with automated scoring, evidence collection, and continuous monitoring. Insider threat detection, DLP policies, USB monitoring, and CVE tracking.",
     screenshot: "/screenshots/compliance.png",
     demoSection: "compliance",
   },
   {
     title: "Activity Monitoring & Productivity",
-    desc: "Track app usage, website visits, file activity, and engagement levels. AI-powered productivity scoring with team comparisons and trend analysis.",
+    desc: "Track app usage, website visits, file activity, and engagement levels. Machine-learning pattern spotting identifies anomalies and accelerates troubleshooting across your organization.",
     screenshot: "/screenshots/productivity.png",
     demoSection: "productivity",
   },
@@ -45,14 +45,14 @@ const features = [
     demoSection: "time-tracking",
   },
   {
-    title: "Security & DLP",
-    desc: "Insider threat detection, data loss prevention policies, USB monitoring, host-based firewall and domain blocking, CVE tracking, and full audit logs.",
+    title: "Alert Thresholds & Automation",
+    desc: "Customize alert thresholds and workflows, seamlessly integrating with third-party systems. Minimize manual intervention with automated flows that remediate issues across endpoints in seconds.",
     screenshot: "/screenshots/security.png",
     demoSection: "security",
   },
   {
-    title: "Software Inventory",
-    desc: "Track every application installed across your fleet. Identify unauthorized software, manage licenses, and enforce software policies at scale.",
+    title: "Cost Optimization & Sustainability",
+    desc: "Execute cost-saving decisions across IT initiatives by proactively identifying opportunities. Leverage data-driven insights to reduce environmental impact and optimize your digital workplace.",
     screenshot: "/screenshots/software-inventory.png",
     demoSection: "software-inventory",
   },
@@ -60,9 +60,9 @@ const features = [
 
 const stats = [
   { value: "30+", label: "Built-in Modules" },
+  { value: "DEX", label: "Experience Scoring" },
   { value: "3", label: "MDM Integrations" },
   { value: "100%", label: "Open Source" },
-  { value: "<5min", label: "Setup Time" },
 ];
 
 export default function HomePage() {
@@ -103,8 +103,8 @@ export default function HomePage() {
               The Complete Digital<br />Employee Experience
             </h2>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-              Device management, IT support, activity monitoring, compliance, and productivity
-              analytics — unified in one platform built for small and mid-size businesses.
+              Real-time monitoring, proactive issue resolution, OS compliance, and DEX scoring —
+              unified in one platform that identifies and resolves IT issues before they impact employees.
             </p>
             <p className="mt-10 text-lg font-semibold text-foreground">
               Start your new digital employee experience.
@@ -158,8 +158,8 @@ export default function HomePage() {
             Everything You Need to Manage Your Team
           </h3>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            From device enrollment to compliance audits, MyDex replaces the patchwork of tools
-            your IT team juggles every day.
+            Efficiently monitor all facets of the digital employee experience in real-time,
+            proactively identifying and resolving issues before they escalate into major incidents.
           </p>
         </div>
 
@@ -227,7 +227,7 @@ export default function HomePage() {
       <section className="mx-auto max-w-7xl px-4 py-24">
         <h3 className="text-center text-2xl font-bold text-foreground">And Much More</h3>
         <p className="mx-auto mt-3 max-w-xl text-center text-muted-foreground">
-          Project management, reports, SSO, MFA, branding customization, agent deployment, and more.
+          Project management, automated workflows, alert thresholds, sustainability insights, and comprehensive reporting.
         </p>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {[
@@ -261,8 +261,8 @@ export default function HomePage() {
             Want to Know More?
           </h3>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            See how MyDex can streamline your IT operations, keep your team productive,
-            and give you visibility across every device and employee.
+            Leverage MyDex&apos;s comprehensive, employee-centric platform to proactively resolve issues,
+            optimize costs, and ensure seamless digital experiences across your entire organization.
           </p>
           <p className="mt-8 text-lg font-semibold text-foreground">
             Start your new digital employee experience.
