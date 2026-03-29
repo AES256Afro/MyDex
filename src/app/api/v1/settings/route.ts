@@ -23,6 +23,12 @@ const updateSettingsSchema = z.object({
         enabled: z.boolean(),
         minRole: z.string().optional(),
       })).optional(),
+      // Branding
+      companyName: z.string().max(100).optional(),
+      logoUrl: z.string().url().optional().or(z.literal("")),
+      primaryColor: z.string().max(30).optional(),
+      favicon: z.string().url().optional().or(z.literal("")),
+      brandingMode: z.enum(["replace", "alongside"]).optional(),
     })
     .optional(),
 });

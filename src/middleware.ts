@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { applySecurityHeaders } from "@/lib/security-headers";
 
 const publicPaths = [
-  "/", "/login", "/register", "/forgot-password", "/demo", "/licensing",
+  "/", "/login", "/register", "/forgot-password", "/demo", "/licensing", "/contact",
   "/api/auth", "/api/register", "/api/health",
   "/api/v1/agents/auth", "/api/v1/agents/telemetry", "/api/v1/agents/policy",
   "/api/v1/agents/devices", "/api/v1/agents/commands",
@@ -40,5 +40,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|images/).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|images|screenshots/).*)"],
 };

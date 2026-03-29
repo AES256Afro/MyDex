@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import { useBranding } from "@/components/branding-provider";
 import { getVisibleModules } from "@/lib/module-access";
 import type { Role } from "@/generated/prisma";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -34,6 +35,10 @@ import {
   Blocks,
   Download,
   Package,
+  Wrench,
+  LifeBuoy,
+  Palette,
+  Smartphone,
   type LucideIcon,
 } from "lucide-react";
 
@@ -57,12 +62,18 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   "sso-providers": KeyRound,
   "module-access": Blocks,
   "software-inventory": Package,
+  "compliance": ShieldCheck,
+  "support": LifeBuoy,
+  "it-support": Wrench,
   "agent-setup": Download,
+  "mdm-providers": Smartphone,
+  branding: Palette,
 };
 
 export function Topbar() {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const branding = useBranding();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -173,7 +184,19 @@ export function Topbar() {
           />
           <div className="fixed inset-y-0 left-0 w-72 bg-sidebar border-r overflow-y-auto">
             <div className="flex h-16 items-center justify-between border-b px-6">
-              <span className="text-xl font-bold text-primary">MyDex</span>
+              <span className="flex items-center gap-2">
+                {branding.logoUrl && <img src={branding.logoUrl} alt="" className="h-8 w-8 object-contain" />}
+                {branding.brandingMode === "alongside" ? (
+                  <span className="flex items-baseline gap-1.5">
+                    <span className="text-xl font-bold text-primary">MyDex</span>
+                    {branding.companyName && branding.companyName !== "MyDex" && (
+                      <span className="text-sm font-medium text-muted-foreground">| {branding.companyName}</span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-xl font-bold text-primary">{branding.companyName}</span>
+                )}
+              </span>
               <Button
                 variant="ghost"
                 size="icon"

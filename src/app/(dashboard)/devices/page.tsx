@@ -69,8 +69,22 @@ interface Device {
   wifiSignal: number | null;
   installedSoftware: Array<{ name: string; version: string; publisher?: string; size?: number }> | null;
   runningSoftware: Array<{ name: string; count: number; memoryMb: number }> | null;
+  serialNumber: string | null;
   user: { id: string; name: string | null; email: string };
   _count: { commands: number; diagnostics: number };
+  mdmDevices: {
+    id: string;
+    enrollmentStatus: string | null;
+    complianceStatus: string | null;
+    managementState: string | null;
+    deviceName: string | null;
+    model: string | null;
+    isEncrypted: boolean | null;
+    lastCheckIn: string | null;
+    managedApps: { name: string; version: string; installState: string }[] | null;
+    mdmDeviceId: string;
+    mdmProvider: { id: string; name: string; providerType: string };
+  }[];
   openCves: number;
   activeIocs: number;
   recentActivity: Array<{
@@ -163,6 +177,24 @@ export default function DevicesPage() {
     } catch {
       setCommandLogs(prev => prev.map(l => l.id === logId ? { ...l, status: "failed", output: "Network error" } : l));
       setRunningFix(null);
+    }
+  }
+
+  async function executeMdmAction(mdmProviderId: string, mdmDeviceId: string, agentDeviceId: string, actionType: string) {
+    try {
+      const res = await fetch("/api/v1/mdm/actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mdmProviderId, mdmDeviceId, agentDeviceId, actionType }),
+      });
+      const data = await res.json();
+      if (data.action?.status === "COMPLETED") {
+        alert(`${actionType} command sent successfully.`);
+      } else if (data.action?.status === "FAILED") {
+        alert(`${actionType} failed: ${data.action.errorMessage || "Unknown error"}`);
+      }
+    } catch {
+      alert("Failed to send MDM command.");
     }
   }
 
@@ -320,6 +352,16 @@ export default function DevicesPage() {
                         {formatTimeAgo(device.lastSeenAt)}
                       </span>
                       <StatusBadge status={device.status} />
+                      {device.mdmDevices?.[0] && (() => {
+                        const mdm = device.mdmDevices[0];
+                        return (
+                          <>
+                            <Badge className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">{mdm.mdmProvider.name}</Badge>
+                            {mdm.complianceStatus === "compliant" && <Badge className="text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">Compliant</Badge>}
+                            {mdm.complianceStatus === "noncompliant" && <Badge className="text-xs bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">Non-Compliant</Badge>}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 </CardContent>
@@ -339,6 +381,7 @@ export default function DevicesPage() {
                         { id: "files", label: "Files", icon: FileText },
                         { id: "remediation", label: "Remediation", icon: Wrench },
                         { id: "compliance", label: "Compliance", icon: FileCheck },
+                        ...(device.mdmDevices?.length ? [{ id: "mdm", label: "MDM", icon: Lock }] : []),
                       ].map((tab) => (
                         <Button
                           key={tab.id}
@@ -1137,6 +1180,84 @@ export default function DevicesPage() {
                               <p className="text-xs text-muted-foreground mt-1">This device meets all compliance requirements.</p>
                             </div>
                           )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* MDM Tab */}
+                    {activeTab === "mdm" && device.mdmDevices?.[0] && (() => {
+                      const mdm = device.mdmDevices[0];
+                      return (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                              <h3 className="font-semibold text-sm flex items-center gap-1"><Lock className="h-4 w-4" /> MDM Status</h3>
+                              <div className="text-sm space-y-1">
+                                <div className="flex justify-between"><span className="text-muted-foreground">Provider</span><span>{mdm.mdmProvider.name}</span></div>
+                                <div className="flex justify-between"><span className="text-muted-foreground">Enrollment</span>
+                                  <Badge className={mdm.enrollmentStatus === "enrolled" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>{mdm.enrollmentStatus || "Unknown"}</Badge>
+                                </div>
+                                <div className="flex justify-between"><span className="text-muted-foreground">Compliance</span>
+                                  <Badge className={mdm.complianceStatus === "compliant" ? "bg-green-100 text-green-800" : mdm.complianceStatus === "noncompliant" ? "bg-red-100 text-red-800" : "bg-gray-100 text-gray-800"}>{mdm.complianceStatus || "Unknown"}</Badge>
+                                </div>
+                                <div className="flex justify-between"><span className="text-muted-foreground">Management</span><span>{mdm.managementState || "N/A"}</span></div>
+                                <div className="flex justify-between"><span className="text-muted-foreground">Encrypted</span>
+                                  <span>{mdm.isEncrypted === true ? "Yes" : mdm.isEncrypted === false ? "No" : "N/A"}</span>
+                                </div>
+                                {mdm.model && <div className="flex justify-between"><span className="text-muted-foreground">Model</span><span>{mdm.model}</span></div>}
+                                {mdm.lastCheckIn && <div className="flex justify-between"><span className="text-muted-foreground">Last Check-in</span><span>{formatTimeAgo(mdm.lastCheckIn)}</span></div>}
+                              </div>
+                            </div>
+
+                            {/* Managed Apps */}
+                            <div className="md:col-span-2 space-y-2">
+                              <h3 className="font-semibold text-sm flex items-center gap-1"><Package className="h-4 w-4" /> Managed Apps</h3>
+                              {(!mdm.managedApps || mdm.managedApps.length === 0) ? (
+                                <p className="text-xs text-muted-foreground">No managed apps reported.</p>
+                              ) : (
+                                <div className="max-h-48 overflow-y-auto border rounded">
+                                  <table className="w-full text-xs">
+                                    <thead><tr className="border-b bg-muted/30"><th className="px-2 py-1 text-left">App</th><th className="px-2 py-1 text-left">Version</th><th className="px-2 py-1 text-left">Status</th></tr></thead>
+                                    <tbody>
+                                      {mdm.managedApps.map((app, i) => (
+                                        <tr key={i} className="border-b last:border-0"><td className="px-2 py-1">{app.name}</td><td className="px-2 py-1 text-muted-foreground">{app.version}</td><td className="px-2 py-1"><Badge variant="outline" className="text-[9px]">{app.installState}</Badge></td></tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* MDM Actions */}
+                          <div className="space-y-2">
+                            <h3 className="font-semibold text-sm flex items-center gap-1"><Wrench className="h-4 w-4" /> MDM Actions</h3>
+                            <div className="flex flex-wrap gap-2">
+                              <Button size="sm" variant="outline" onClick={() => executeMdmAction(mdm.mdmProvider.id, mdm.mdmDeviceId, device.id, "sync")}>
+                                <RefreshCw className="h-3.5 w-3.5 mr-1" /> Sync
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => executeMdmAction(mdm.mdmProvider.id, mdm.mdmDeviceId, device.id, "lock")}>
+                                <Lock className="h-3.5 w-3.5 mr-1" /> Lock
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => executeMdmAction(mdm.mdmProvider.id, mdm.mdmDeviceId, device.id, "restart")}>
+                                <RefreshCw className="h-3.5 w-3.5 mr-1" /> Restart
+                              </Button>
+                              <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" onClick={() => {
+                                if (confirm(`Are you sure you want to WIPE ${device.hostname}? This cannot be undone.`)) {
+                                  executeMdmAction(mdm.mdmProvider.id, mdm.mdmDeviceId, device.id, "wipe");
+                                }
+                              }}>
+                                <Trash2 className="h-3.5 w-3.5 mr-1" /> Wipe
+                              </Button>
+                              <Button size="sm" variant="outline" className="text-orange-600" onClick={() => {
+                                if (confirm(`Retire/unenroll ${device.hostname} from MDM?`)) {
+                                  executeMdmAction(mdm.mdmProvider.id, mdm.mdmDeviceId, device.id, "retire");
+                                }
+                              }}>
+                                <XCircle className="h-3.5 w-3.5 mr-1" /> Retire
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       );
                     })()}

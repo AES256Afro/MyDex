@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Shield, Building2, Loader2 } from "lucide-react";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 export default function LoginPage() {
   return (
@@ -180,6 +181,11 @@ function LoginForm() {
                 Sign in with Microsoft
               </Button>
             </div>
+
+            <Turnstile
+              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"}
+              options={{ theme: "light", size: "normal" }}
+            />
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
               <Shield className="h-3.5 w-3.5" />

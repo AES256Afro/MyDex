@@ -32,7 +32,10 @@ type Permission =
   | "reports:schedule"
   | "settings:read"
   | "settings:write"
-  | "team:manage";
+  | "team:manage"
+  | "mdm:read"
+  | "mdm:write"
+  | "mdm:actions";
 
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   SUPER_ADMIN: [
@@ -45,6 +48,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "security:read", "security:manage",
     "reports:read", "reports:create", "reports:schedule",
     "settings:read", "settings:write", "team:manage",
+    "mdm:read", "mdm:write", "mdm:actions",
   ],
   ADMIN: [
     "employees:read", "employees:write", "employees:invite",
@@ -56,6 +60,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "security:read", "security:manage",
     "reports:read", "reports:create", "reports:schedule",
     "settings:read", "settings:write", "team:manage",
+    "mdm:read", "mdm:write", "mdm:actions",
   ],
   MANAGER: [
     "employees:read",
