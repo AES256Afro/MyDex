@@ -4865,202 +4865,443 @@ function DemoPage() {
         )}
 
         {/* Cost Optimization */}
-        {activeSection === "cost-optimization" && (
+        {activeSection === "cost-optimization" && (() => {
+          const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          const budgetData = [80, 82, 85, 88, 87, 90, 92, 94, 95, 97, 98, 100];
+          const forecastData = [null, null, null, null, null, null, null, 94, 96, 98, 99, 101];
+          const itSpend = [20, 21, 22, 21.5, 22, 23, 22.5, 24, 23.5, 25, 24, 26];
+          const revenue = [22, 23, 22.5, 24, 24.5, 25, 24, 25.5, 26, 25, 26, 26.5];
+          const ticketVol = [240, 280, 320, 350, 310, 290, 260, 300, 340, 280, 250, 220];
+          const resEff = [55, 52, 48, 45, 50, 55, 60, 58, 54, 62, 65, 70];
+          return (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold">Cost Optimization</h2>
-              <p className="text-muted-foreground">Execute cost-saving decisions across key IT initiatives and technologies</p>
+              <h2 className="text-2xl font-bold">IT Analytics & Cost Optimization</h2>
+              <p className="text-muted-foreground">From compliance, costs, and tickets to performance, security, and SLAs — analytics drives excellence across IT.</p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-4">
-              {[
-                { label: "Potential Savings", value: "$24.8K", sub: "Annual estimate", color: "text-green-600" },
-                { label: "Unused Licenses", value: "47", sub: "Across 12 applications", color: "text-yellow-600" },
-                { label: "Underutilized Devices", value: "8", sub: "Below 20% usage", color: "text-orange-600" },
-                { label: "Optimization Score", value: "72%", sub: "Room for improvement", color: "text-blue-600" },
-              ].map((s) => (
-                <Card key={s.label}>
-                  <CardContent className="pt-6">
-                    <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-                    <div className="text-xs text-muted-foreground">{s.label}</div>
-                    <div className="text-[10px] text-muted-foreground mt-0.5">{s.sub}</div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <div className="grid gap-6 lg:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Software License Optimization</CardTitle>
-                  <CardDescription>Identify unused or underutilized software licenses</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {[
-                      { app: "Microsoft 365 E5", total: 35, used: 28, cost: "$38/mo", savings: "$266/mo" },
-                      { app: "Adobe Creative Cloud", total: 15, used: 9, cost: "$55/mo", savings: "$330/mo" },
-                      { app: "Slack Business+", total: 40, used: 32, cost: "$12.50/mo", savings: "$100/mo" },
-                      { app: "Zoom Business", total: 25, used: 18, cost: "$20/mo", savings: "$140/mo" },
-                      { app: "Jira Software", total: 30, used: 27, cost: "$8/mo", savings: "$24/mo" },
-                    ].map((lic) => (
-                      <div key={lic.app} className="flex items-center justify-between py-2 border-b last:border-0">
-                        <div>
-                          <div className="text-sm font-medium">{lic.app}</div>
-                          <div className="text-xs text-muted-foreground">{lic.used}/{lic.total} seats used &middot; {lic.cost}/seat</div>
+            {/* Service Intelligence */}
+            <Card>
+              <CardHeader><CardTitle className="text-lg">Service Intelligence</CardTitle></CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-3 sm:grid-cols-5">
+                  {[
+                    { label: "Technician to ticket ratio", value: "1:40", sub: "Last quarter: 1:25", color: "text-blue-600" },
+                    { label: "Ticket resolution efficiency", value: "65%", sub: "Last quarter: 60%", color: "text-green-500" },
+                    { label: "IT spend per employee", value: "$2,400", sub: "Last quarter: $2,000", color: "text-orange-500" },
+                    { label: "Cost per incident", value: "$16", sub: "Last quarter: $18", color: "text-green-600" },
+                    { label: "Happiness index", value: "82%", sub: "Last quarter: 81%", color: "text-pink-500" },
+                  ].map((kpi) => (
+                    <div key={kpi.label} className="rounded-xl border p-4 text-center">
+                      <div className="text-[11px] font-medium text-muted-foreground mb-2">{kpi.label}</div>
+                      <div className={`text-3xl font-bold ${kpi.color}`}>{kpi.value}</div>
+                      <div className="text-[10px] text-muted-foreground mt-1">{kpi.sub}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {/* Ticket volume vs efficiency chart */}
+                  <div className="rounded-xl border p-4">
+                    <div className="text-sm font-semibold mb-1">Effect of ticket volume on efficiency</div>
+                    <div className="flex gap-4 text-[10px] text-muted-foreground mb-3">
+                      <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-green-400 inline-block" /> Resolution efficiency (%)</span>
+                      <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-blue-400 inline-block" /> Ticket volume</span>
+                    </div>
+                    <div className="flex items-end gap-[3px] h-40">
+                      {months.map((m, i) => (
+                        <div key={m} className="flex-1 flex flex-col items-center gap-0.5" title={`${m}: ${ticketVol[i]} tickets, ${resEff[i]}% eff`}>
+                          <div className="w-full flex gap-[1px]">
+                            <div className="flex-1 bg-blue-400 rounded-t" style={{ height: `${(ticketVol[i] / 400) * 140}px` }} />
+                            <div className="flex-1 bg-green-400 rounded-t" style={{ height: `${(resEff[i] / 100) * 140}px` }} />
+                          </div>
+                          <span className="text-[8px] text-muted-foreground">{m}</span>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium text-green-600">{lic.savings}</div>
-                          <div className="text-[10px] text-muted-foreground">potential savings</div>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Hardware Lifecycle Analysis</CardTitle>
-                  <CardDescription>Device age and replacement recommendations</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {[
-                      { age: "0-1 years", count: 12, pct: 30, color: "bg-green-500", status: "Optimal" },
-                      { age: "1-2 years", count: 15, pct: 38, color: "bg-blue-500", status: "Good" },
-                      { age: "2-3 years", count: 8, pct: 20, color: "bg-yellow-500", status: "Monitor" },
-                      { age: "3-4 years", count: 3, pct: 8, color: "bg-orange-500", status: "Plan Replacement" },
-                      { age: "4+ years", count: 2, pct: 5, color: "bg-red-500", status: "Replace" },
-                    ].map((item) => (
-                      <div key={item.age} className="flex items-center gap-3">
-                        <span className="text-sm w-20">{item.age}</span>
-                        <div className="flex-1 bg-muted rounded-full h-2">
-                          <div className={`h-2 rounded-full ${item.color}`} style={{ width: `${item.pct}%` }} />
-                        </div>
-                        <span className="text-sm w-8 text-right">{item.count}</span>
-                        <Badge variant="outline" className="text-[10px] w-28 justify-center">{item.status}</Badge>
+                  {/* IT spend vs productivity */}
+                  <div className="rounded-xl border p-4">
+                    <div className="text-sm font-semibold mb-1">IT spend vs productivity</div>
+                    <div className="flex gap-4 text-[10px] text-muted-foreground mb-3">
+                      <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-blue-400 inline-block" /> IT spend (%)</span>
+                      <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-pink-400 inline-block" /> Productivity (%)</span>
+                    </div>
+                    <div className="relative h-40">
+                      <svg viewBox="0 0 480 160" className="w-full h-full" preserveAspectRatio="none">
+                        <polyline fill="none" stroke="#60a5fa" strokeWidth="2" points={months.map((_, i) => `${i * (480 / 11)},${160 - (itSpend[i] - 18) * 18}`).join(" ")} />
+                        <polyline fill="none" stroke="#f472b6" strokeWidth="2" points={months.map((_, i) => `${i * (480 / 11)},${160 - (revenue[i] - 18) * 18}`).join(" ")} />
+                        {itSpend.map((v, i) => <circle key={`s${i}`} cx={i * (480 / 11)} cy={160 - (v - 18) * 18} r="3" fill="#60a5fa" />)}
+                        {revenue.map((v, i) => <circle key={`r${i}`} cx={i * (480 / 11)} cy={160 - (v - 18) * 18} r="3" fill="#f472b6" />)}
+                      </svg>
+                      <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[8px] text-muted-foreground px-1">
+                        {months.map((m) => <span key={m}>{m}</span>)}
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* IT Financial Analytics */}
+            <Card>
+              <CardHeader><CardTitle className="text-lg">IT Financial Analytics</CardTitle></CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-3 sm:grid-cols-5">
+                  {[
+                    { label: "Predicted budget overshoot", value: "-$27K", sub: "YTD Last year: -$16.4K", color: "text-red-500" },
+                    { label: "IT spend rate", value: "$226/day", sub: "Last quarter: $214/day", color: "text-orange-500" },
+                    { label: "IT spend to value ratio", value: "1:3", sub: "Last quarter: 1:2", color: "text-green-500" },
+                    { label: "Infra replacement frequency", value: "3 years", sub: "", color: "text-blue-600" },
+                    { label: "ROI index", value: "7.6", sub: "Last quarter: 6.4", color: "text-green-600" },
+                  ].map((kpi) => (
+                    <div key={kpi.label} className="rounded-xl border p-4 text-center">
+                      <div className="text-[11px] font-medium text-muted-foreground mb-2">{kpi.label}</div>
+                      <div className={`text-3xl font-bold ${kpi.color}`}>{kpi.value}</div>
+                      {kpi.sub && <div className="text-[10px] text-muted-foreground mt-1">{kpi.sub}</div>}
+                    </div>
+                  ))}
+                </div>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {/* Budget usage forecast */}
+                  <div className="rounded-xl border p-4">
+                    <div className="text-sm font-semibold mb-1">IT budget usage forecast</div>
+                    <div className="flex gap-4 text-[10px] text-muted-foreground mb-3">
+                      <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-indigo-400 inline-block" /> Total IT budget usage</span>
+                      <span className="flex items-center gap-1"><span className="h-[1px] w-3 bg-blue-300 inline-block" /> Forecasted usage</span>
+                    </div>
+                    <div className="relative h-40">
+                      <svg viewBox="0 0 480 160" className="w-full h-full" preserveAspectRatio="none">
+                        <defs>
+                          <linearGradient id="budgetFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#818cf8" stopOpacity="0.3" />
+                            <stop offset="100%" stopColor="#818cf8" stopOpacity="0.05" />
+                          </linearGradient>
+                        </defs>
+                        <polygon fill="url(#budgetFill)" points={`0,160 ${budgetData.map((v, i) => `${i * (480 / 11)},${160 - (v - 75) * 5.5}`).join(" ")} ${11 * (480 / 11)},160`} />
+                        <polyline fill="none" stroke="#818cf8" strokeWidth="2.5" points={budgetData.map((v, i) => `${i * (480 / 11)},${160 - (v - 75) * 5.5}`).join(" ")} />
+                        <polyline fill="none" stroke="#93c5fd" strokeWidth="1.5" strokeDasharray="4,3" points={forecastData.map((v, i) => v !== null ? `${i * (480 / 11)},${160 - (v - 75) * 5.5}` : "").filter(Boolean).join(" ")} />
+                        {budgetData.map((v, i) => <circle key={i} cx={i * (480 / 11)} cy={160 - (v - 75) * 5.5} r="2.5" fill="#818cf8" />)}
+                      </svg>
+                      <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[8px] text-muted-foreground px-1">
+                        {months.map((m) => <span key={m}>{m}</span>)}
+                      </div>
+                      <div className="absolute left-0 top-0 bottom-4 flex flex-col justify-between text-[8px] text-muted-foreground">
+                        <span>$100K</span><span>$90K</span><span>$80K</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* IT spend vs revenue per employee */}
+                  <div className="rounded-xl border p-4">
+                    <div className="text-sm font-semibold mb-1">IT spend vs revenue per employee</div>
+                    <div className="flex gap-4 text-[10px] text-muted-foreground mb-3">
+                      <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-pink-400 inline-block" /> IT spend ($)</span>
+                      <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-green-400 inline-block" /> Revenue per employee ($)</span>
+                    </div>
+                    <div className="relative h-40">
+                      <svg viewBox="0 0 480 160" className="w-full h-full" preserveAspectRatio="none">
+                        <polyline fill="none" stroke="#f472b6" strokeWidth="2" points={itSpend.map((v, i) => `${i * (480 / 11)},${160 - (v - 18) * 18}`).join(" ")} />
+                        <polyline fill="none" stroke="#4ade80" strokeWidth="2" points={revenue.map((v, i) => `${i * (480 / 11)},${160 - (v - 18) * 18}`).join(" ")} />
+                        {itSpend.map((v, i) => <circle key={`s${i}`} cx={i * (480 / 11)} cy={160 - (v - 18) * 18} r="3" fill="#f472b6" />)}
+                        {revenue.map((v, i) => <circle key={`r${i}`} cx={i * (480 / 11)} cy={160 - (v - 18) * 18} r="3" fill="#4ade80" />)}
+                      </svg>
+                      <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[8px] text-muted-foreground px-1">
+                        {months.map((m) => <span key={m}>{m}</span>)}
+                      </div>
+                      <div className="absolute left-0 top-0 bottom-4 flex flex-col justify-between text-[8px] text-muted-foreground">
+                        <span>$26K</span><span>$22K</span><span>$18K</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* License Optimization */}
+            <Card>
+              <CardHeader><CardTitle className="text-lg">Software License Optimization</CardTitle></CardHeader>
+              <CardContent>
+                <div className="grid gap-3 sm:grid-cols-4 mb-6">
+                  {[
+                    { label: "Total license spend", value: "$14.2K/mo", sub: "Last quarter: $12.8K/mo", color: "text-blue-600" },
+                    { label: "Unused licenses", value: "47", sub: "Across 12 applications", color: "text-red-500" },
+                    { label: "Potential monthly savings", value: "$860", sub: "$10,320/year", color: "text-green-600" },
+                    { label: "License utilization", value: "78%", sub: "Last quarter: 74%", color: "text-orange-500" },
+                  ].map((kpi) => (
+                    <div key={kpi.label} className="rounded-xl border p-4 text-center">
+                      <div className="text-[11px] font-medium text-muted-foreground mb-2">{kpi.label}</div>
+                      <div className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</div>
+                      <div className="text-[10px] text-muted-foreground mt-1">{kpi.sub}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/30">
+                        <th className="text-left p-3 font-medium text-muted-foreground">Application</th>
+                        <th className="text-center p-3 font-medium text-muted-foreground">Total</th>
+                        <th className="text-center p-3 font-medium text-muted-foreground">Used</th>
+                        <th className="text-center p-3 font-medium text-muted-foreground">Unused</th>
+                        <th className="text-center p-3 font-medium text-muted-foreground">Utilization</th>
+                        <th className="text-right p-3 font-medium text-muted-foreground">Cost/seat</th>
+                        <th className="text-right p-3 font-medium text-muted-foreground">Savings/mo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { app: "Microsoft 365 E5", total: 35, used: 28, cost: 38 },
+                        { app: "Adobe Creative Cloud", total: 15, used: 9, cost: 55 },
+                        { app: "Slack Business+", total: 40, used: 32, cost: 12.5 },
+                        { app: "Zoom Business", total: 25, used: 18, cost: 20 },
+                        { app: "Jira Software", total: 30, used: 27, cost: 8 },
+                        { app: "Figma Organization", total: 12, used: 10, cost: 45 },
+                      ].map((lic) => {
+                        const unused = lic.total - lic.used;
+                        const util = Math.round((lic.used / lic.total) * 100);
+                        return (
+                          <tr key={lic.app} className="border-b last:border-0 hover:bg-muted/50">
+                            <td className="p-3 font-medium">{lic.app}</td>
+                            <td className="p-3 text-center">{lic.total}</td>
+                            <td className="p-3 text-center text-green-600">{lic.used}</td>
+                            <td className="p-3 text-center text-red-500">{unused}</td>
+                            <td className="p-3 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <div className="w-16 bg-muted rounded-full h-1.5">
+                                  <div className={`h-1.5 rounded-full ${util >= 80 ? "bg-green-500" : util >= 60 ? "bg-yellow-500" : "bg-red-500"}`} style={{ width: `${util}%` }} />
+                                </div>
+                                <span className="text-xs">{util}%</span>
+                              </div>
+                            </td>
+                            <td className="p-3 text-right">${lic.cost}</td>
+                            <td className="p-3 text-right font-medium text-green-600">${unused * lic.cost}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Hardware Lifecycle */}
+            <Card>
+              <CardHeader><CardTitle className="text-lg">Hardware Lifecycle & Replacement</CardTitle></CardHeader>
+              <CardContent>
+                <div className="grid gap-3 sm:grid-cols-4 mb-6">
+                  {[
+                    { label: "Avg device age", value: "2.1 yrs", sub: "Last year: 1.8 yrs", color: "text-blue-600" },
+                    { label: "Devices due for refresh", value: "5", sub: "Within 6 months", color: "text-orange-500" },
+                    { label: "Replacement budget", value: "$18K", sub: "Estimated annual", color: "text-red-500" },
+                    { label: "Fleet health score", value: "84%", sub: "Last quarter: 81%", color: "text-green-600" },
+                  ].map((kpi) => (
+                    <div key={kpi.label} className="rounded-xl border p-4 text-center">
+                      <div className="text-[11px] font-medium text-muted-foreground mb-2">{kpi.label}</div>
+                      <div className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</div>
+                      <div className="text-[10px] text-muted-foreground mt-1">{kpi.sub}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="rounded-xl border p-4">
+                    <div className="text-sm font-semibold mb-4">Device age distribution</div>
+                    <div className="space-y-3">
+                      {[
+                        { age: "0-1 years", count: 12, pct: 30, color: "bg-green-500" },
+                        { age: "1-2 years", count: 15, pct: 38, color: "bg-blue-500" },
+                        { age: "2-3 years", count: 8, pct: 20, color: "bg-yellow-500" },
+                        { age: "3-4 years", count: 3, pct: 8, color: "bg-orange-500" },
+                        { age: "4+ years", count: 2, pct: 5, color: "bg-red-500" },
+                      ].map((item) => (
+                        <div key={item.age} className="flex items-center gap-3">
+                          <span className="text-sm w-20 text-muted-foreground">{item.age}</span>
+                          <div className="flex-1 bg-muted rounded-full h-4">
+                            <div className={`h-4 rounded-full ${item.color} flex items-center justify-end pr-2`} style={{ width: `${Math.max(item.pct, 10)}%` }}>
+                              {item.pct > 15 && <span className="text-[9px] text-white font-medium">{item.count}</span>}
+                            </div>
+                          </div>
+                          <span className="text-sm w-10 text-right font-medium">{item.pct}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border p-4">
+                    <div className="text-sm font-semibold mb-4">Replacement forecast (next 12 months)</div>
+                    <div className="flex items-end gap-1 h-36">
+                      {[2, 1, 0, 3, 1, 2, 0, 1, 4, 2, 1, 0].map((v, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                          {v > 0 && <span className="text-[9px] font-medium">{v}</span>}
+                          <div className="w-full bg-orange-400 rounded-t" style={{ height: `${Math.max(v * 25, 2)}px` }} />
+                          <span className="text-[8px] text-muted-foreground">{months[i]}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        )}
+          );
+        })()}
 
         {/* Sustainability */}
-        {activeSection === "sustainability" && (
+        {activeSection === "sustainability" && (() => {
+          const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          const co2Data = [3.2, 3.0, 2.9, 2.8, 2.7, 2.6, 2.5, 2.5, 2.4, 2.4, 2.3, 2.2];
+          const energyData = [3200, 3100, 3050, 2980, 2900, 2850, 2800, 2780, 2730, 2700, 2680, 2650];
+          return (
           <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-bold">Sustainability & Green IT</h2>
-              <p className="text-muted-foreground">Drive sustainability through and within IT — reduce environmental impact with data-driven insights</p>
+              <p className="text-muted-foreground">Drive sustainability through and within IT — leverage smart technology and data-driven insights to reduce environmental impact</p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-4">
+            {/* Top KPIs */}
+            <div className="grid gap-3 sm:grid-cols-5">
               {[
-                { label: "Carbon Footprint", value: "2.4t", sub: "CO₂e this quarter", color: "text-green-600" },
-                { label: "Energy Savings", value: "18%", sub: "vs last quarter", color: "text-blue-600" },
-                { label: "Devices in Sleep Mode", value: "89%", sub: "After-hours compliance", color: "text-green-600" },
-                { label: "Green Score", value: "B+", sub: "Organization rating", color: "text-green-600" },
-              ].map((s) => (
-                <Card key={s.label}>
-                  <CardContent className="pt-6">
-                    <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-                    <div className="text-xs text-muted-foreground">{s.label}</div>
-                    <div className="text-[10px] text-muted-foreground mt-0.5">{s.sub}</div>
-                  </CardContent>
-                </Card>
+                { label: "Carbon footprint", value: "2.4t", sub: "CO₂e this quarter", color: "text-green-600" },
+                { label: "Energy reduction", value: "18%", sub: "vs last quarter", color: "text-green-500" },
+                { label: "Power cost savings", value: "$4.2K", sub: "YTD: $3.1K last year", color: "text-blue-600" },
+                { label: "Sleep mode compliance", value: "89%", sub: "Last quarter: 82%", color: "text-green-600" },
+                { label: "Green IT score", value: "B+", sub: "Last quarter: B", color: "text-green-500" },
+              ].map((kpi) => (
+                <div key={kpi.label} className="rounded-xl border p-4 text-center">
+                  <div className="text-[11px] font-medium text-muted-foreground mb-2">{kpi.label}</div>
+                  <div className={`text-3xl font-bold ${kpi.color}`}>{kpi.value}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">{kpi.sub}</div>
+                </div>
               ))}
             </div>
 
+            {/* Charts */}
             <div className="grid gap-6 lg:grid-cols-2">
+              {/* CO2 trend */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Energy Consumption by Category</CardTitle>
-                  <CardDescription>Estimated power usage across your device fleet</CardDescription>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-base">Carbon emissions trend (tCO₂e)</CardTitle></CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {[
-                      { category: "Desktops", kwh: 1240, pct: 45, color: "bg-blue-500" },
-                      { category: "Laptops", kwh: 680, pct: 25, color: "bg-green-500" },
-                      { category: "Monitors", kwh: 520, pct: 19, color: "bg-yellow-500" },
-                      { category: "Peripherals", kwh: 180, pct: 7, color: "bg-purple-500" },
-                      { category: "Networking", kwh: 110, pct: 4, color: "bg-gray-500" },
-                    ].map((item) => (
-                      <div key={item.category} className="flex items-center gap-3">
-                        <span className="text-sm w-24">{item.category}</span>
-                        <div className="flex-1 bg-muted rounded-full h-3">
-                          <div className={`h-3 rounded-full ${item.color}`} style={{ width: `${item.pct}%` }} />
-                        </div>
-                        <span className="text-sm w-20 text-right">{item.kwh} kWh</span>
-                        <span className="text-xs text-muted-foreground w-10 text-right">{item.pct}%</span>
+                  <div className="relative h-44">
+                    <svg viewBox="0 0 480 160" className="w-full h-full" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="co2Fill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#4ade80" stopOpacity="0.3" />
+                          <stop offset="100%" stopColor="#4ade80" stopOpacity="0.02" />
+                        </linearGradient>
+                      </defs>
+                      <polygon fill="url(#co2Fill)" points={`0,160 ${co2Data.map((v, i) => `${i * (480 / 11)},${160 - (v - 2) * 120}`).join(" ")} ${11 * (480 / 11)},160`} />
+                      <polyline fill="none" stroke="#4ade80" strokeWidth="2.5" points={co2Data.map((v, i) => `${i * (480 / 11)},${160 - (v - 2) * 120}`).join(" ")} />
+                      {co2Data.map((v, i) => <circle key={i} cx={i * (480 / 11)} cy={160 - (v - 2) * 120} r="3" fill="#4ade80" />)}
+                    </svg>
+                    <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[8px] text-muted-foreground px-1">
+                      {months.map((m) => <span key={m}>{m}</span>)}
+                    </div>
+                    <div className="absolute left-0 top-0 bottom-4 flex flex-col justify-between text-[8px] text-muted-foreground">
+                      <span>3.2t</span><span>2.6t</span><span>2.0t</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Energy consumption trend */}
+              <Card>
+                <CardHeader><CardTitle className="text-base">Monthly energy consumption (kWh)</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="flex items-end gap-[3px] h-44">
+                    {months.map((m, i) => (
+                      <div key={m} className="flex-1 flex flex-col items-center gap-0.5">
+                        <span className="text-[8px] text-muted-foreground">{energyData[i]}</span>
+                        <div className="w-full bg-blue-400 rounded-t" style={{ height: `${((energyData[i] - 2400) / 900) * 140}px` }} />
+                        <span className="text-[8px] text-muted-foreground">{m}</span>
                       </div>
                     ))}
-                    <div className="border-t pt-3 flex justify-between text-sm">
-                      <span className="font-medium">Total Estimated</span>
-                      <span className="font-bold">2,730 kWh/month</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Energy breakdown + recommendations */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader><CardTitle className="text-base">Energy by device category</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="flex gap-6">
+                    {/* Donut chart mockup */}
+                    <div className="flex-shrink-0">
+                      <svg viewBox="0 0 120 120" className="w-28 h-28">
+                        <circle cx="60" cy="60" r="50" fill="none" stroke="#e5e7eb" strokeWidth="20" />
+                        <circle cx="60" cy="60" r="50" fill="none" stroke="#3b82f6" strokeWidth="20" strokeDasharray="141 314" strokeDashoffset="0" className="origin-center -rotate-90" />
+                        <circle cx="60" cy="60" r="50" fill="none" stroke="#22c55e" strokeWidth="20" strokeDasharray="79 314" strokeDashoffset="-141" className="origin-center -rotate-90" />
+                        <circle cx="60" cy="60" r="50" fill="none" stroke="#eab308" strokeWidth="20" strokeDasharray="60 314" strokeDashoffset="-220" className="origin-center -rotate-90" />
+                        <circle cx="60" cy="60" r="50" fill="none" stroke="#a855f7" strokeWidth="20" strokeDasharray="22 314" strokeDashoffset="-280" className="origin-center -rotate-90" />
+                        <text x="60" y="56" textAnchor="middle" className="text-[11px] font-bold fill-foreground">2,730</text>
+                        <text x="60" y="70" textAnchor="middle" className="text-[8px] fill-muted-foreground">kWh/mo</text>
+                      </svg>
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      {[
+                        { label: "Desktops", value: "1,240 kWh", pct: "45%", color: "bg-blue-500" },
+                        { label: "Laptops", value: "680 kWh", pct: "25%", color: "bg-green-500" },
+                        { label: "Monitors", value: "520 kWh", pct: "19%", color: "bg-yellow-500" },
+                        { label: "Peripherals", value: "180 kWh", pct: "7%", color: "bg-purple-500" },
+                        { label: "Networking", value: "110 kWh", pct: "4%", color: "bg-gray-400" },
+                      ].map((item) => (
+                        <div key={item.label} className="flex items-center gap-2 text-sm">
+                          <span className={`h-3 w-3 rounded-sm ${item.color} flex-shrink-0`} />
+                          <span className="flex-1">{item.label}</span>
+                          <span className="text-muted-foreground">{item.value}</span>
+                          <span className="font-medium w-8 text-right">{item.pct}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Sustainability Recommendations</CardTitle>
-                  <CardDescription>Actions to reduce your environmental impact</CardDescription>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-base">Sustainability actions</CardTitle></CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     {[
-                      { action: "Enable power management policies", impact: "High", savings: "~320 kWh/mo", status: "Not configured" },
-                      { action: "Schedule after-hours sleep mode", impact: "High", savings: "~280 kWh/mo", status: "Partial" },
-                      { action: "Consolidate underused devices", impact: "Medium", savings: "~150 kWh/mo", status: "8 candidates" },
-                      { action: "Optimize display brightness policies", impact: "Low", savings: "~60 kWh/mo", status: "Not configured" },
-                      { action: "Enable USB device auto-suspend", impact: "Low", savings: "~30 kWh/mo", status: "Not configured" },
+                      { action: "Enable power management policies", impact: "High", savings: "~320 kWh/mo", color: "text-red-500" },
+                      { action: "Schedule after-hours sleep mode", impact: "High", savings: "~280 kWh/mo", color: "text-red-500" },
+                      { action: "Consolidate underused devices", impact: "Medium", savings: "~150 kWh/mo", color: "text-orange-500" },
+                      { action: "Optimize display brightness", impact: "Low", savings: "~60 kWh/mo", color: "text-yellow-600" },
+                      { action: "Enable USB auto-suspend", impact: "Low", savings: "~30 kWh/mo", color: "text-yellow-600" },
                     ].map((rec) => (
-                      <div key={rec.action} className="p-3 rounded-lg border">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{rec.action}</span>
-                          <Badge variant={rec.impact === "High" ? "destructive" : rec.impact === "Medium" ? "warning" : "secondary"}>
-                            {rec.impact} Impact
-                          </Badge>
+                      <div key={rec.action} className="flex items-center gap-3 py-2 border-b last:border-0">
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">{rec.action}</div>
+                          <div className="text-xs text-muted-foreground">Est. savings: {rec.savings}</div>
                         </div>
-                        <div className="flex items-center justify-between mt-1.5">
-                          <span className="text-xs text-muted-foreground">Est. savings: {rec.savings}</span>
-                          <span className="text-xs text-muted-foreground">{rec.status}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle className="text-base">Digital Workplace Awareness</CardTitle>
-                  <CardDescription>Foster awareness and enhance adoption of sustainable digital practices</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    {[
-                      { title: "Employee Education", desc: "Automated tips and nudges about energy-saving practices, sent via notification when wasteful patterns are detected.", metric: "234 nudges sent this month" },
-                      { title: "Department Leaderboard", desc: "Gamified sustainability scoring by department — encouraging friendly competition around green IT practices.", metric: "Engineering leads with 92/100" },
-                      { title: "Impact Dashboard", desc: "Visualize the real environmental impact of your IT decisions — equivalent trees planted, carbon offset, energy saved.", metric: "Equivalent of 12 trees planted" },
-                    ].map((item) => (
-                      <div key={item.title} className="p-4 rounded-xl border bg-green-50/30 dark:bg-green-950/10">
-                        <h4 className="font-semibold text-sm">{item.title}</h4>
-                        <p className="text-xs text-muted-foreground mt-1">{item.desc}</p>
-                        <p className="text-xs font-medium text-green-700 dark:text-green-400 mt-2">{item.metric}</p>
+                        <Badge variant="outline" className={`${rec.color} border-current`}>{rec.impact}</Badge>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Awareness */}
+            <Card>
+              <CardHeader><CardTitle className="text-base">Digital Workplace Awareness</CardTitle></CardHeader>
+              <CardContent>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    { label: "Employee nudges sent", value: "234", sub: "This month", color: "text-green-600", icon: "Automated tips about energy-saving practices" },
+                    { label: "Top department", value: "Engineering", sub: "Score: 92/100", color: "text-blue-600", icon: "Gamified sustainability leaderboard" },
+                    { label: "Environmental equivalent", value: "12 trees", sub: "CO₂ offset this quarter", color: "text-green-600", icon: "Real impact of your IT decisions" },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-xl border p-4 text-center bg-green-50/30 dark:bg-green-950/10">
+                      <div className="text-[11px] font-medium text-muted-foreground mb-2">{item.icon}</div>
+                      <div className={`text-2xl font-bold ${item.color}`}>{item.value}</div>
+                      <div className="text-xs font-medium mt-1">{item.label}</div>
+                      <div className="text-[10px] text-muted-foreground">{item.sub}</div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        )}
+          );
+        })()}
 
         </div>
       </main>
