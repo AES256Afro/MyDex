@@ -127,6 +127,15 @@ export const MODULE_REGISTRY: ModuleConfig[] = [
 
   // Security — admin only
   {
+    id: "fleet-health",
+    label: "Fleet Health",
+    href: "/fleet-health",
+    description: "DEX scores, OS compliance, agent status, and proactive health alerts",
+    minRole: "ADMIN",
+    configurable: false,
+    category: "security",
+  },
+  {
     id: "devices",
     label: "Devices",
     href: "/devices",
@@ -255,6 +264,15 @@ export const MODULE_REGISTRY: ModuleConfig[] = [
     label: "Branding",
     href: "/settings/branding",
     description: "Customize logo, company name, and brand colors",
+    minRole: "ADMIN",
+    configurable: false,
+    category: "admin",
+  },
+  {
+    id: "alert-thresholds",
+    label: "Alert Thresholds",
+    href: "/settings/alerts",
+    description: "Customize alert thresholds, workflows, and auto-remediation rules",
     minRole: "ADMIN",
     configurable: false,
     category: "admin",

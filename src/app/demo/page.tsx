@@ -4,7 +4,7 @@ import { useState, useEffect, Fragment, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -567,7 +567,7 @@ const sectionGroups = [
     items: [
       { id: "activity", label: "Activity", icon: Activity },
       { id: "productivity", label: "Productivity", icon: Brain },
-      { id: "fleet-health", label: "Fleet Health", icon: Activity },
+      { id: "fleet-health", label: "Fleet Health & DEX", icon: Activity },
     ],
   },
   {
@@ -612,6 +612,14 @@ const sectionGroups = [
       { id: "sso-providers", label: "SSO Providers", icon: LinkIcon },
       { id: "module-access", label: "Module Access", icon: Layers },
       { id: "agent-setup", label: "Agent Setup", icon: Download },
+      { id: "alert-thresholds", label: "Alert Thresholds", icon: Bell },
+    ],
+  },
+  {
+    category: "INSIGHTS",
+    items: [
+      { id: "cost-optimization", label: "Cost Optimization", icon: TrendingUp },
+      { id: "sustainability", label: "Sustainability", icon: Leaf },
     ],
   },
 ];
@@ -4799,6 +4807,260 @@ function DemoPage() {
             </div>
           );
         })()}
+
+        {/* Alert Thresholds */}
+        {activeSection === "alert-thresholds" && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold">Alert Thresholds</h2>
+              <p className="text-muted-foreground">Customize alert thresholds and workflows to proactively identify issues</p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-4">
+              {[
+                { label: "Active Rules", value: "10", color: "text-primary" },
+                { label: "Email Alerts", value: "5", color: "text-blue-600" },
+                { label: "Auto-Remediate", value: "3", color: "text-yellow-600" },
+                { label: "Critical Rules", value: "4", color: "text-red-600" },
+              ].map((s) => (
+                <Card key={s.label}>
+                  <CardContent className="pt-6">
+                    <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+                    <div className="text-xs text-muted-foreground">{s.label}</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {[
+              { name: "DEX Score Drop", desc: "Alert when device DEX score falls below threshold", threshold: "50", unit: "score", severity: "HIGH", auto: true },
+              { name: "Device Offline Duration", desc: "Alert when managed device hasn't checked in", threshold: "24", unit: "hours", severity: "MEDIUM", auto: false },
+              { name: "BSOD Frequency", desc: "Blue screen crashes exceeding limit in 30 days", threshold: "3", unit: "crashes", severity: "CRITICAL", auto: true },
+              { name: "Update Non-Compliance", desc: "Pending updates exceeding allowed duration", threshold: "14", unit: "days", severity: "MEDIUM", auto: true },
+              { name: "Unauthorized Application", desc: "Blacklisted application detected on device", threshold: "1", unit: "occurrence", severity: "HIGH", auto: false },
+              { name: "Missing Antivirus", desc: "No antivirus or Defender disabled", threshold: "1", unit: "detection", severity: "CRITICAL", auto: false },
+            ].map((rule) => (
+              <Card key={rule.name}>
+                <CardContent className="py-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{rule.name}</span>
+                        <Badge variant={rule.severity === "CRITICAL" ? "destructive" : rule.severity === "HIGH" ? "warning" : "secondary"}>{rule.severity}</Badge>
+                        {rule.auto && <Badge variant="outline" className="text-[10px]"><Zap className="h-3 w-3 mr-0.5" />Auto-fix</Badge>}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">{rule.desc}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-mono bg-muted px-2 py-1 rounded">{rule.threshold} {rule.unit}</span>
+                      <div className="w-9 h-5 bg-primary rounded-full relative">
+                        <div className="absolute top-[2px] right-[2px] bg-white border border-gray-300 rounded-full h-4 w-4" />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Cost Optimization */}
+        {activeSection === "cost-optimization" && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold">Cost Optimization</h2>
+              <p className="text-muted-foreground">Execute cost-saving decisions across key IT initiatives and technologies</p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-4">
+              {[
+                { label: "Potential Savings", value: "$24.8K", sub: "Annual estimate", color: "text-green-600" },
+                { label: "Unused Licenses", value: "47", sub: "Across 12 applications", color: "text-yellow-600" },
+                { label: "Underutilized Devices", value: "8", sub: "Below 20% usage", color: "text-orange-600" },
+                { label: "Optimization Score", value: "72%", sub: "Room for improvement", color: "text-blue-600" },
+              ].map((s) => (
+                <Card key={s.label}>
+                  <CardContent className="pt-6">
+                    <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+                    <div className="text-xs text-muted-foreground">{s.label}</div>
+                    <div className="text-[10px] text-muted-foreground mt-0.5">{s.sub}</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Software License Optimization</CardTitle>
+                  <CardDescription>Identify unused or underutilized software licenses</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {[
+                      { app: "Microsoft 365 E5", total: 35, used: 28, cost: "$38/mo", savings: "$266/mo" },
+                      { app: "Adobe Creative Cloud", total: 15, used: 9, cost: "$55/mo", savings: "$330/mo" },
+                      { app: "Slack Business+", total: 40, used: 32, cost: "$12.50/mo", savings: "$100/mo" },
+                      { app: "Zoom Business", total: 25, used: 18, cost: "$20/mo", savings: "$140/mo" },
+                      { app: "Jira Software", total: 30, used: 27, cost: "$8/mo", savings: "$24/mo" },
+                    ].map((lic) => (
+                      <div key={lic.app} className="flex items-center justify-between py-2 border-b last:border-0">
+                        <div>
+                          <div className="text-sm font-medium">{lic.app}</div>
+                          <div className="text-xs text-muted-foreground">{lic.used}/{lic.total} seats used &middot; {lic.cost}/seat</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-green-600">{lic.savings}</div>
+                          <div className="text-[10px] text-muted-foreground">potential savings</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Hardware Lifecycle Analysis</CardTitle>
+                  <CardDescription>Device age and replacement recommendations</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {[
+                      { age: "0-1 years", count: 12, pct: 30, color: "bg-green-500", status: "Optimal" },
+                      { age: "1-2 years", count: 15, pct: 38, color: "bg-blue-500", status: "Good" },
+                      { age: "2-3 years", count: 8, pct: 20, color: "bg-yellow-500", status: "Monitor" },
+                      { age: "3-4 years", count: 3, pct: 8, color: "bg-orange-500", status: "Plan Replacement" },
+                      { age: "4+ years", count: 2, pct: 5, color: "bg-red-500", status: "Replace" },
+                    ].map((item) => (
+                      <div key={item.age} className="flex items-center gap-3">
+                        <span className="text-sm w-20">{item.age}</span>
+                        <div className="flex-1 bg-muted rounded-full h-2">
+                          <div className={`h-2 rounded-full ${item.color}`} style={{ width: `${item.pct}%` }} />
+                        </div>
+                        <span className="text-sm w-8 text-right">{item.count}</span>
+                        <Badge variant="outline" className="text-[10px] w-28 justify-center">{item.status}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Sustainability */}
+        {activeSection === "sustainability" && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold">Sustainability & Green IT</h2>
+              <p className="text-muted-foreground">Drive sustainability through and within IT — reduce environmental impact with data-driven insights</p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-4">
+              {[
+                { label: "Carbon Footprint", value: "2.4t", sub: "CO₂e this quarter", color: "text-green-600" },
+                { label: "Energy Savings", value: "18%", sub: "vs last quarter", color: "text-blue-600" },
+                { label: "Devices in Sleep Mode", value: "89%", sub: "After-hours compliance", color: "text-green-600" },
+                { label: "Green Score", value: "B+", sub: "Organization rating", color: "text-green-600" },
+              ].map((s) => (
+                <Card key={s.label}>
+                  <CardContent className="pt-6">
+                    <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+                    <div className="text-xs text-muted-foreground">{s.label}</div>
+                    <div className="text-[10px] text-muted-foreground mt-0.5">{s.sub}</div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Energy Consumption by Category</CardTitle>
+                  <CardDescription>Estimated power usage across your device fleet</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[
+                      { category: "Desktops", kwh: 1240, pct: 45, color: "bg-blue-500" },
+                      { category: "Laptops", kwh: 680, pct: 25, color: "bg-green-500" },
+                      { category: "Monitors", kwh: 520, pct: 19, color: "bg-yellow-500" },
+                      { category: "Peripherals", kwh: 180, pct: 7, color: "bg-purple-500" },
+                      { category: "Networking", kwh: 110, pct: 4, color: "bg-gray-500" },
+                    ].map((item) => (
+                      <div key={item.category} className="flex items-center gap-3">
+                        <span className="text-sm w-24">{item.category}</span>
+                        <div className="flex-1 bg-muted rounded-full h-3">
+                          <div className={`h-3 rounded-full ${item.color}`} style={{ width: `${item.pct}%` }} />
+                        </div>
+                        <span className="text-sm w-20 text-right">{item.kwh} kWh</span>
+                        <span className="text-xs text-muted-foreground w-10 text-right">{item.pct}%</span>
+                      </div>
+                    ))}
+                    <div className="border-t pt-3 flex justify-between text-sm">
+                      <span className="font-medium">Total Estimated</span>
+                      <span className="font-bold">2,730 kWh/month</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Sustainability Recommendations</CardTitle>
+                  <CardDescription>Actions to reduce your environmental impact</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {[
+                      { action: "Enable power management policies", impact: "High", savings: "~320 kWh/mo", status: "Not configured" },
+                      { action: "Schedule after-hours sleep mode", impact: "High", savings: "~280 kWh/mo", status: "Partial" },
+                      { action: "Consolidate underused devices", impact: "Medium", savings: "~150 kWh/mo", status: "8 candidates" },
+                      { action: "Optimize display brightness policies", impact: "Low", savings: "~60 kWh/mo", status: "Not configured" },
+                      { action: "Enable USB device auto-suspend", impact: "Low", savings: "~30 kWh/mo", status: "Not configured" },
+                    ].map((rec) => (
+                      <div key={rec.action} className="p-3 rounded-lg border">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">{rec.action}</span>
+                          <Badge variant={rec.impact === "High" ? "destructive" : rec.impact === "Medium" ? "warning" : "secondary"}>
+                            {rec.impact} Impact
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between mt-1.5">
+                          <span className="text-xs text-muted-foreground">Est. savings: {rec.savings}</span>
+                          <span className="text-xs text-muted-foreground">{rec.status}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-base">Digital Workplace Awareness</CardTitle>
+                  <CardDescription>Foster awareness and enhance adoption of sustainable digital practices</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    {[
+                      { title: "Employee Education", desc: "Automated tips and nudges about energy-saving practices, sent via notification when wasteful patterns are detected.", metric: "234 nudges sent this month" },
+                      { title: "Department Leaderboard", desc: "Gamified sustainability scoring by department — encouraging friendly competition around green IT practices.", metric: "Engineering leads with 92/100" },
+                      { title: "Impact Dashboard", desc: "Visualize the real environmental impact of your IT decisions — equivalent trees planted, carbon offset, energy saved.", metric: "Equivalent of 12 trees planted" },
+                    ].map((item) => (
+                      <div key={item.title} className="p-4 rounded-xl border bg-green-50/30 dark:bg-green-950/10">
+                        <h4 className="font-semibold text-sm">{item.title}</h4>
+                        <p className="text-xs text-muted-foreground mt-1">{item.desc}</p>
+                        <p className="text-xs font-medium text-green-700 dark:text-green-400 mt-2">{item.metric}</p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
 
         </div>
       </main>

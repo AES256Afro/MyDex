@@ -33,6 +33,8 @@ import {
   LifeBuoy,
   Palette,
   Smartphone,
+  HeartPulse,
+  Bell,
   type LucideIcon,
 } from "lucide-react";
 
@@ -49,6 +51,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   "user-management": UserCog,
   departments: Building2,
   reports: BarChart3,
+  "fleet-health": HeartPulse,
   devices: Monitor,
   "host-groups": Server,
   security: Shield,
@@ -63,6 +66,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   "agent-setup": Download,
   "mdm-providers": Smartphone,
   branding: Palette,
+  "alert-thresholds": Bell,
 };
 
 // Category labels and order
