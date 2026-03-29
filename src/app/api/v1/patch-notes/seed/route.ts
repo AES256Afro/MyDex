@@ -18,16 +18,14 @@ export async function POST() {
   const orgId = session.user.organizationId;
   const authorId = session.user.id;
 
-  // Check if already seeded
-  const existing = await prisma.patchNote.count({
+  // Get existing versions so we only add new ones
+  const existingNotes = await prisma.patchNote.findMany({
     where: { organizationId: orgId },
+    select: { version: true },
   });
+  const existingVersions = new Set(existingNotes.map(n => n.version).filter(Boolean));
 
-  if (existing > 0) {
-    return NextResponse.json({ message: "Patch notes already seeded", count: existing });
-  }
-
-  const seedNotes = [
+  const allNotes = [
     {
       title: "MyDex Platform Launch",
       version: "v0.1.0",
@@ -223,6 +221,13 @@ export async function POST() {
     },
   ];
 
+  // Filter to only notes not yet seeded
+  const seedNotes = allNotes.filter(n => !existingVersions.has(n.version));
+
+  if (seedNotes.length === 0) {
+    return NextResponse.json({ message: "All patch notes already exist", count: existingNotes.length });
+  }
+
   try {
     for (const note of seedNotes) {
       await prisma.patchNote.create({
@@ -239,7 +244,7 @@ export async function POST() {
       });
     }
 
-    return NextResponse.json({ message: "Seeded patch notes", count: seedNotes.length }, { status: 201 });
+    return NextResponse.json({ message: `Added ${seedNotes.length} new patch notes`, added: seedNotes.length, total: existingNotes.length + seedNotes.length }, { status: 201 });
   } catch (error) {
     console.error("Error seeding patch notes:", error);
     return NextResponse.json({ error: "Failed to seed patch notes" }, { status: 500 });
