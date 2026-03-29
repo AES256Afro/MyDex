@@ -36,7 +36,7 @@ export default async function EmployeeDetailPage({
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const [recentTimeEntries, attendanceRecords, tickets, recentActivity, boardingTasks] =
+  const [recentTimeEntries, attendanceRecords, tickets, recentActivity, boardingTasks, activitySummaries, securityAlerts] =
     await Promise.all([
       prisma.timeEntry.findMany({
         where: { userId: employee.id, clockIn: { gte: thirtyDaysAgo } },
@@ -80,6 +80,15 @@ export default async function EmployeeDetailPage({
         orderBy: [{ type: "asc" }, { sortOrder: "asc" }],
         include: { completedBy: { select: { id: true, name: true } } },
       }),
+      prisma.activitySummary.findMany({
+        where: { userId: employee.id, organizationId: session.user.organizationId, date: { gte: thirtyDaysAgo }, hour: null },
+        orderBy: { date: "desc" },
+      }),
+      prisma.securityAlert.findMany({
+        where: { userId: employee.id, organizationId: session.user.organizationId },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      }),
     ]);
 
   // Get MDM devices matched to this user
@@ -118,6 +127,8 @@ export default async function EmployeeDetailPage({
     usbEvents: JSON.parse(JSON.stringify(usbEvents)),
     boardingTasks: JSON.parse(JSON.stringify(boardingTasks)),
     mdmDevices: JSON.parse(JSON.stringify(mdmDevices)),
+    activitySummaries: JSON.parse(JSON.stringify(activitySummaries)),
+    securityAlerts: JSON.parse(JSON.stringify(securityAlerts)),
     canWrite: hasPermission(session.user.role, "employees:write"),
     currentUserId: session.user.id,
   };

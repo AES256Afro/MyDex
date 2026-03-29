@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, Fragment, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -621,7 +621,15 @@ const sections = sectionGroups.flatMap((g) => g.items);
 
 // ─── Demo Page ───────────────────────────────────────────────────────────────
 
-export default function DemoPage() {
+export default function DemoPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
+      <DemoPage />
+    </Suspense>
+  );
+}
+
+function DemoPage() {
   const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState(searchParams.get("section") || "dashboard");
 
