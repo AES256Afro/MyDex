@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import { getVisibleModules } from "@/lib/module-access";
 import type { Role } from "@/generated/prisma";
 import { useBranding } from "@/components/branding-provider";
-import Image from "next/image";
 import {
   LayoutDashboard,
   Users,
@@ -35,6 +34,7 @@ import {
   Smartphone,
   HeartPulse,
   Bell,
+  Megaphone,
   type LucideIcon,
 } from "lucide-react";
 
@@ -67,6 +67,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   "mdm-providers": Smartphone,
   branding: Palette,
   "alert-thresholds": Bell,
+  "patch-notes": Megaphone,
 };
 
 // Category labels and order
@@ -98,20 +99,26 @@ export function Sidebar() {
 
   return (
     <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 border-r bg-sidebar">
-      <div className="flex h-16 items-center border-b px-6">
-        <Link href="/dashboard" className="flex items-center gap-2">
+      {/* Banner image (if uploaded) */}
+      {branding.bannerUrl && (
+        <Link href="/dashboard" className="block border-b overflow-hidden">
+          <img src={branding.bannerUrl} alt={branding.companyName} className="w-full h-auto object-cover max-h-24" />
+        </Link>
+      )}
+      <div className="flex h-16 items-center border-b px-4">
+        <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0 overflow-hidden">
           {branding.logoUrl ? (
-            <Image src={branding.logoUrl} alt={branding.companyName} width={32} height={32} className="h-8 w-8 object-contain" />
+            <img src={branding.logoUrl} alt={branding.companyName} className="h-8 w-8 object-contain flex-shrink-0" />
           ) : null}
           {branding.brandingMode === "alongside" ? (
-            <span className="flex items-baseline gap-1.5">
+            <span className="flex items-baseline gap-1.5 truncate">
               <span className="text-xl font-bold text-primary">MyDex</span>
               {branding.companyName && branding.companyName !== "MyDex" && (
-                <span className="text-sm font-medium text-muted-foreground">| {branding.companyName}</span>
+                <span className="text-sm font-medium text-muted-foreground truncate">| {branding.companyName}</span>
               )}
             </span>
           ) : (
-            <span className="text-xl font-bold text-primary">{branding.companyName}</span>
+            <span className="text-xl font-bold text-primary truncate">{branding.companyName}</span>
           )}
         </Link>
       </div>

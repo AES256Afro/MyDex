@@ -35,6 +35,7 @@ model Organization {
   agentPolicies    AgentPolicy[]
   ssoProviders     SsoProvider[]
   mdmProviders     MdmProvider[]
+  patchNotes       PatchNote[]
 }
 
 model User {
@@ -84,6 +85,7 @@ model User {
   generatedReports  ReportHistory[]  @relation("generatedReports")
   monitoringChangeLogs MonitoringChangeLog[] @relation("MonitoringUser")
   monitoringChangesBy  MonitoringChangeLog[] @relation("MonitoringChangedBy")
+  patchNotes           PatchNote[]           @relation("PatchNoteAuthor")
 
   @@index([organizationId])
   @@index([email])
@@ -1339,4 +1341,25 @@ model MonitoringChangeLog {
 
   @@index([organizationId, createdAt])
   @@index([userId])
+}
+
+// ─── Patch Notes ────────────────────────────────────────────────────────────
+
+model PatchNote {
+  id             String   @id @default(cuid())
+  organizationId String?  // null = global (system-authored), set = org-specific
+  authorId       String
+  version        String?  // e.g. "v0.1.0", optional
+  title          String
+  content        String   @db.Text
+  tags           Json?    // ["feature", "bugfix", "security", ...]
+  isPublished    Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  author       User          @relation("PatchNoteAuthor", fields: [authorId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([authorId])
 }

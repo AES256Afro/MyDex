@@ -25,9 +25,10 @@ const updateSettingsSchema = z.object({
       })).optional(),
       // Branding
       companyName: z.string().max(100).optional(),
-      logoUrl: z.string().url().optional().or(z.literal("")),
+      logoUrl: z.string().optional().or(z.literal("")),
+      bannerUrl: z.string().optional().or(z.literal("")),
       primaryColor: z.string().max(30).optional(),
-      favicon: z.string().url().optional().or(z.literal("")),
+      favicon: z.string().optional().or(z.literal("")),
       brandingMode: z.enum(["replace", "alongside"]).optional(),
     })
     .optional(),

@@ -35,7 +35,9 @@ type Permission =
   | "team:manage"
   | "mdm:read"
   | "mdm:write"
-  | "mdm:actions";
+  | "mdm:actions"
+  | "patch-notes:read"
+  | "patch-notes:write";
 
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   SUPER_ADMIN: [
@@ -49,6 +51,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "reports:read", "reports:create", "reports:schedule",
     "settings:read", "settings:write", "team:manage",
     "mdm:read", "mdm:write", "mdm:actions",
+    "patch-notes:read", "patch-notes:write",
   ],
   ADMIN: [
     "employees:read", "employees:write", "employees:invite",
@@ -61,6 +64,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "reports:read", "reports:create", "reports:schedule",
     "settings:read", "settings:write", "team:manage",
     "mdm:read", "mdm:write", "mdm:actions",
+    "patch-notes:read", "patch-notes:write",
   ],
   MANAGER: [
     "employees:read",
@@ -72,6 +76,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "security:read",
     "reports:read", "reports:create",
     "settings:read",
+    "patch-notes:read",
   ],
   EMPLOYEE: [
     "time-entries:read", "time-entries:write",
@@ -81,6 +86,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "tasks:read", "tasks:write",
     "reports:read",
     "settings:read",
+    "patch-notes:read",
   ],
 };
 

@@ -43,6 +43,7 @@ import {
   HeartPulse,
   Sun,
   Moon,
+  Megaphone,
   type LucideIcon,
 } from "lucide-react";
 
@@ -74,6 +75,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   "mdm-providers": Smartphone,
   branding: Palette,
   "alert-thresholds": Bell,
+  "patch-notes": Megaphone,
 };
 
 export function Topbar() {
@@ -199,18 +201,23 @@ export function Topbar() {
             onClick={() => setMobileOpen(false)}
           />
           <div className="fixed inset-y-0 left-0 w-72 bg-sidebar border-r overflow-y-auto">
-            <div className="flex h-16 items-center justify-between border-b px-6">
-              <span className="flex items-center gap-2">
-                {branding.logoUrl && <img src={branding.logoUrl} alt="" className="h-8 w-8 object-contain" />}
+            {branding.bannerUrl && (
+              <div className="border-b overflow-hidden">
+                <img src={branding.bannerUrl} alt={branding.companyName} className="w-full h-auto object-cover max-h-24" />
+              </div>
+            )}
+            <div className="flex h-16 items-center justify-between border-b px-4">
+              <span className="flex items-center gap-2.5 min-w-0 overflow-hidden">
+                {branding.logoUrl && <img src={branding.logoUrl} alt="" className="h-8 w-8 object-contain flex-shrink-0" />}
                 {branding.brandingMode === "alongside" ? (
-                  <span className="flex items-baseline gap-1.5">
+                  <span className="flex items-baseline gap-1.5 truncate">
                     <span className="text-xl font-bold text-primary">MyDex</span>
                     {branding.companyName && branding.companyName !== "MyDex" && (
-                      <span className="text-sm font-medium text-muted-foreground">| {branding.companyName}</span>
+                      <span className="text-sm font-medium text-muted-foreground truncate">| {branding.companyName}</span>
                     )}
                   </span>
                 ) : (
-                  <span className="text-xl font-bold text-primary">{branding.companyName}</span>
+                  <span className="text-xl font-bold text-primary truncate">{branding.companyName}</span>
                 )}
               </span>
               <Button

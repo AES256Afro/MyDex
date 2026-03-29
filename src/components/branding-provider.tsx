@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 interface Branding {
   companyName: string;
   logoUrl: string;
+  bannerUrl: string;
   primaryColor: string;
   favicon: string;
   brandingMode: "replace" | "alongside";
@@ -13,6 +14,7 @@ interface Branding {
 const BrandingContext = createContext<Branding>({
   companyName: "MyDex",
   logoUrl: "",
+  bannerUrl: "",
   primaryColor: "",
   favicon: "",
   brandingMode: "replace",
@@ -26,6 +28,7 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
   const [branding, setBranding] = useState<Branding>({
     companyName: "MyDex",
     logoUrl: "",
+    bannerUrl: "",
     primaryColor: "",
     favicon: "",
     brandingMode: "replace",
