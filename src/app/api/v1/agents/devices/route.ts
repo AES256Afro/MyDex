@@ -40,6 +40,10 @@ export async function GET(request: NextRequest) {
       include: {
         user: { select: { id: true, name: true, email: true } },
         _count: { select: { commands: true } },
+        mdmDevices: {
+          include: { mdmProvider: { select: { id: true, name: true, providerType: true } } },
+          take: 1,
+        },
       },
       orderBy: { lastSeenAt: "desc" },
     });

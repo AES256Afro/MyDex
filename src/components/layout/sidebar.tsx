@@ -6,6 +6,8 @@ import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { getVisibleModules } from "@/lib/module-access";
 import type { Role } from "@/generated/prisma";
+import { useBranding } from "@/components/branding-provider";
+import Image from "next/image";
 import {
   LayoutDashboard,
   Users,
@@ -29,6 +31,8 @@ import {
   Package,
   Wrench,
   LifeBuoy,
+  Palette,
+  Smartphone,
   type LucideIcon,
 } from "lucide-react";
 
@@ -57,6 +61,8 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   "support": LifeBuoy,
   "it-support": Wrench,
   "agent-setup": Download,
+  "mdm-providers": Smartphone,
+  branding: Palette,
 };
 
 // Category labels and order
@@ -74,6 +80,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const branding = useBranding();
 
   const role = (session?.user?.role as Role) || "EMPLOYEE";
   const visibleModules = getVisibleModules(role);
@@ -88,8 +95,20 @@ export function Sidebar() {
   return (
     <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 border-r bg-sidebar">
       <div className="flex h-16 items-center border-b px-6">
-        <Link href="/dashboard" className="text-xl font-bold text-primary">
-          MyDex
+        <Link href="/dashboard" className="flex items-center gap-2">
+          {branding.logoUrl ? (
+            <Image src={branding.logoUrl} alt={branding.companyName} width={32} height={32} className="h-8 w-8 object-contain" />
+          ) : null}
+          {branding.brandingMode === "alongside" ? (
+            <span className="flex items-baseline gap-1.5">
+              <span className="text-xl font-bold text-primary">MyDex</span>
+              {branding.companyName && branding.companyName !== "MyDex" && (
+                <span className="text-sm font-medium text-muted-foreground">| {branding.companyName}</span>
+              )}
+            </span>
+          ) : (
+            <span className="text-xl font-bold text-primary">{branding.companyName}</span>
+          )}
         </Link>
       </div>
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">

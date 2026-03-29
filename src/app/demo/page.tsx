@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, Fragment } from "react";
+import { useState, useEffect, Fragment } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Monitor, Cpu, HardDrive, Shield, RefreshCw, ChevronDown, ChevronRight,
   Wifi, AlertTriangle, CheckCircle, XCircle, Clock, Search, FileText,
@@ -604,6 +606,8 @@ const sectionGroups = [
     category: "ADMINISTRATION",
     items: [
       { id: "settings", label: "Settings", icon: Settings },
+      { id: "mdm-integration", label: "MDM Integration", icon: Smartphone },
+      { id: "branding", label: "Branding", icon: Palette },
       { id: "mfa-security", label: "MFA & Security", icon: Fingerprint },
       { id: "sso-providers", label: "SSO Providers", icon: LinkIcon },
       { id: "module-access", label: "Module Access", icon: Layers },
@@ -618,7 +622,15 @@ const sections = sectionGroups.flatMap((g) => g.items);
 // ─── Demo Page ───────────────────────────────────────────────────────────────
 
 export default function DemoPage() {
-  const [activeSection, setActiveSection] = useState("dashboard");
+  const searchParams = useSearchParams();
+  const [activeSection, setActiveSection] = useState(searchParams.get("section") || "dashboard");
+
+  useEffect(() => {
+    const section = searchParams.get("section");
+    if (section && sections.some((s) => s.id === section)) {
+      setActiveSection(section);
+    }
+  }, [searchParams]);
   const [expandedDevice, setExpandedDevice] = useState<string | null>("dev-1");
   const [deviceTab, setDeviceTab] = useState("overview");
   const [expandedGroup, setExpandedGroup] = useState<string | null>("hg1");
@@ -3190,6 +3202,282 @@ export default function DemoPage() {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          )}
+
+          {/* ── MDM INTEGRATION ──────────────────────────────────────────── */}
+          {activeSection === "mdm-integration" && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2"><Smartphone className="h-6 w-6" /> MDM Integration</h1>
+                <p className="text-muted-foreground text-sm">Connect your MDM provider to auto-assign devices and manage your fleet</p>
+              </div>
+
+              {/* Provider Cards */}
+              <div className="grid gap-4 md:grid-cols-3">
+                {[
+                  { name: "Microsoft Intune", type: "MICROSOFT_INTUNE", color: "blue", icon: "🔷", status: "connected", devices: 28, lastSync: "2 min ago" },
+                  { name: "Jamf Pro", type: "JAMF_PRO", color: "purple", icon: "🟣", status: "not_configured", devices: 0, lastSync: null },
+                  { name: "Kandji", type: "KANDJI", color: "green", icon: "🟢", status: "not_configured", devices: 0, lastSync: null },
+                ].map((provider) => (
+                  <Card key={provider.type} className={provider.status === "connected" ? "border-2 border-blue-300 dark:border-blue-700" : ""}>
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">{provider.icon}</span>
+                          <h3 className="font-semibold">{provider.name}</h3>
+                        </div>
+                        <Badge className={provider.status === "connected" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}>
+                          {provider.status === "connected" ? "Connected" : "Not Configured"}
+                        </Badge>
+                      </div>
+                      {provider.status === "connected" ? (
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between"><span className="text-muted-foreground">Devices synced</span><span className="font-medium">{provider.devices}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Last sync</span><span className="font-medium">{provider.lastSync}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Auto-assign</span><Badge className="bg-green-100 text-green-700 text-[10px]">Enabled</Badge></div>
+                          <div className="flex gap-2 mt-3">
+                            <Button size="sm" variant="outline" className="flex-1"><RefreshCw className="h-3.5 w-3.5 mr-1" /> Sync Now</Button>
+                            <Button size="sm" variant="outline"><Settings className="h-3.5 w-3.5" /></Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-2">
+                          <p className="text-xs text-muted-foreground mb-3">Connect your {provider.name} instance to start syncing devices.</p>
+                          <Button size="sm" className="w-full"><Plus className="h-3.5 w-3.5 mr-1" /> Configure</Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Intune Configuration */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Settings className="h-5 w-5" /> Microsoft Intune — Configuration</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">Tenant ID</Label>
+                      <Input value="a1b2c3d4-e5f6-7890-abcd-ef1234567890" readOnly className="mt-1 bg-muted/50 font-mono text-xs" />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">Client ID</Label>
+                      <Input value="12345678-abcd-ef01-2345-678901234567" readOnly className="mt-1 bg-muted/50 font-mono text-xs" />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">Client Secret</Label>
+                      <Input value="••••••••••••••••••••••••••••••••••" readOnly className="mt-1 bg-muted/50" type="password" />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">Sync Interval</Label>
+                      <div className="mt-1 flex h-10 items-center rounded-md border bg-muted/50 px-3 text-sm">Every 15 minutes</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm"><CheckCircle className="h-4 w-4 mr-1 text-green-500" /> Test Connection</Button>
+                    <Button size="sm">Save Changes</Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Synced Devices */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">Synced MDM Devices</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">28 devices</Badge>
+                      <Badge className="bg-green-100 text-green-700 text-xs">24 compliant</Badge>
+                      <Badge className="bg-red-100 text-red-700 text-xs">4 non-compliant</Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {[
+                      { name: "DESKTOP-JMILLER", user: "Jordan Miller", platform: "Windows 11", enrollment: "Enrolled", compliance: "Compliant", lastCheckin: "2 min ago", matched: true },
+                      { name: "LAPTOP-SCHEN", user: "Sarah Chen", platform: "Windows 11", enrollment: "Enrolled", compliance: "Non-Compliant", lastCheckin: "5 min ago", matched: true },
+                      { name: "MACBOOK-APATEL", user: "Anita Patel", platform: "macOS 15.3", enrollment: "Enrolled", compliance: "Compliant", lastCheckin: "1 min ago", matched: true },
+                      { name: "WS-TGARCIA", user: "Tom Garcia", platform: "Windows 10", enrollment: "Enrolled", compliance: "Non-Compliant", lastCheckin: "3 hrs ago", matched: false },
+                      { name: "IPHONE-JMILLER", user: "Jordan Miller", platform: "iOS 18.3", enrollment: "Enrolled", compliance: "Compliant", lastCheckin: "10 min ago", matched: false },
+                      { name: "PIXEL-SCHEN", user: "Sarah Chen", platform: "Android 15", enrollment: "Enrolled", compliance: "Compliant", lastCheckin: "25 min ago", matched: false },
+                    ].map((device) => (
+                      <div key={device.name} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/30 transition-colors">
+                        <div className="flex items-center gap-3">
+                          {device.platform.includes("iOS") || device.platform.includes("Android") ? <Phone className="h-5 w-5 text-muted-foreground" /> : <Monitor className="h-5 w-5 text-muted-foreground" />}
+                          <div>
+                            <div className="text-sm font-medium">{device.name}</div>
+                            <div className="text-xs text-muted-foreground">{device.user} &middot; {device.platform}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {device.matched ? (
+                            <Badge className="bg-blue-100 text-blue-700 text-[10px]">MyDex Matched</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px]">MDM Only</Badge>
+                          )}
+                          <Badge className={device.compliance === "Compliant" ? "bg-green-100 text-green-700 text-[10px]" : "bg-red-100 text-red-700 text-[10px]"}>{device.compliance}</Badge>
+                          <span className="text-xs text-muted-foreground">{device.lastCheckin}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* MDM Actions */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Zap className="h-5 w-5" /> Quick Actions</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {[
+                      { icon: Lock, label: "Lock Device", desc: "Remotely lock a managed device", color: "text-amber-600" },
+                      { icon: RefreshCw, label: "Restart Device", desc: "Send restart command via MDM", color: "text-blue-600" },
+                      { icon: RotateCcw, label: "Sync Device", desc: "Force MDM policy check-in", color: "text-green-600" },
+                      { icon: Download, label: "Deploy App", desc: "Push an application to devices", color: "text-purple-600" },
+                      { icon: ShieldOff, label: "Retire Device", desc: "Remove corporate data only", color: "text-orange-600" },
+                      { icon: Trash2, label: "Wipe Device", desc: "Factory reset — all data erased", color: "text-red-600" },
+                    ].map((action) => (
+                      <div key={action.label} className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/30 transition-colors cursor-pointer">
+                        <action.icon className={`h-5 w-5 ${action.color}`} />
+                        <div>
+                          <div className="text-sm font-medium">{action.label}</div>
+                          <div className="text-xs text-muted-foreground">{action.desc}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Recent MDM Actions Log */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Recent Actions</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {[
+                      { action: "Sync Device", device: "DESKTOP-JMILLER", user: "Admin", status: "Completed", time: "2 min ago" },
+                      { action: "Lock Device", device: "LAPTOP-SCHEN", user: "Admin", status: "Completed", time: "1 hr ago" },
+                      { action: "Deploy App", device: "MACBOOK-APATEL", user: "Admin", status: "Completed", time: "3 hrs ago" },
+                      { action: "Restart Device", device: "WS-TGARCIA", user: "Admin", status: "Failed", time: "5 hrs ago" },
+                    ].map((log, i) => (
+                      <div key={i} className="flex items-center justify-between p-2 rounded border text-sm">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-[10px]">{log.action}</Badge>
+                          <span className="font-medium">{log.device}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className={log.status === "Completed" ? "bg-green-100 text-green-700 text-[10px]" : "bg-red-100 text-red-700 text-[10px]"}>{log.status}</Badge>
+                          <span className="text-xs text-muted-foreground">{log.time}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* ── BRANDING ──────────────────────────────────────────────────── */}
+          {activeSection === "branding" && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2"><Palette className="h-6 w-6" /> Branding</h1>
+                <p className="text-muted-foreground text-sm">Customize the look and feel of your MyDex instance</p>
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                {/* Branding Settings */}
+                <div className="space-y-6">
+                  {/* Company Info */}
+                  <Card>
+                    <CardHeader><CardTitle className="text-lg">Company Branding</CardTitle></CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Company Name</Label>
+                        <Input value="Acme Corp" readOnly className="mt-1" />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Logo URL</Label>
+                        <Input value="https://acme.com/logo.png" readOnly className="mt-1 font-mono text-xs" />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Primary Color</Label>
+                        <div className="mt-1 flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-md border" style={{ backgroundColor: "#3B82F6" }} />
+                          <Input value="#3B82F6" readOnly className="font-mono" />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Accent Color</Label>
+                        <div className="mt-1 flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-md border" style={{ backgroundColor: "#10B981" }} />
+                          <Input value="#10B981" readOnly className="font-mono" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Display Mode */}
+                  <Card>
+                    <CardHeader><CardTitle className="text-lg">Display Mode</CardTitle></CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-sm text-muted-foreground">Choose how your branding appears in the sidebar and navigation.</p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-lg border-2 border-primary p-4 cursor-pointer bg-primary/5">
+                          <div className="text-sm font-semibold mb-2">Replace MyDex</div>
+                          <div className="rounded-md bg-background border p-3">
+                            <span className="text-lg font-bold" style={{ color: "#3B82F6" }}>Acme Corp</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">Show only your company name</p>
+                        </div>
+                        <div className="rounded-lg border p-4 cursor-pointer hover:bg-muted/30">
+                          <div className="text-sm font-semibold mb-2">Alongside MyDex</div>
+                          <div className="rounded-md bg-background border p-3">
+                            <span className="text-lg font-bold text-primary">MyDex</span>
+                            <span className="text-sm text-muted-foreground ml-1">| Acme Corp</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">Show both MyDex and your company</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Live Preview */}
+                <Card className="h-fit">
+                  <CardHeader><CardTitle className="text-lg">Live Preview</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="rounded-lg border bg-background overflow-hidden">
+                      {/* Fake sidebar preview */}
+                      <div className="flex">
+                        <div className="w-56 border-r bg-card p-4 space-y-4">
+                          <div className="flex items-center gap-2 pb-3 border-b">
+                            <div className="h-8 w-8 rounded bg-blue-500 flex items-center justify-center text-white text-xs font-bold">A</div>
+                            <span className="text-lg font-bold" style={{ color: "#3B82F6" }}>Acme Corp</span>
+                          </div>
+                          <div className="space-y-1">
+                            {["Dashboard", "Employees", "Devices", "IT Support", "Settings"].map((item, i) => (
+                              <div key={item} className={`text-sm px-3 py-2 rounded-md ${i === 0 ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground"}`}>{item}</div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex-1 p-4">
+                          <div className="h-4 bg-muted rounded w-48 mb-3" />
+                          <div className="h-3 bg-muted rounded w-64 mb-6" />
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="h-20 bg-muted/50 rounded-lg border" />
+                            <div className="h-20 bg-muted/50 rounded-lg border" />
+                            <div className="h-20 bg-muted/50 rounded-lg border" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-3 text-center">Preview updates as you change settings</p>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           )}
 

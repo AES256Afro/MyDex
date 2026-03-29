@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 export default function RegisterPage() {
   const [orgName, setOrgName] = useState("");
@@ -115,6 +116,12 @@ export default function RegisterPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Creating..." : "Create Organization"}
             </Button>
+
+            <Turnstile
+              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"}
+              options={{ theme: "light", size: "normal" }}
+            />
+
             <p className="text-sm text-muted-foreground">
               Already have an account?{" "}
               <Link href="/login" className="text-primary hover:underline">

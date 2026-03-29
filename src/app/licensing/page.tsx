@@ -397,7 +397,7 @@ export default function LicensingPage() {
                 </div>
 
                 {/* CTA */}
-                <Link href="/register">
+                <Link href="/contact">
                   <button
                     className={`w-full py-3 rounded-lg font-semibold text-sm transition-all ${
                       isRec
@@ -405,7 +405,7 @@ export default function LicensingPage() {
                         : "bg-gray-100 dark:bg-gray-800 text-foreground hover:bg-gray-200 dark:hover:bg-gray-700"
                     }`}
                   >
-                    Start Free Trial <ArrowRight className="inline h-4 w-4 ml-1" />
+                    Get Started <ArrowRight className="inline h-4 w-4 ml-1" />
                   </button>
                 </Link>
 
@@ -728,9 +728,9 @@ export default function LicensingPage() {
             Deploy your first agent in under 2 minutes.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/register">
+            <Link href="/contact">
               <button className="px-8 py-3 bg-white text-indigo-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow-lg">
-                Start Free Trial
+                Get Started
               </button>
             </Link>
             <Link href="/demo">

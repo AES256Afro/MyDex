@@ -24,12 +24,14 @@ model Organization {
   projects         Project[]
   dlpPolicies      DlpPolicy[]
   scheduledReports ScheduledReport[]
+  reportHistories  ReportHistory[]
   departments      Department[]
   hostGroups       HostGroup[]
   domainBlocklists DomainBlocklist[]
   agentApiKeys     AgentApiKey[]
   agentPolicies    AgentPolicy[]
   ssoProviders     SsoProvider[]
+  mdmProviders     MdmProvider[]
 }
 
 model User {
@@ -72,6 +74,9 @@ model User {
   submittedTickets  SupportTicket[]  @relation("TicketSubmitter")
   assignedTickets   SupportTicket[]  @relation("TicketAssignee")
   ticketMessages    TicketMessage[]
+  boardingTasks     BoardingTask[]   @relation("BoardingUser")
+  boardingCompleted BoardingTask[]   @relation("BoardingCompletedBy")
+  generatedReports  ReportHistory[]  @relation("generatedReports")
 
   @@index([organizationId])
   @@index([email])
@@ -586,6 +591,28 @@ model ScheduledReport {
   @@index([organizationId])
 }
 
+model ReportHistory {
+  id             String   @id @default(cuid())
+  organizationId String
+  reportType     String
+  dateFrom       DateTime
+  dateTo         DateTime
+  format         String   @default("pdf")
+  generatedBy    String
+  generatedAt    DateTime @default(now())
+  fileName       String
+  fileSize       Int?
+  recordCount    Int      @default(0)
+  summary        Json?
+  status         String   @default("completed") // completed, failed
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User         @relation("generatedReports", fields: [generatedBy], references: [id])
+
+  @@index([organizationId])
+  @@index([generatedBy])
+}
+
 // ============================================
 // THREAT INTELLIGENCE (IOC & CVE)
 // ============================================
@@ -707,6 +734,7 @@ model AgentDevice {
   lastSeenAt     DateTime     @default(now())
   ipAddress      String?
   osVersion      String?
+  serialNumber   String?
   installedSoftware Json?
   runningSoftware   Json?     // Currently running processes
   createdAt      DateTime     @default(now())
@@ -756,6 +784,7 @@ model AgentDevice {
   usbDeviceEvents      UsbDeviceEvent[]
   apiKey               AgentApiKey?
   supportTickets       SupportTicket[]
+  mdmDevices           MdmDevice[]
 
   @@unique([organizationId, userId, hostname])
   @@index([organizationId])
@@ -1032,6 +1061,38 @@ model ActiveSession {
 }
 
 // ============================================
+// ONBOARDING / OFFBOARDING
+// ============================================
+
+model BoardingTask {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String       // employee being onboarded/offboarded
+  type           BoardingType // ONBOARDING or OFFBOARDING
+  category       String       // e.g., "IT Setup", "HR", "Access", "Equipment"
+  title          String
+  description    String?
+  completed      Boolean      @default(false)
+  completedAt    DateTime?
+  completedById  String?      // who marked it done
+  dueDate        DateTime?
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  user        User  @relation("BoardingUser", fields: [userId], references: [id])
+  completedBy User? @relation("BoardingCompletedBy", fields: [completedById], references: [id])
+
+  @@index([userId, type])
+  @@index([organizationId, type])
+}
+
+enum BoardingType {
+  ONBOARDING
+  OFFBOARDING
+}
+
+// ============================================
 // SUPPORT TICKETS
 // ============================================
 
@@ -1105,4 +1166,136 @@ enum TicketStatus {
   WAITING_ON_IT
   RESOLVED
   CLOSED
+}
+
+// ============================================
+// MDM INTEGRATION
+// ============================================
+
+model MdmProvider {
+  id             String          @id @default(cuid())
+  organizationId String
+  providerType   MdmProviderType
+  name           String
+
+  // Auth credentials
+  clientId       String?         // Intune: Azure AD app client ID
+  clientSecret   String?         // Intune: app client secret
+  tenantId       String?         // Intune: Azure tenant ID
+  apiToken       String?         // Jamf/Kandji: API token
+  instanceUrl    String?         // Jamf/Kandji: instance URL
+
+  isActive       Boolean         @default(true)
+  autoAssign     Boolean         @default(true)
+  syncIntervalMinutes Int        @default(60)
+  lastSyncAt     DateTime?
+  lastSyncStatus MdmSyncStatus   @default(IDLE)
+  lastSyncError  String?
+  lastSyncDeviceCount Int?
+
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  mdmDevices     MdmDevice[]
+  mdmActions     MdmAction[]
+
+  @@unique([organizationId, providerType])
+  @@index([organizationId])
+}
+
+model MdmDevice {
+  id              String   @id @default(cuid())
+  organizationId  String
+  mdmProviderId   String
+  mdmDeviceId     String          // ID from the MDM provider
+
+  // Device identity (used for matching)
+  serialNumber    String?
+  hostname        String?
+  userEmail       String?         // MDM-reported user email
+
+  // MDM status
+  enrollmentStatus   String?      // "enrolled" | "pending" | "unenrolled"
+  complianceStatus   String?      // "compliant" | "noncompliant" | "unknown"
+  managementState    String?      // "managed" | "unmanaged"
+
+  // Device info from MDM
+  deviceName      String?
+  platform        String?         // "Windows" | "macOS" | "iOS" | "Android"
+  osVersion       String?
+  model           String?
+  manufacturer    String?
+
+  // MDM-managed apps
+  managedApps     Json?           // [{name, version, installState}]
+
+  // Security from MDM
+  isEncrypted     Boolean?
+  isJailbroken    Boolean?
+  lastCheckIn     DateTime?
+
+  // Link to MyDex
+  agentDeviceId   String?
+  matchedUserId   String?
+  matchConfidence String?         // "serial" | "hostname" | "manual"
+
+  rawData         Json?
+
+  lastSyncedAt    DateTime        @default(now())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  mdmProvider     MdmProvider     @relation(fields: [mdmProviderId], references: [id], onDelete: Cascade)
+  agentDevice     AgentDevice?    @relation(fields: [agentDeviceId], references: [id])
+
+  @@unique([mdmProviderId, mdmDeviceId])
+  @@index([organizationId])
+  @@index([agentDeviceId])
+  @@index([serialNumber])
+  @@index([userEmail])
+}
+
+model MdmAction {
+  id             String          @id @default(cuid())
+  organizationId String
+  mdmProviderId  String
+  mdmDeviceId    String?
+  agentDeviceId  String?
+
+  actionType     String          // "lock" | "wipe" | "restart" | "deploy_app" | "retire" | "sync"
+  payload        Json?
+  status         MdmActionStatus @default(PENDING)
+
+  issuedBy       String
+  issuedAt       DateTime        @default(now())
+  completedAt    DateTime?
+  result         String?
+  errorMessage   String?
+
+  mdmProvider    MdmProvider     @relation(fields: [mdmProviderId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, issuedAt])
+  @@index([mdmProviderId, status])
+}
+
+enum MdmProviderType {
+  MICROSOFT_INTUNE
+  JAMF_PRO
+  KANDJI
+}
+
+enum MdmSyncStatus {
+  IDLE
+  SYNCING
+  SUCCESS
+  FAILED
+}
+
+enum MdmActionStatus {
+  PENDING
+  SENT
+  COMPLETED
+  FAILED
+  CANCELLED
 }

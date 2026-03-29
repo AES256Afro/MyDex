@@ -241,6 +241,24 @@ export const MODULE_REGISTRY: ModuleConfig[] = [
     configurable: false,
     category: "admin",
   },
+  {
+    id: "mdm-providers",
+    label: "MDM Integration",
+    href: "/settings/mdm",
+    description: "Connect and manage MDM providers (Intune, Jamf, Kandji)",
+    minRole: "ADMIN",
+    configurable: false,
+    category: "admin",
+  },
+  {
+    id: "branding",
+    label: "Branding",
+    href: "/settings/branding",
+    description: "Customize logo, company name, and brand colors",
+    minRole: "ADMIN",
+    configurable: false,
+    category: "admin",
+  },
 ];
 
 const ROLE_LEVEL: Record<Role, number> = {
