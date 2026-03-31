@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { emitRealtimeEvent, managersChannel } from "@/lib/realtime";
 
 export async function POST() {
   const session = await auth();
@@ -46,6 +47,13 @@ export async function POST() {
         where: { userId, organizationId: orgId, date: todayStart },
         data: { checkOut: now },
       }).catch(() => { /* ignore if no record */ });
+
+      emitRealtimeEvent({
+        organizationId: orgId,
+        channel: managersChannel(orgId),
+        eventType: "CLOCK_OUT",
+        payload: { userId: session.user.id, userName: session.user.name, time: new Date().toISOString() },
+      }).catch(() => {});
 
       return NextResponse.json({
         action: "clock_out",
@@ -107,6 +115,13 @@ export async function POST() {
           },
         }).catch(() => { /* ignore if duplicate race */ });
       }
+
+      emitRealtimeEvent({
+        organizationId: orgId,
+        channel: managersChannel(orgId),
+        eventType: "CLOCK_IN",
+        payload: { userId: session.user.id, userName: session.user.name, time: new Date().toISOString() },
+      }).catch(() => {});
 
       return NextResponse.json({
         action: "clock_in",

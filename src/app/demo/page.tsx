@@ -26,7 +26,7 @@ import {
   Thermometer, WifiOff, PrinterIcon, FolderCog, FileCheck,
   LifeBuoy, Sparkles, BatteryCharging, Volume2, Bluetooth, MousePointer,
   Keyboard as KeyboardIcon, Info, ArrowUpRight, ArrowDownRight,
-  AlertCircle, Loader2, Megaphone, User,
+  AlertCircle, Loader2, Megaphone, User, GitBranch, Plug,
 } from "lucide-react";
 import {
   PieChart as RechartsPieChart, Pie, Cell, Tooltip as RechartsTooltip,
@@ -578,6 +578,7 @@ const sectionGroups = [
       { id: "user-management", label: "User Management", icon: UserCog },
       { id: "departments", label: "Departments", icon: Building2 },
       { id: "reports", label: "Reports", icon: BarChart3 },
+      { id: "employee-view", label: "Employee Self-Service", icon: Eye },
     ],
   },
   {
@@ -614,6 +615,8 @@ const sectionGroups = [
       { id: "module-access", label: "Module Access", icon: Layers },
       { id: "agent-setup", label: "Agent Setup", icon: Download },
       { id: "alert-thresholds", label: "Alert Thresholds", icon: Bell },
+      { id: "workflows", label: "Workflows", icon: GitBranch },
+      { id: "integrations", label: "Integrations", icon: Plug },
     ],
   },
   {
@@ -676,6 +679,7 @@ function DemoPage() {
   const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null);
   const [expandedPolicy, setExpandedPolicy] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
+  const [complianceFramework, setComplianceFramework] = useState<"soc2" | "cis" | "iso27001" | "gdpr">("soc2");
   const { theme, setTheme } = useTheme();
 
   const onlineCount = mockDevices.filter((d) => d.status === "ONLINE").length;
@@ -791,9 +795,22 @@ function DemoPage() {
           {/* ═══ DASHBOARD ═══ */}
           {activeSection === "dashboard" && (
             <div className="space-y-6">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                <p className="text-muted-foreground">Welcome back, Admin</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+                  <p className="text-muted-foreground">Welcome back, Admin</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" /><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" /></span>
+                    <span className="font-medium text-green-600">Live</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-lg border bg-muted/40 px-3 py-1.5 text-sm">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-semibold">Active Now:</span>
+                    <span className="text-blue-600 font-bold">12</span>
+                  </div>
+                </div>
               </div>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {[
@@ -869,6 +886,33 @@ function DemoPage() {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* 14-Day Productivity Trend */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">14-Day Productivity Trend</CardTitle>
+                    <Badge variant="outline" className="text-xs">Team Average</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <LineChart data={[
+                      { day: "Mar 17", score: 74 }, { day: "Mar 18", score: 78 }, { day: "Mar 19", score: 76 },
+                      { day: "Mar 20", score: 81 }, { day: "Mar 21", score: 83 }, { day: "Mar 22", score: 42 },
+                      { day: "Mar 23", score: 38 }, { day: "Mar 24", score: 80 }, { day: "Mar 25", score: 84 },
+                      { day: "Mar 26", score: 82 }, { day: "Mar 27", score: 86 }, { day: "Mar 28", score: 45 },
+                      { day: "Mar 29", score: 40 }, { day: "Mar 30", score: 85 },
+                    ]}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                      <XAxis dataKey="day" tick={{ fontSize: 10 }} />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+                      <RechartsTooltip formatter={(value) => [`${value}%`, "Productivity"]} />
+                      <Line type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3, fill: "#3b82f6" }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
             </div>
           )}
 
@@ -924,7 +968,7 @@ function DemoPage() {
 
               {/* Weekly Timesheet */}
               <Card>
-                <CardHeader><CardTitle className="text-lg">Weekly Timesheet</CardTitle></CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between"><CardTitle className="text-lg">Weekly Timesheet</CardTitle><Button size="sm" variant="outline"><Download className="h-3.5 w-3.5 mr-1" /> Export CSV</Button></CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -1034,7 +1078,10 @@ function DemoPage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-lg">Leave Requests</CardTitle>
-                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700">Request Leave</Button>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline"><Download className="h-3.5 w-3.5 mr-1" /> Export CSV</Button>
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700">Request Leave</Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
@@ -1368,6 +1415,7 @@ function DemoPage() {
               <div className="flex items-center justify-between">
                 <div><h1 className="text-2xl font-bold flex items-center gap-2"><Monitor className="h-6 w-6" /> Devices</h1>
                 <p className="text-muted-foreground text-sm">Connected agents and system health</p></div>
+                <Button size="sm" variant="outline"><Download className="h-3.5 w-3.5 mr-1" /> Export CSV</Button>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
@@ -2016,8 +2064,14 @@ function DemoPage() {
           {/* ═══ REPORTS ═══ */}
           {activeSection === "reports" && (
             <div className="space-y-6">
-              <div><h1 className="text-2xl font-bold flex items-center gap-2"><BarChart3 className="h-6 w-6" /> Reports</h1>
-              <p className="text-muted-foreground text-sm">Scheduled and on-demand reports</p></div>
+              <div className="flex items-center justify-between">
+                <div><h1 className="text-2xl font-bold flex items-center gap-2"><BarChart3 className="h-6 w-6" /> Reports</h1>
+                <p className="text-muted-foreground text-sm">Scheduled and on-demand reports</p></div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline"><Download className="h-3.5 w-3.5 mr-1" /> Export CSV</Button>
+                  <Button size="sm" variant="outline"><PrinterIcon className="h-3.5 w-3.5 mr-1" /> Print Report</Button>
+                </div>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Scheduled Reports</div><div className="text-2xl font-bold">{mockReports.length}</div></CardContent></Card>
                 <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Generated This Week</div><div className="text-2xl font-bold">8</div></CardContent></Card>
@@ -4957,8 +5011,21 @@ function DemoPage() {
           return (
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold flex items-center gap-2"><FileCheck className="h-6 w-6" /> SOC 2 Compliance</h2>
-                <p className="text-muted-foreground text-sm">Compliance health, trust criteria, device audits, and self-remediation scripts mapped to SOC 2 controls.</p>
+                <h2 className="text-2xl font-bold flex items-center gap-2"><FileCheck className="h-6 w-6" /> Compliance Frameworks</h2>
+                <p className="text-muted-foreground text-sm">Compliance health, trust criteria, device audits, and self-remediation scripts.</p>
+                <div className="flex gap-2 mt-3">
+                  {([
+                    { id: "soc2" as const, label: "SOC 2", score: 85 },
+                    { id: "cis" as const, label: "CIS Benchmarks", score: 78 },
+                    { id: "iso27001" as const, label: "ISO 27001", score: 82 },
+                    { id: "gdpr" as const, label: "GDPR", score: 91 },
+                  ]).map(fw => (
+                    <button key={fw.id} onClick={() => setComplianceFramework(fw.id)}
+                      className={cn("px-3 py-1.5 rounded-full text-xs font-medium border transition-colors", complianceFramework === fw.id ? "bg-blue-600 text-white border-blue-600" : "bg-muted/50 text-muted-foreground border-border hover:bg-muted")}>
+                      {fw.label} <span className={cn("ml-1 font-bold", complianceFramework === fw.id ? "text-white" : fw.score >= 85 ? "text-green-600" : fw.score >= 75 ? "text-amber-600" : "text-red-600")}>{fw.score}%</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Overall Score + Charts */}
@@ -5703,6 +5770,217 @@ function DemoPage() {
         })()}
 
           {/* ═══ PATCH NOTES ═══ */}
+          {/* ═══ WORKFLOWS ═══ */}
+          {activeSection === "workflows" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold flex items-center gap-2"><GitBranch className="h-6 w-6" /> Automated Workflows</h1>
+                  <p className="text-muted-foreground text-sm">Automated playbooks for alerts, tickets, and notifications</p>
+                </div>
+                <Button size="sm"><Plus className="h-3.5 w-3.5 mr-1" /> New Workflow</Button>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Active Workflows</div><div className="text-2xl font-bold">6</div></CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Executions (24h)</div><div className="text-2xl font-bold text-blue-600">47</div></CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Success Rate</div><div className="text-2xl font-bold text-green-600">96%</div></CardContent></Card>
+                <Card><CardContent className="pt-4 pb-3"><div className="text-sm text-muted-foreground">Avg Duration</div><div className="text-2xl font-bold">2.3s</div></CardContent></Card>
+              </div>
+
+              <div className="space-y-3">
+                {[
+                  { name: "Alert on Critical CVE", desc: "Notify security team when a critical CVE is detected on any managed device", trigger: "CVE Detected", triggerColor: "bg-red-100 text-red-700", status: "Active", actions: 3, executions: 18, lastRun: "12 min ago", success: 18, failed: 0 },
+                  { name: "Auto-assign Urgent Tickets", desc: "Route high-priority tickets to on-call engineer via PagerDuty integration", trigger: "Ticket Created", triggerColor: "bg-blue-100 text-blue-700", status: "Active", actions: 4, executions: 12, lastRun: "1 hr ago", success: 11, failed: 1 },
+                  { name: "Device Compliance Drift Alert", desc: "Send Slack notification when device compliance score drops below 70%", trigger: "Compliance Score", triggerColor: "bg-amber-100 text-amber-700", status: "Active", actions: 2, executions: 8, lastRun: "3 hrs ago", success: 8, failed: 0 },
+                  { name: "New Employee Onboarding", desc: "Provision accounts, assign device group, and send welcome email", trigger: "User Created", triggerColor: "bg-green-100 text-green-700", status: "Active", actions: 5, executions: 3, lastRun: "2 days ago", success: 3, failed: 0 },
+                  { name: "Weekly Security Digest", desc: "Compile weekly security summary and email to leadership", trigger: "Schedule (Mon 9am)", triggerColor: "bg-purple-100 text-purple-700", status: "Active", actions: 3, executions: 4, lastRun: "4 days ago", success: 4, failed: 0 },
+                  { name: "Auto-Remediate Disk Encryption", desc: "Automatically enable BitLocker/FileVault when detected as disabled", trigger: "Compliance Fail", triggerColor: "bg-orange-100 text-orange-700", status: "Paused", actions: 2, executions: 2, lastRun: "1 week ago", success: 1, failed: 1 },
+                ].map((wf) => (
+                  <Card key={wf.name} className={wf.status === "Paused" ? "opacity-70" : ""}>
+                    <CardContent className="py-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-sm font-semibold">{wf.name}</h3>
+                            <Badge className={`text-[10px] ${wf.triggerColor}`}>{wf.trigger}</Badge>
+                            <Badge variant="outline" className="text-[10px]">{wf.actions} actions</Badge>
+                            {wf.status === "Paused" && <Badge className="bg-gray-100 text-gray-600 text-[10px]">Paused</Badge>}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{wf.desc}</p>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <span>{wf.executions} executions</span>
+                            <span className="text-green-600">{wf.success} passed</span>
+                            {wf.failed > 0 && <span className="text-red-600">{wf.failed} failed</span>}
+                            <span>Last: {wf.lastRun}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button size="sm" variant="outline"><Play className="h-3.5 w-3.5 mr-1" /> Run</Button>
+                          <Button size="sm" variant="ghost"><Settings className="h-3.5 w-3.5" /></Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Recent Execution History */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Recent Executions</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {[
+                      { workflow: "Alert on Critical CVE", trigger: "CVE-2026-1234 on DESKTOP-JMILLER", status: "Success", time: "12 min ago", duration: "1.8s" },
+                      { workflow: "Auto-assign Urgent Tickets", trigger: "TKT-1042 High Priority", status: "Success", time: "1 hr ago", duration: "3.2s" },
+                      { workflow: "Device Compliance Drift Alert", trigger: "LAPTOP-SCHEN score 68%", status: "Success", time: "3 hrs ago", duration: "1.1s" },
+                      { workflow: "Auto-assign Urgent Tickets", trigger: "TKT-1040 High Priority", status: "Failed", time: "5 hrs ago", duration: "0.4s" },
+                      { workflow: "Alert on Critical CVE", trigger: "CVE-2026-0891 on WS-TGARCIA", status: "Success", time: "8 hrs ago", duration: "2.1s" },
+                    ].map((exec, i) => (
+                      <div key={i} className="flex items-center justify-between p-2 rounded border text-sm">
+                        <div className="flex items-center gap-3">
+                          <Badge className={exec.status === "Success" ? "bg-green-100 text-green-700 text-[10px]" : "bg-red-100 text-red-700 text-[10px]"}>{exec.status}</Badge>
+                          <div>
+                            <span className="font-medium">{exec.workflow}</span>
+                            <span className="text-muted-foreground ml-2 text-xs">{exec.trigger}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span>{exec.duration}</span>
+                          <span>{exec.time}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* ═══ INTEGRATIONS ═══ */}
+          {activeSection === "integrations" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold flex items-center gap-2"><Plug className="h-6 w-6" /> Integrations</h1>
+                  <p className="text-muted-foreground text-sm">Connect Slack, Microsoft Teams, SCIM, and other tools</p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                {[
+                  { name: "Slack", icon: "S", color: "bg-purple-500", status: "Connected", desc: "Send alerts and notifications to Slack channels", channels: "#security-alerts, #it-support", lastSync: "2 min ago" },
+                  { name: "Microsoft Teams", icon: "T", color: "bg-blue-500", status: "Connected", desc: "Send alerts and approval requests to Teams", channels: "IT Operations, Security", lastSync: "5 min ago" },
+                  { name: "PagerDuty", icon: "P", color: "bg-green-600", status: "Not Configured", desc: "Escalation policies and on-call routing", channels: null, lastSync: null },
+                ].map((integ) => (
+                  <Card key={integ.name} className={integ.status === "Connected" ? "border-green-200" : ""}>
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className={`h-8 w-8 rounded-lg ${integ.color} text-white flex items-center justify-center font-bold text-sm`}>{integ.icon}</div>
+                          <h3 className="font-semibold">{integ.name}</h3>
+                        </div>
+                        <Badge className={integ.status === "Connected" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}>{integ.status}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-3">{integ.desc}</p>
+                      {integ.status === "Connected" ? (
+                        <div className="space-y-1 text-xs">
+                          <div className="flex justify-between"><span className="text-muted-foreground">Channels</span><span className="font-medium">{integ.channels}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Last sync</span><span>{integ.lastSync}</span></div>
+                          <div className="flex gap-2 mt-2"><Button size="sm" variant="outline" className="flex-1">Configure</Button><Button size="sm" variant="outline"><RefreshCw className="h-3.5 w-3.5" /></Button></div>
+                        </div>
+                      ) : (
+                        <Button size="sm" className="w-full"><Plus className="h-3.5 w-3.5 mr-1" /> Connect</Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* SCIM Provisioning */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg flex items-center gap-2"><Users className="h-5 w-5" /> SCIM Provisioning</CardTitle>
+                      <p className="text-xs text-muted-foreground mt-1">Automate user provisioning and deprovisioning via SCIM 2.0</p>
+                    </div>
+                    <Badge className="bg-green-100 text-green-700">Active</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">SCIM Endpoint</Label>
+                      <div className="mt-1 flex items-center gap-2">
+                        <Input value="https://api.mydex.app/scim/v2" readOnly className="bg-muted/50 font-mono text-xs" />
+                        <Button size="sm" variant="outline"><Copy className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">Bearer Token</Label>
+                      <div className="mt-1 flex items-center gap-2">
+                        <Input value="scim_tk_••••••••••••••••••••" readOnly className="bg-muted/50 font-mono text-xs" type="password" />
+                        <Button size="sm" variant="outline"><RefreshCw className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 text-center"><div className="text-xl font-bold text-blue-600">32</div><div className="text-[10px] text-muted-foreground">Provisioned Users</div></div>
+                    <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3 text-center"><div className="text-xl font-bold text-green-600">4</div><div className="text-[10px] text-muted-foreground">Added (30d)</div></div>
+                    <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-3 text-center"><div className="text-xl font-bold text-red-600">1</div><div className="text-[10px] text-muted-foreground">Deprovisioned (30d)</div></div>
+                    <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-3 text-center"><div className="text-xl font-bold text-amber-600">2</div><div className="text-[10px] text-muted-foreground">Pending Sync</div></div>
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Recent SCIM Activity</h4>
+                    {[
+                      { action: "User Created", user: "alex.rivera@acmecorp.com", source: "Okta", time: "15 min ago" },
+                      { action: "User Updated", user: "jordan@acmecorp.com", source: "Okta", time: "1 hr ago" },
+                      { action: "User Deactivated", user: "dave.former@acmecorp.com", source: "Okta", time: "2 days ago" },
+                      { action: "Group Sync", user: "Engineering (12 members)", source: "Okta", time: "3 hrs ago" },
+                    ].map((evt, i) => (
+                      <div key={i} className="flex items-center justify-between p-2 rounded border text-sm">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-[10px]">{evt.action}</Badge>
+                          <span>{evt.user}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{evt.source}</span>
+                          <span>{evt.time}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Webhook Configuration */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Globe className="h-5 w-5" /> Webhooks</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {[
+                      { url: "https://hooks.slack.com/services/T.../B.../xxx", events: "security.alert, device.offline", status: "Active", lastDelivery: "2 min ago" },
+                      { url: "https://acmecorp.webhook.office.com/webhook/...", events: "ticket.created, ticket.resolved", status: "Active", lastDelivery: "1 hr ago" },
+                      { url: "https://api.pagerduty.com/incidents", events: "security.critical", status: "Inactive", lastDelivery: "Never" },
+                    ].map((wh, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded border text-sm">
+                        <div>
+                          <div className="font-mono text-xs truncate max-w-md">{wh.url}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">{wh.events}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className={wh.status === "Active" ? "bg-green-100 text-green-700 text-[10px]" : "bg-gray-100 text-gray-600 text-[10px]"}>{wh.status}</Badge>
+                          <span className="text-xs text-muted-foreground">{wh.lastDelivery}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           {activeSection === "patch-notes" && (() => {
             const demoNotes = [
               {

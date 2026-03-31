@@ -23,12 +23,16 @@ import {
   ActivityFeed,
   QuickActionsGrid,
   TopAppsChart,
+  HourlyActivityHeatmap,
 } from "@/components/dashboard/dashboard-charts";
+import { ActiveNowCounter } from "@/components/dashboard/active-now-counter";
+import { LiveActivityFeed } from "@/components/dashboard/live-activity-feed";
 import type {
   ActivityDay,
   DeviceBreakdown,
   FeedItem,
   TopApp,
+  HourlyActivityPoint,
 } from "@/components/dashboard/dashboard-charts";
 import {
   WelcomeBanner,
@@ -77,6 +81,7 @@ export default async function DashboardPage() {
       topAppsRaw,
       openTickets,
       resolvedTickets,
+      todayHourlySummaries,
     ] = await Promise.all([
       // KPI cards
       prisma.user.count({
@@ -167,6 +172,16 @@ export default async function DashboardPage() {
       }),
       prisma.supportTicket.count({
         where: { organizationId: orgId, status: { in: ["RESOLVED", "CLOSED"] } },
+      }),
+
+      // Today's hourly activity summaries for heatmap
+      prisma.activitySummary.findMany({
+        where: {
+          organizationId: orgId,
+          date: today,
+          hour: { not: null },
+        },
+        orderBy: { hour: "asc" },
       }),
     ]);
 
@@ -274,6 +289,17 @@ export default async function DashboardPage() {
       count: r._count.appName,
     }));
 
+    // Hourly heatmap data — aggregate across all users per hour
+    const hourlyMap = new Map<number, number>();
+    for (const s of todayHourlySummaries) {
+      if (s.hour !== null) {
+        hourlyMap.set(s.hour, (hourlyMap.get(s.hour) ?? 0) + s.totalActiveSeconds);
+      }
+    }
+    const heatmapData: HourlyActivityPoint[] = Array.from(hourlyMap.entries())
+      .map(([hour, activeSeconds]) => ({ hour, activeSeconds }))
+      .sort((a, b) => a.hour - b.hour);
+
     // Attendance percentage
     const attendancePct =
       totalEmployees > 0 ? Math.round((presentToday / totalEmployees) * 100) : 0;
@@ -338,7 +364,7 @@ export default async function DashboardPage() {
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{activeTimeEntries}</div>
+              <ActiveNowCounter initialCount={activeTimeEntries} />
               <p className="text-xs text-muted-foreground">Clocked in right now</p>
             </CardContent>
           </Card>
@@ -443,9 +469,20 @@ export default async function DashboardPage() {
           <DeviceFleetDonut data={deviceBreakdown} />
         </div>
 
-        {/* Row 3: Activity Feed + Quick Actions */}
-        <div className="grid gap-4 md:grid-cols-2">
+        {/* Row 2b: Hourly Activity Heatmap */}
+        <HourlyActivityHeatmap data={heatmapData} />
+
+        {/* Row 3: Activity Feed + Live Activity + Quick Actions */}
+        <div className="grid gap-4 md:grid-cols-3">
           <ActivityFeed items={feedSlice} />
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Live Activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <LiveActivityFeed />
+            </CardContent>
+          </Card>
           <QuickActionsGrid />
         </div>
 

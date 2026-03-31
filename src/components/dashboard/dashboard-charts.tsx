@@ -47,6 +47,11 @@ export interface RecentTimeEntry {
   status: string;
 }
 
+export interface HourlyActivityPoint {
+  hour: number;          // 0-23
+  activeSeconds: number; // total active seconds for that hour
+}
+
 export interface TopApp {
   appName: string;
   count: number;
@@ -368,6 +373,75 @@ export function TopAppsChart({ data }: { data: TopApp[] }) {
                 </div>
               );
             })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Today's Activity Heatmap ───────────────────────────────────────────
+
+export function HourlyActivityHeatmap({ data }: { data: HourlyActivityPoint[] }) {
+  // Build array for all 24 hours, filling gaps with 0
+  const hours = Array.from({ length: 24 }, (_, i) => {
+    const match = data.find((d) => d.hour === i);
+    return { hour: i, activeSeconds: match?.activeSeconds ?? 0 };
+  });
+  const maxSec = Math.max(...hours.map((h) => h.activeSeconds), 1);
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-semibold">
+          Today&apos;s Activity Heatmap
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {data.length === 0 ? (
+          <div className="flex items-center justify-center h-24 text-muted-foreground text-sm">
+            No hourly activity data yet today
+          </div>
+        ) : (
+          <div>
+            <div className="flex items-end gap-1" style={{ height: 120 }}>
+              {hours.map(({ hour, activeSeconds }) => {
+                const pct = (activeSeconds / maxSec) * 100;
+                const intensity =
+                  activeSeconds === 0
+                    ? "bg-muted"
+                    : pct > 75
+                    ? "bg-blue-600"
+                    : pct > 50
+                    ? "bg-blue-500"
+                    : pct > 25
+                    ? "bg-blue-400"
+                    : "bg-blue-300";
+                const mins = Math.round(activeSeconds / 60);
+                return (
+                  <div
+                    key={hour}
+                    className="flex-1 flex flex-col items-center justify-end"
+                    title={`${hour}:00 - ${mins}m active`}
+                  >
+                    <div
+                      className={`w-full rounded-t ${intensity} transition-all`}
+                      style={{ height: `${Math.max(pct, 2)}%` }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex gap-1 mt-1">
+              {hours.map(({ hour }) => (
+                <div
+                  key={hour}
+                  className="flex-1 text-center text-[10px] text-muted-foreground"
+                >
+                  {hour % 3 === 0 ? `${hour}` : ""}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </CardContent>

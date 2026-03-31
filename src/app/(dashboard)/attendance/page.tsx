@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import type { AttendanceStatus } from "@/generated/prisma";
+import { ExportButton } from "@/components/shared/export-button";
 
 const STATUS_LABELS: Record<AttendanceStatus, string> = {
   PRESENT: "P",
@@ -116,12 +117,15 @@ export default async function AttendancePage() {
             {format(now, "MMMM yyyy")} overview
           </p>
         </div>
-        <Link
-          href="/attendance/leave-requests"
-          className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
-        >
-          Leave Requests
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportButton type="attendance" />
+          <Link
+            href="/attendance/leave-requests"
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+          >
+            Leave Requests
+          </Link>
+        </div>
       </div>
 
       {/* Legend */}
