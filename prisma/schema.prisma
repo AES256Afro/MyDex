@@ -97,6 +97,7 @@ model User {
   patchNotes           PatchNote[]           @relation("PatchNoteAuthor")
   notifications        Notification[]
   createdWorkflows     Workflow[]     @relation("WorkflowCreator")
+  mdmDevices           MdmDevice[]   @relation("MdmMatchedUser")
 
   @@index([organizationId])
   @@index([email])
@@ -1282,6 +1283,7 @@ model MdmDevice {
 
   mdmProvider     MdmProvider     @relation(fields: [mdmProviderId], references: [id], onDelete: Cascade)
   agentDevice     AgentDevice?    @relation(fields: [agentDeviceId], references: [id])
+  matchedUser     User?           @relation("MdmMatchedUser", fields: [matchedUserId], references: [id])
 
   @@unique([mdmProviderId, mdmDeviceId])
   @@index([organizationId])

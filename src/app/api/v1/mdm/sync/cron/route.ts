@@ -38,7 +38,11 @@ export async function GET(request: NextRequest) {
 
     try {
       const result = await syncMdmProvider(provider.id);
-      results.push({ providerId: provider.id, synced: true, error: result.error });
+      results.push({
+        providerId: provider.id,
+        synced: true,
+        error: result.errors.length > 0 ? result.errors.join("; ") : undefined,
+      });
     } catch (e) {
       results.push({
         providerId: provider.id,

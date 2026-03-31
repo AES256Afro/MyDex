@@ -21,14 +21,13 @@ export class KandjiClient implements MdmClient {
     });
   }
 
-  async testConnection(): Promise<{ success: boolean; error?: string; deviceCount?: number }> {
+  async testConnection(): Promise<{ success: boolean; message?: string; error?: string }> {
     try {
       const res = await this.kandjiFetch("/api/v1/devices?limit=1");
       if (!res.ok) {
         return { success: false, error: `Kandji API error: ${res.status}` };
       }
-      const data = await res.json();
-      return { success: true, deviceCount: Array.isArray(data) ? data.length : 0 };
+      return { success: true, message: "Connected to Kandji successfully." };
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : "Unknown error" };
     }
@@ -63,34 +62,52 @@ export class KandjiClient implements MdmClient {
     return this.mapDevice(d);
   }
 
-  async lockDevice(mdmDeviceId: string): Promise<void> {
-    const res = await this.kandjiFetch(`/api/v1/devices/${mdmDeviceId}/action/lock`, { method: "POST" });
-    if (!res.ok && res.status !== 204) throw new Error(`Lock failed: ${res.status}`);
+  async lockDevice(mdmDeviceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await this.kandjiFetch(`/api/v1/devices/${mdmDeviceId}/action/lock`, { method: "POST" });
+      if (!res.ok && res.status !== 204) return { success: false, error: `Lock failed: ${res.status}` };
+      return { success: true };
+    } catch (e) { return { success: false, error: e instanceof Error ? e.message : "Lock failed" }; }
   }
 
-  async wipeDevice(mdmDeviceId: string): Promise<void> {
-    const res = await this.kandjiFetch(`/api/v1/devices/${mdmDeviceId}/action/erase`, { method: "POST" });
-    if (!res.ok && res.status !== 204) throw new Error(`Wipe failed: ${res.status}`);
+  async wipeDevice(mdmDeviceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await this.kandjiFetch(`/api/v1/devices/${mdmDeviceId}/action/erase`, { method: "POST" });
+      if (!res.ok && res.status !== 204) return { success: false, error: `Wipe failed: ${res.status}` };
+      return { success: true };
+    } catch (e) { return { success: false, error: e instanceof Error ? e.message : "Wipe failed" }; }
   }
 
-  async restartDevice(mdmDeviceId: string): Promise<void> {
-    const res = await this.kandjiFetch(`/api/v1/devices/${mdmDeviceId}/action/restart`, { method: "POST" });
-    if (!res.ok && res.status !== 204) throw new Error(`Restart failed: ${res.status}`);
+  async restartDevice(mdmDeviceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await this.kandjiFetch(`/api/v1/devices/${mdmDeviceId}/action/restart`, { method: "POST" });
+      if (!res.ok && res.status !== 204) return { success: false, error: `Restart failed: ${res.status}` };
+      return { success: true };
+    } catch (e) { return { success: false, error: e instanceof Error ? e.message : "Restart failed" }; }
   }
 
-  async retireDevice(mdmDeviceId: string): Promise<void> {
-    const res = await this.kandjiFetch(`/api/v1/devices/${mdmDeviceId}/action/unenroll`, { method: "POST" });
-    if (!res.ok && res.status !== 204) throw new Error(`Retire failed: ${res.status}`);
+  async retireDevice(mdmDeviceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await this.kandjiFetch(`/api/v1/devices/${mdmDeviceId}/action/unenroll`, { method: "POST" });
+      if (!res.ok && res.status !== 204) return { success: false, error: `Retire failed: ${res.status}` };
+      return { success: true };
+    } catch (e) { return { success: false, error: e instanceof Error ? e.message : "Retire failed" }; }
   }
 
-  async syncDevice(mdmDeviceId: string): Promise<void> {
-    const res = await this.kandjiFetch(`/api/v1/devices/${mdmDeviceId}/action/blankpush`, { method: "POST" });
-    if (!res.ok && res.status !== 204) throw new Error(`Sync failed: ${res.status}`);
+  async syncDevice(mdmDeviceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await this.kandjiFetch(`/api/v1/devices/${mdmDeviceId}/action/blankpush`, { method: "POST" });
+      if (!res.ok && res.status !== 204) return { success: false, error: `Sync failed: ${res.status}` };
+      return { success: true };
+    } catch (e) { return { success: false, error: e instanceof Error ? e.message : "Sync failed" }; }
   }
 
-  async deployApp(mdmDeviceId: string, appId: string): Promise<void> {
-    const res = await this.kandjiFetch(`/api/v1/devices/${mdmDeviceId}/apps/${appId}/install`, { method: "POST" });
-    if (!res.ok && res.status !== 204) throw new Error(`Deploy failed: ${res.status}`);
+  async deployApp(mdmDeviceId: string, appId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await this.kandjiFetch(`/api/v1/devices/${mdmDeviceId}/apps/${appId}/install`, { method: "POST" });
+      if (!res.ok && res.status !== 204) return { success: false, error: `Deploy failed: ${res.status}` };
+      return { success: true };
+    } catch (e) { return { success: false, error: e instanceof Error ? e.message : "Deploy failed" }; }
   }
 
   private mapDevice(d: Record<string, unknown>): MdmDeviceData {

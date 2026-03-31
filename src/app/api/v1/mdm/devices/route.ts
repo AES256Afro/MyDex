@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { NextRequest, NextResponse } from "next/server";
 
-// GET - list MDM devices
+// GET - list MDM devices with filtering, search, and pagination
 export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -12,27 +12,55 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const providerId = searchParams.get("providerId");
-  const complianceStatus = searchParams.get("complianceStatus");
-  const enrollmentStatus = searchParams.get("enrollmentStatus");
+  const compliance = searchParams.get("compliance");
+  const enrollment = searchParams.get("enrollment");
   const unmatched = searchParams.get("unmatched");
+  const search = searchParams.get("search");
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50", 10)));
+  const skip = (page - 1) * limit;
 
-  const where: Record<string, unknown> = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: any = {
     organizationId: session.user.organizationId,
   };
 
   if (providerId) where.mdmProviderId = providerId;
-  if (complianceStatus) where.complianceStatus = complianceStatus;
-  if (enrollmentStatus) where.enrollmentStatus = enrollmentStatus;
+  if (compliance) where.complianceStatus = compliance;
+  if (enrollment) where.enrollmentStatus = enrollment;
   if (unmatched === "true") where.agentDeviceId = null;
 
-  const devices = await prisma.mdmDevice.findMany({
-    where,
-    include: {
-      mdmProvider: { select: { id: true, name: true, providerType: true } },
-      agentDevice: { select: { id: true, hostname: true, platform: true, status: true, userId: true } },
-    },
-    orderBy: { lastSyncedAt: "desc" },
-  });
+  if (search) {
+    where.OR = [
+      { hostname: { contains: search, mode: "insensitive" } },
+      { serialNumber: { contains: search, mode: "insensitive" } },
+      { userEmail: { contains: search, mode: "insensitive" } },
+      { deviceName: { contains: search, mode: "insensitive" } },
+    ];
+  }
 
-  return NextResponse.json({ devices });
+  const [devices, total] = await Promise.all([
+    prisma.mdmDevice.findMany({
+      where,
+      include: {
+        mdmProvider: { select: { name: true, providerType: true } },
+        matchedUser: { select: { id: true, name: true, email: true } },
+        agentDevice: { select: { id: true, hostname: true } },
+      },
+      orderBy: { lastSyncedAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.mdmDevice.count({ where }),
+  ]);
+
+  return NextResponse.json({
+    devices,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  });
 }

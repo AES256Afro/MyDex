@@ -3,13 +3,10 @@ import { createMdmClient } from "./factory";
 import type { MdmDeviceData } from "./types";
 
 interface SyncResult {
-  success: boolean;
-  devicesFound: number;
-  devicesUpserted: number;
-  usersMatched: number;
-  devicesMatched: number;
+  synced: number;
+  matched: number;
   autoAssigned: number;
-  error?: string;
+  errors: string[];
 }
 
 export async function syncMdmProvider(providerId: string): Promise<SyncResult> {
@@ -21,6 +18,8 @@ export async function syncMdmProvider(providerId: string): Promise<SyncResult> {
     where: { id: providerId },
     data: { lastSyncStatus: "SYNCING" },
   });
+
+  const errors: string[] = [];
 
   try {
     const client = createMdmClient({
@@ -47,8 +46,8 @@ export async function syncMdmProvider(providerId: string): Promise<SyncResult> {
       where: { organizationId: provider.organizationId },
       select: { id: true, hostname: true, serialNumber: true, userId: true },
     });
-    const serialToDevice = new Map<string, typeof agentDevices[0]>();
-    const hostnameToDevice = new Map<string, typeof agentDevices[0]>();
+    const serialToDevice = new Map<string, (typeof agentDevices)[0]>();
+    const hostnameToDevice = new Map<string, (typeof agentDevices)[0]>();
     for (const d of agentDevices) {
       if (d.serialNumber) serialToDevice.set(d.serialNumber.toLowerCase(), d);
       if (d.hostname) hostnameToDevice.set(d.hostname.toLowerCase(), d);
@@ -62,77 +61,86 @@ export async function syncMdmProvider(providerId: string): Promise<SyncResult> {
     const existingIds = new Set(existingMdmDevices.map((d) => d.mdmDeviceId));
     const seenIds = new Set<string>();
 
-    let usersMatched = 0;
-    let devicesMatched = 0;
+    let matched = 0;
     let autoAssigned = 0;
 
     // 5. Upsert each device
     for (const device of mdmDevices) {
-      seenIds.add(device.mdmDeviceId);
+      try {
+        seenIds.add(device.mdmDeviceId);
 
-      // Match user
-      let matchedUserId: string | null = null;
-      if (device.userEmail) {
-        const userId = emailToUser.get(device.userEmail.toLowerCase());
-        if (userId) {
-          matchedUserId = userId;
-          usersMatched++;
+        // Match user by email
+        let matchedUserId: string | null = null;
+        let matchConfidence: string | null = null;
+        if (device.userEmail) {
+          const userId = emailToUser.get(device.userEmail.toLowerCase());
+          if (userId) {
+            matchedUserId = userId;
+            matchConfidence = "high";
+          }
         }
-      }
 
-      // Match agent device (serial first, then hostname)
-      let agentDeviceId: string | null = null;
-      let matchConfidence: string | null = null;
+        // Match agent device: serial number first (high confidence), then hostname (medium)
+        let agentDeviceId: string | null = null;
 
-      if (device.serialNumber) {
-        const match = serialToDevice.get(device.serialNumber.toLowerCase());
-        if (match) {
-          agentDeviceId = match.id;
-          matchConfidence = "serial";
-          devicesMatched++;
+        if (device.serialNumber) {
+          const match = serialToDevice.get(device.serialNumber.toLowerCase());
+          if (match) {
+            agentDeviceId = match.id;
+            matchConfidence = "high";
+            matched++;
+          }
         }
-      }
-      if (!agentDeviceId && device.hostname) {
-        const match = hostnameToDevice.get(device.hostname.toLowerCase());
-        if (match) {
-          agentDeviceId = match.id;
-          matchConfidence = "hostname";
-          devicesMatched++;
+        if (!agentDeviceId && device.hostname) {
+          const match = hostnameToDevice.get(device.hostname.toLowerCase());
+          if (match) {
+            agentDeviceId = match.id;
+            matchConfidence = "medium";
+            matched++;
+          }
         }
-      }
 
-      await prisma.mdmDevice.upsert({
-        where: {
-          mdmProviderId_mdmDeviceId: {
-            mdmProviderId: providerId,
-            mdmDeviceId: device.mdmDeviceId,
+        await prisma.mdmDevice.upsert({
+          where: {
+            mdmProviderId_mdmDeviceId: {
+              mdmProviderId: providerId,
+              mdmDeviceId: device.mdmDeviceId,
+            },
           },
-        },
-        create: {
-          organizationId: provider.organizationId,
-          mdmProviderId: providerId,
-          ...mapToDbFields(device, agentDeviceId, matchedUserId, matchConfidence),
-        },
-        update: {
-          ...mapToDbFields(device, agentDeviceId, matchedUserId, matchConfidence),
-          lastSyncedAt: new Date(),
-        },
-      });
+          create: {
+            organizationId: provider.organizationId,
+            mdmProviderId: providerId,
+            ...mapToDbFields(device, agentDeviceId, matchedUserId, matchConfidence),
+          },
+          update: {
+            ...mapToDbFields(device, agentDeviceId, matchedUserId, matchConfidence),
+            lastSyncedAt: new Date(),
+          },
+        });
 
-      // 6. Auto-assign if enabled
-      if (provider.autoAssign && agentDeviceId && matchedUserId) {
-        const agentDev = agentDevices.find((d) => d.id === agentDeviceId);
-        if (agentDev && agentDev.userId !== matchedUserId) {
-          await prisma.agentDevice.update({
-            where: { id: agentDeviceId },
-            data: { userId: matchedUserId },
-          });
-          autoAssigned++;
+        // 6. Auto-assign if enabled: MDM device matched a user AND an AgentDevice,
+        // and that AgentDevice has no userId set
+        if (provider.autoAssign && agentDeviceId && matchedUserId) {
+          const agentDev = agentDevices.find((d) => d.id === agentDeviceId);
+          if (agentDev && !agentDev.userId) {
+            await prisma.agentDevice.update({
+              where: { id: agentDeviceId },
+              data: { userId: matchedUserId },
+            });
+            autoAssigned++;
+            console.log(
+              `[MDM Auto-Assign] Assigned user ${matchedUserId} to device ${agentDeviceId} via MDM sync (provider: ${providerId})`
+            );
+          }
         }
+      } catch (e) {
+        errors.push(
+          `Device ${device.mdmDeviceId}: ${e instanceof Error ? e.message : "Unknown error"}`
+        );
       }
     }
 
-    // 7. Mark stale devices
+    // 7. Mark stale devices as unenrolled
     const staleIds = [...existingIds].filter((id) => !seenIds.has(id));
     if (staleIds.length > 0) {
       await prisma.mdmDevice.updateMany({
@@ -144,7 +152,7 @@ export async function syncMdmProvider(providerId: string): Promise<SyncResult> {
       });
     }
 
-    // 8. Update provider
+    // 8. Update provider sync stats
     await prisma.mdmProvider.update({
       where: { id: providerId },
       data: {
@@ -156,12 +164,10 @@ export async function syncMdmProvider(providerId: string): Promise<SyncResult> {
     });
 
     return {
-      success: true,
-      devicesFound: mdmDevices.length,
-      devicesUpserted: mdmDevices.length,
-      usersMatched,
-      devicesMatched,
+      synced: mdmDevices.length,
+      matched,
       autoAssigned,
+      errors,
     };
   } catch (e) {
     const error = e instanceof Error ? e.message : "Unknown error";
@@ -173,13 +179,10 @@ export async function syncMdmProvider(providerId: string): Promise<SyncResult> {
       },
     });
     return {
-      success: false,
-      devicesFound: 0,
-      devicesUpserted: 0,
-      usersMatched: 0,
-      devicesMatched: 0,
+      synced: 0,
+      matched: 0,
       autoAssigned: 0,
-      error,
+      errors: [error],
     };
   }
 }

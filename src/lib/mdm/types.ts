@@ -3,37 +3,31 @@ export interface MdmDeviceData {
   serialNumber?: string;
   hostname?: string;
   userEmail?: string;
+  enrollmentStatus?: string;
+  complianceStatus?: string;
+  managementState?: string;
   deviceName?: string;
   platform?: string;
   osVersion?: string;
   model?: string;
   manufacturer?: string;
-  enrollmentStatus?: string;
-  complianceStatus?: string;
-  managementState?: string;
   isEncrypted?: boolean;
   isJailbroken?: boolean;
   lastCheckIn?: Date;
-  managedApps?: MdmManagedApp[];
+  managedApps?: string[];
   rawData?: Record<string, unknown>;
 }
 
-export interface MdmManagedApp {
-  name: string;
-  version: string;
-  installState: string;
-}
-
 export interface MdmClient {
-  testConnection(): Promise<{ success: boolean; error?: string; deviceCount?: number }>;
+  testConnection(): Promise<{ success: boolean; message?: string; error?: string }>;
   listDevices(): Promise<MdmDeviceData[]>;
-  getDevice(mdmDeviceId: string): Promise<MdmDeviceData | null>;
-  lockDevice(mdmDeviceId: string): Promise<void>;
-  wipeDevice(mdmDeviceId: string): Promise<void>;
-  restartDevice(mdmDeviceId: string): Promise<void>;
-  retireDevice(mdmDeviceId: string): Promise<void>;
-  syncDevice(mdmDeviceId: string): Promise<void>;
-  deployApp(mdmDeviceId: string, appId: string): Promise<void>;
+  getDevice(deviceId: string): Promise<MdmDeviceData | null>;
+  lockDevice(deviceId: string): Promise<{ success: boolean; error?: string }>;
+  wipeDevice(deviceId: string): Promise<{ success: boolean; error?: string }>;
+  restartDevice(deviceId: string): Promise<{ success: boolean; error?: string }>;
+  deployApp(deviceId: string, appName: string): Promise<{ success: boolean; error?: string }>;
+  retireDevice(deviceId: string): Promise<{ success: boolean; error?: string }>;
+  syncDevice(deviceId: string): Promise<{ success: boolean; error?: string }>;
 }
 
 export interface MdmProviderCredentials {
