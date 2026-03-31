@@ -4,9 +4,9 @@ import { redirect } from "next/navigation";
 import { hasPermission } from "@/lib/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format } from "date-fns";
 import { Clock } from "lucide-react";
 import { ClockWidget } from "@/components/time-tracking/clock-widget";
+import { LocalTime } from "@/components/local-time";
 import type { TimeEntryStatus } from "@/generated/prisma";
 
 function statusVariant(status: TimeEntryStatus) {
@@ -206,14 +206,14 @@ export default async function TimeTrackingPage() {
                           </td>
                         )}
                         <td className="py-3 pr-4">
-                          {format(new Date(entry.clockIn), "MMM d, yyyy")}
+                          <LocalTime date={entry.clockIn.toISOString()} fmt="MMM d, yyyy" />
                         </td>
                         <td className="py-3 pr-4">
-                          {format(new Date(entry.clockIn), "h:mm a")}
+                          <LocalTime date={entry.clockIn.toISOString()} fmt="h:mm a" />
                         </td>
                         <td className="py-3 pr-4">
                           {entry.clockOut
-                            ? format(new Date(entry.clockOut), "h:mm a")
+                            ? <LocalTime date={entry.clockOut.toISOString()} fmt="h:mm a" />
                             : "—"}
                         </td>
                         <td className="py-3 pr-4">

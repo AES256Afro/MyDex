@@ -155,15 +155,6 @@ export default function ContactPage() {
               ))}
             </div>
 
-            <div className="mt-10 rounded-lg border border-border bg-muted/30 p-6">
-              <p className="text-sm font-medium text-foreground">
-                &ldquo;MyDex replaced three separate tools for us — device management, time tracking,
-                and IT support — into one dashboard our whole team actually uses.&rdquo;
-              </p>
-              <p className="mt-3 text-xs text-muted-foreground">
-                — IT Director, 85-person SaaS company
-              </p>
-            </div>
           </div>
 
           {/* Right side — form */}

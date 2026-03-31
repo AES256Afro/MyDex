@@ -219,6 +219,24 @@ export async function POST() {
 - New sidebar category grouping Cost Optimization, Sustainability, and Patch Notes
 - TrendingUp and Leaf icons for quick visual identification`,
     },
+    {
+      title: "Timezone Fix & Activity Monitoring Improvements",
+      version: "v0.5.1",
+      tags: ["bugfix", "improvement"],
+      createdAt: new Date("2026-03-29T04:00:00-05:00"),
+      content: `Fixed timezone display and improved activity data collection.
+
+**Timezone Fix**
+- Time tracking clock in/out times now display in user's local timezone instead of UTC
+- Fleet health device "last seen" timestamps converted to local time
+- All server-rendered date/time values use client-side formatting component
+
+**Activity Monitoring**
+- Desktop agent now extracts domain info from browser window titles for WEBSITE_VISIT events
+- Site Visit Timeline shows page titles when domain is unavailable
+- Improved domain aggregation for agent-reported website visits
+- Hourly Activity heatmap works with both app and website event data`,
+    },
   ];
 
   // Filter to only notes not yet seeded

@@ -371,7 +371,8 @@ export default function ActivityPage() {
   const domainAggregation = useMemo(() => {
     const map = new Map<string, number>();
     for (const ev of eventsWithDurations.websites) {
-      const domain = ev.domain || "unknown";
+      // Use domain if available, otherwise extract from windowTitle or use appName
+      const domain = ev.domain || ev.windowTitle || ev.appName || "unknown";
       map.set(domain, (map.get(domain) || 0) + ev.inferredDuration);
     }
     return Array.from(map.entries())
@@ -608,10 +609,10 @@ export default function ActivityPage() {
                                   className="hover:underline text-blue-600 dark:text-blue-400"
                                   title={ev.url}
                                 >
-                                  {ev.domain || "—"}
+                                  {ev.domain || ev.windowTitle || "—"}
                                 </a>
                               ) : (
-                                ev.domain || "—"
+                                ev.domain || ev.windowTitle || "—"
                               )}
                             </td>
                             <td className="py-2.5 pr-4 max-w-[300px] truncate" title={ev.windowTitle || ""}>
