@@ -21,6 +21,7 @@ import {
   Plus,
   Settings,
   Clock,
+  History,
 } from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
@@ -65,6 +66,27 @@ const PROVIDER_INFO: Record<string, { label: string; color: string; bgColor: str
   },
 };
 
+interface MdmActionRecord {
+  id: string;
+  actionType: string;
+  status: string;
+  mdmDeviceId: string | null;
+  issuedAt: string;
+  completedAt: string | null;
+  result: string | null;
+  errorMessage: string | null;
+  issuerName: string;
+  mdmProvider: { name: string; providerType: string };
+}
+
+const ACTION_STATUS_COLORS: Record<string, string> = {
+  PENDING: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+  SENT: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  COMPLETED: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+  FAILED: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+  CANCELLED: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+};
+
 const SYNC_INTERVALS = [
   { value: 15, label: "Every 15 minutes" },
   { value: 30, label: "Every 30 minutes" },
@@ -84,6 +106,8 @@ export default function MdmSettingsPage() {
   const [testResult, setTestResult] = useState<{ success: boolean; error?: string; deviceCount?: number } | null>(null);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [syncResult, setSyncResult] = useState<{ devicesFound?: number; usersMatched?: number; devicesMatched?: number; autoAssigned?: number; error?: string } | null>(null);
+  const [actionHistory, setActionHistory] = useState<MdmActionRecord[]>([]);
+  const [actionsLoading, setActionsLoading] = useState(false);
 
   // Form fields
   const [name, setName] = useState("");
@@ -97,6 +121,7 @@ export default function MdmSettingsPage() {
 
   useEffect(() => {
     fetchProviders();
+    fetchActionHistory();
   }, []);
 
   async function fetchProviders() {
@@ -108,6 +133,19 @@ export default function MdmSettingsPage() {
       }
     } catch { /* ignore */ } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchActionHistory() {
+    setActionsLoading(true);
+    try {
+      const res = await fetch("/api/v1/mdm/actions?limit=20");
+      if (res.ok) {
+        const data = await res.json();
+        setActionHistory(data.actions || []);
+      }
+    } catch { /* ignore */ } finally {
+      setActionsLoading(false);
     }
   }
 
@@ -564,6 +602,74 @@ export default function MdmSettingsPage() {
               <p className="text-xs text-muted-foreground">Lock, restart, wipe, or deploy apps to devices directly from the MyDex Devices page — no need to switch to your MDM console.</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Action History */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Action History
+            </CardTitle>
+            <Button size="sm" variant="ghost" onClick={fetchActionHistory} disabled={actionsLoading}>
+              {actionsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            </Button>
+          </div>
+          <CardDescription>Recent MDM actions executed across all providers</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {actionsLoading && actionHistory.length === 0 ? (
+            <div className="text-center py-6">
+              <Loader2 className="h-5 w-5 mx-auto animate-spin text-muted-foreground" />
+            </div>
+          ) : actionHistory.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No MDM actions have been executed yet.</p>
+          ) : (
+            <div className="overflow-x-auto border rounded">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/30">
+                    <th className="px-3 py-2 text-left font-medium">Time</th>
+                    <th className="px-3 py-2 text-left font-medium">Device</th>
+                    <th className="px-3 py-2 text-left font-medium">Action</th>
+                    <th className="px-3 py-2 text-left font-medium">Status</th>
+                    <th className="px-3 py-2 text-left font-medium">Issued By</th>
+                    <th className="px-3 py-2 text-left font-medium">Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {actionHistory.map((action) => (
+                    <tr key={action.id} className="border-b last:border-0 hover:bg-muted/20">
+                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
+                        {formatDistanceToNow(new Date(action.issuedAt), { addSuffix: true })}
+                      </td>
+                      <td className="px-3 py-2 text-xs">
+                        <span className="font-mono">{action.mdmDeviceId ? action.mdmDeviceId.slice(0, 12) + "..." : "N/A"}</span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <Badge variant="outline" className="text-xs capitalize">{action.actionType.replace("_", " ")}</Badge>
+                      </td>
+                      <td className="px-3 py-2">
+                        <Badge className={`text-xs ${ACTION_STATUS_COLORS[action.status] || ""}`}>
+                          {action.status}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">{action.issuerName}</td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground max-w-[200px] truncate">
+                        {action.status === "FAILED" ? (
+                          <span className="text-red-600">{action.errorMessage || "Failed"}</span>
+                        ) : (
+                          action.result || (action.status === "COMPLETED" ? "Success" : "-")
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

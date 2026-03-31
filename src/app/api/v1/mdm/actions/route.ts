@@ -112,17 +112,38 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const providerId = searchParams.get("providerId");
+  const deviceId = searchParams.get("deviceId");
+  const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10) || 50, 200);
 
   const where: Record<string, unknown> = {
     organizationId: session.user.organizationId,
   };
   if (providerId) where.mdmProviderId = providerId;
+  if (deviceId) where.mdmDeviceId = deviceId;
 
   const actions = await prisma.mdmAction.findMany({
     where,
     orderBy: { issuedAt: "desc" },
-    take: 50,
+    take: limit,
+    include: {
+      mdmProvider: { select: { name: true, providerType: true } },
+    },
   });
 
-  return NextResponse.json({ actions });
+  // Resolve issuer names
+  const issuerIds = [...new Set(actions.map((a) => a.issuedBy))];
+  const issuers = issuerIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: issuerIds } },
+        select: { id: true, name: true, email: true },
+      })
+    : [];
+  const issuerMap = Object.fromEntries(issuers.map((u) => [u.id, u.name || u.email]));
+
+  const enriched = actions.map((a) => ({
+    ...a,
+    issuerName: issuerMap[a.issuedBy] || "Unknown",
+  }));
+
+  return NextResponse.json({ actions: enriched });
 }

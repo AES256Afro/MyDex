@@ -36,6 +36,7 @@ import {
   Wrench,
   Loader2,
 } from "lucide-react";
+import { MdmActions } from "@/components/mdm/mdm-actions";
 
 interface Device {
   id: string;
@@ -79,11 +80,15 @@ interface Device {
     managementState: string | null;
     deviceName: string | null;
     model: string | null;
+    platform: string | null;
+    osVersion: string | null;
     isEncrypted: boolean | null;
+    isJailbroken: boolean | null;
     lastCheckIn: string | null;
     managedApps: { name: string; version: string; installState: string }[] | null;
     mdmDeviceId: string;
     mdmProvider: { id: string; name: string; providerType: string };
+    matchedUser: { id: string; name: string | null; email: string } | null;
   }[];
   openCves: number;
   activeIocs: number;
@@ -180,23 +185,6 @@ export default function DevicesPage() {
     }
   }
 
-  async function executeMdmAction(mdmProviderId: string, mdmDeviceId: string, agentDeviceId: string, actionType: string) {
-    try {
-      const res = await fetch("/api/v1/mdm/actions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mdmProviderId, mdmDeviceId, agentDeviceId, actionType }),
-      });
-      const data = await res.json();
-      if (data.action?.status === "COMPLETED") {
-        alert(`${actionType} command sent successfully.`);
-      } else if (data.action?.status === "FAILED") {
-        alert(`${actionType} failed: ${data.action.errorMessage || "Unknown error"}`);
-      }
-    } catch {
-      alert("Failed to send MDM command.");
-    }
-  }
 
   async function fetchDevices() {
     setLoading(true);
@@ -354,11 +342,21 @@ export default function DevicesPage() {
                       <StatusBadge status={device.status} />
                       {device.mdmDevices?.[0] && (() => {
                         const mdm = device.mdmDevices[0];
+                        const enrollCls = mdm.enrollmentStatus === "enrolled"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                          : mdm.enrollmentStatus === "pending"
+                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
+                        const compCls = mdm.complianceStatus === "compliant"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                          : mdm.complianceStatus === "noncompliant"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
                         return (
                           <>
+                            <Badge className={`text-xs ${enrollCls}`}>{mdm.enrollmentStatus || "Unknown"}</Badge>
+                            <Badge className={`text-xs ${compCls}`}>{mdm.complianceStatus === "noncompliant" ? "Non-Compliant" : mdm.complianceStatus || "Unknown"}</Badge>
                             <Badge className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">{mdm.mdmProvider.name}</Badge>
-                            {mdm.complianceStatus === "compliant" && <Badge className="text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">Compliant</Badge>}
-                            {mdm.complianceStatus === "noncompliant" && <Badge className="text-xs bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">Non-Compliant</Badge>}
                           </>
                         );
                       })()}
@@ -1204,8 +1202,14 @@ export default function DevicesPage() {
                                 <div className="flex justify-between"><span className="text-muted-foreground">Encrypted</span>
                                   <span>{mdm.isEncrypted === true ? "Yes" : mdm.isEncrypted === false ? "No" : "N/A"}</span>
                                 </div>
+                                <div className="flex justify-between"><span className="text-muted-foreground">Jailbroken</span>
+                                  <span className={mdm.isJailbroken ? "text-red-600 font-medium" : ""}>{mdm.isJailbroken === true ? "Yes" : mdm.isJailbroken === false ? "No" : "N/A"}</span>
+                                </div>
+                                {mdm.platform && <div className="flex justify-between"><span className="text-muted-foreground">Platform</span><span>{mdm.platform}</span></div>}
+                                {mdm.osVersion && <div className="flex justify-between"><span className="text-muted-foreground">OS Version</span><span>{mdm.osVersion}</span></div>}
                                 {mdm.model && <div className="flex justify-between"><span className="text-muted-foreground">Model</span><span>{mdm.model}</span></div>}
                                 {mdm.lastCheckIn && <div className="flex justify-between"><span className="text-muted-foreground">Last Check-in</span><span>{formatTimeAgo(mdm.lastCheckIn)}</span></div>}
+                                {mdm.matchedUser && <div className="flex justify-between"><span className="text-muted-foreground">Matched User</span><span>{mdm.matchedUser.name || mdm.matchedUser.email}</span></div>}
                               </div>
                             </div>
 
@@ -1232,31 +1236,13 @@ export default function DevicesPage() {
                           {/* MDM Actions */}
                           <div className="space-y-2">
                             <h3 className="font-semibold text-sm flex items-center gap-1"><Wrench className="h-4 w-4" /> MDM Actions</h3>
-                            <div className="flex flex-wrap gap-2">
-                              <Button size="sm" variant="outline" onClick={() => executeMdmAction(mdm.mdmProvider.id, mdm.mdmDeviceId, device.id, "sync")}>
-                                <RefreshCw className="h-3.5 w-3.5 mr-1" /> Sync
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => executeMdmAction(mdm.mdmProvider.id, mdm.mdmDeviceId, device.id, "lock")}>
-                                <Lock className="h-3.5 w-3.5 mr-1" /> Lock
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => executeMdmAction(mdm.mdmProvider.id, mdm.mdmDeviceId, device.id, "restart")}>
-                                <RefreshCw className="h-3.5 w-3.5 mr-1" /> Restart
-                              </Button>
-                              <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" onClick={() => {
-                                if (confirm(`Are you sure you want to WIPE ${device.hostname}? This cannot be undone.`)) {
-                                  executeMdmAction(mdm.mdmProvider.id, mdm.mdmDeviceId, device.id, "wipe");
-                                }
-                              }}>
-                                <Trash2 className="h-3.5 w-3.5 mr-1" /> Wipe
-                              </Button>
-                              <Button size="sm" variant="outline" className="text-orange-600" onClick={() => {
-                                if (confirm(`Retire/unenroll ${device.hostname} from MDM?`)) {
-                                  executeMdmAction(mdm.mdmProvider.id, mdm.mdmDeviceId, device.id, "retire");
-                                }
-                              }}>
-                                <XCircle className="h-3.5 w-3.5 mr-1" /> Retire
-                              </Button>
-                            </div>
+                            <MdmActions
+                              mdmProviderId={mdm.mdmProvider.id}
+                              mdmDeviceId={mdm.mdmDeviceId}
+                              agentDeviceId={device.id}
+                              enrollmentStatus={mdm.enrollmentStatus || undefined}
+                              deviceName={device.hostname}
+                            />
                           </div>
                         </div>
                       );
