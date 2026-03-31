@@ -299,10 +299,24 @@ function extractDomain(title) {
   for (const pattern of browserPatterns) {
     const match = title.match(pattern);
     if (match) {
-      return { isBrowser: true, pageTitle: match[1].trim(), browser: match[2] };
+      const pageTitle = match[1].trim();
+      const browser = match[2];
+      // Try to extract domain from known title patterns like "site.com" or "Page - site.com"
+      let domain = null;
+      // Check if the page title itself looks like a URL or domain
+      const urlMatch = pageTitle.match(/^https?:\/\/([^/]+)/);
+      if (urlMatch) {
+        domain = urlMatch[1];
+      } else {
+        // Many sites use "Page Title - Domain" or just show the domain
+        const domainPattern = /(?:^|\s[-–—|]\s)([a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z]{2,})$/;
+        const dm = pageTitle.match(domainPattern);
+        if (dm) domain = dm[1].toLowerCase();
+      }
+      return { isBrowser: true, pageTitle, browser, domain };
     }
   }
-  return { isBrowser: false, pageTitle: title, browser: null };
+  return { isBrowser: false, pageTitle: title, browser: null, domain: null };
 }
 
 // --- Command execution ---
@@ -443,12 +457,13 @@ function startCollectors(apiClient, store) {
       const win = getActiveWindow();
       if (!win || !win.Title) return;
 
-      const { isBrowser, pageTitle, browser } = extractDomain(win.Title);
+      const { isBrowser, pageTitle, browser, domain } = extractDomain(win.Title);
 
       const event = {
         eventType: isBrowser ? "WEBSITE_VISIT" : "APP_SWITCH",
-        appName: win.Process || browser || "unknown",
+        appName: isBrowser ? (browser || win.Process || "unknown") : (win.Process || "unknown"),
         windowTitle: pageTitle,
+        domain: domain || undefined,
         timestamp: new Date().toISOString(),
         metadata: { hostname, processPath: win.Path },
       };

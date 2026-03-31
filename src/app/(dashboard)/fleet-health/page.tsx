@@ -11,7 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { format, subDays, startOfDay } from "date-fns";
+import { subDays, startOfDay } from "date-fns";
+import { LocalTime } from "@/components/local-time";
 
 function gradeColor(grade: string | null): string {
   if (!grade) return "text-muted-foreground";
@@ -445,7 +446,7 @@ export default async function FleetHealthPage() {
                           </Badge>
                         </td>
                         <td className="py-3 text-muted-foreground text-xs">
-                          {format(new Date(device.lastSeenAt), "MMM d, h:mm a")}
+                          <LocalTime date={new Date(device.lastSeenAt).toISOString()} fmt="MMM d, h:mm a" />
                         </td>
                       </tr>
                     ))}
