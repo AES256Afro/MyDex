@@ -297,6 +297,15 @@ export const MODULE_REGISTRY: ModuleConfig[] = [
   },
   // Insights
   {
+    id: "insights",
+    label: "AI Insights",
+    href: "/insights",
+    description: "AI-powered analytics, anomaly detection, and workforce recommendations",
+    minRole: "MANAGER",
+    configurable: true,
+    category: "insights",
+  },
+  {
     id: "cost-optimization",
     label: "Cost Optimization",
     href: "/cost-optimization",
@@ -322,6 +331,24 @@ export const MODULE_REGISTRY: ModuleConfig[] = [
     minRole: "EMPLOYEE",
     configurable: false,
     category: "insights",
+  },
+  {
+    id: "domain-categories",
+    label: "Domain Categories",
+    href: "/settings/domain-categories",
+    description: "Categorize domains as productive, neutral, or unproductive",
+    minRole: "ADMIN",
+    configurable: false,
+    category: "admin",
+  },
+  {
+    id: "api-docs",
+    label: "API Docs",
+    href: "/settings/api-docs",
+    description: "API reference documentation for all endpoints",
+    minRole: "ADMIN",
+    configurable: false,
+    category: "admin",
   },
 ];
 

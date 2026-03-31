@@ -14,6 +14,7 @@ import {
   ArrowRight,
   Activity,
   Ticket,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { hasMinRole } from "@/lib/permissions";
@@ -82,6 +83,9 @@ export default async function DashboardPage() {
       openTickets,
       resolvedTickets,
       todayHourlySummaries,
+      insightsProdScores,
+      insightsAnomalyCount,
+      insightsDeptScores,
     ] = await Promise.all([
       // KPI cards
       prisma.user.count({
@@ -182,6 +186,35 @@ export default async function DashboardPage() {
           hour: { not: null },
         },
         orderBy: { hour: "asc" },
+      }),
+
+      // Quick insights: 7-day productivity scores
+      prisma.activitySummary.findMany({
+        where: {
+          organizationId: orgId,
+          date: { gte: sevenDaysAgo, lte: today },
+          hour: null,
+        },
+        select: { productivityScore: true, userId: true },
+      }),
+
+      // Quick insights: anomaly count (security alerts in last 7 days)
+      prisma.securityAlert.count({
+        where: {
+          organizationId: orgId,
+          createdAt: { gte: sevenDaysAgo },
+          status: "OPEN",
+        },
+      }),
+
+      // Quick insights: department engagement (top dept)
+      prisma.activitySummary.findMany({
+        where: {
+          organizationId: orgId,
+          date: { gte: sevenDaysAgo, lte: today },
+          hour: null,
+        },
+        select: { productivityScore: true, user: { select: { department: true } } },
       }),
     ]);
 
@@ -303,6 +336,32 @@ export default async function DashboardPage() {
     // Attendance percentage
     const attendancePct =
       totalEmployees > 0 ? Math.round((presentToday / totalEmployees) * 100) : 0;
+
+    // ── Quick Insights computation ────────────────────────────────
+    const qiScores = insightsProdScores
+      .filter(s => s.productivityScore !== null)
+      .map(s => s.productivityScore!);
+    const qiAvgProd = qiScores.length > 0
+      ? Math.round(qiScores.reduce((a, b) => a + b, 0) / qiScores.length)
+      : null;
+
+    // Department engagement — find highest department
+    const deptScoreMap = new Map<string, number[]>();
+    for (const s of insightsDeptScores) {
+      if (s.productivityScore === null) continue;
+      const dept = s.user.department || "Unassigned";
+      if (!deptScoreMap.has(dept)) deptScoreMap.set(dept, []);
+      deptScoreMap.get(dept)!.push(s.productivityScore);
+    }
+    let topDeptName = "";
+    let topDeptScore = 0;
+    for (const [dept, scores] of deptScoreMap) {
+      const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+      if (avg > topDeptScore) {
+        topDeptScore = avg;
+        topDeptName = dept;
+      }
+    }
 
     // ── Render ──────────────────────────────────────────────────────
     return (
@@ -485,6 +544,50 @@ export default async function DashboardPage() {
           </Card>
           <QuickActionsGrid />
         </div>
+
+        {/* Quick Insights Widget */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Quick Insights
+            </CardTitle>
+            <Link href="/insights" className="text-xs text-primary hover:underline flex items-center gap-1">
+              View All <ArrowRight className="h-3 w-3" />
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {qiAvgProd !== null && (
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="h-2 w-2 rounded-full bg-blue-500" />
+                  <span>Productivity averaging <span className="font-medium">{qiAvgProd}%</span> this week</span>
+                </div>
+              )}
+              {insightsAnomalyCount > 0 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="h-2 w-2 rounded-full bg-red-500" />
+                  <span><span className="font-medium">{insightsAnomalyCount}</span> open anomalies detected</span>
+                </div>
+              )}
+              {insightsAnomalyCount === 0 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="h-2 w-2 rounded-full bg-green-500" />
+                  <span>No anomalies detected — all clear</span>
+                </div>
+              )}
+              {topDeptName && (
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <span>{topDeptName} team engagement: <span className="font-medium">{topDeptScore}%</span></span>
+                </div>
+              )}
+              {qiAvgProd === null && !topDeptName && insightsAnomalyCount === 0 && (
+                <p className="text-sm text-muted-foreground">Deploy agents and start tracking to see insights here.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Row 4: Top Apps */}
         <TopAppsChart data={topApps} />

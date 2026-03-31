@@ -29,7 +29,9 @@ function MfaVerifyForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [useBackup, setUseBackup] = useState(false);
+  const [useRecovery, setUseRecovery] = useState(false);
   const [backupCode, setBackupCode] = useState("");
+  const [recoveryCode, setRecoveryCode] = useState("");
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -107,6 +109,29 @@ function MfaVerifyForm() {
     await submitCode(backupCode.trim());
   }
 
+  async function handleRecoverySubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/v1/auth/mfa/recovery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: recoveryCode.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        router.push(callbackUrl);
+      } else {
+        setError(data.error || "Invalid recovery code");
+      }
+    } catch {
+      setError("Verification failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
@@ -116,7 +141,9 @@ function MfaVerifyForm() {
           </div>
           <CardTitle className="text-xl">Two-Factor Authentication</CardTitle>
           <CardDescription>
-            {useBackup
+            {useRecovery
+              ? "Enter one of your recovery codes (XXXX-XXXX)"
+              : useBackup
               ? "Enter one of your backup codes"
               : "Enter the 6-digit code from your authenticator app"}
           </CardDescription>
@@ -128,7 +155,29 @@ function MfaVerifyForm() {
             </div>
           )}
 
-          {!useBackup ? (
+          {useRecovery ? (
+            <form onSubmit={handleRecoverySubmit} className="space-y-4">
+              <Input
+                type="text"
+                placeholder="XXXX-XXXX"
+                value={recoveryCode}
+                onChange={(e) => setRecoveryCode(e.target.value.toUpperCase())}
+                className="text-center font-mono text-lg tracking-wider"
+                disabled={loading}
+                autoComplete="off"
+              />
+              <Button className="w-full" disabled={loading || !recoveryCode.trim()}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  "Verify Recovery Code"
+                )}
+              </Button>
+            </form>
+          ) : !useBackup ? (
             <>
               <div className="flex justify-center gap-2" onPaste={handlePaste}>
                 {code.map((digit, index) => (
@@ -187,16 +236,30 @@ function MfaVerifyForm() {
             </form>
           )}
 
-          <div className="text-center">
+          <div className="text-center space-y-1">
+            {!useRecovery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setUseBackup(!useBackup);
+                  setUseRecovery(false);
+                  setError("");
+                }}
+                className="text-sm text-muted-foreground hover:text-primary underline block mx-auto"
+              >
+                {useBackup ? "Use authenticator app instead" : "Use a backup code"}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
-                setUseBackup(!useBackup);
+                setUseRecovery(!useRecovery);
+                setUseBackup(false);
                 setError("");
               }}
-              className="text-sm text-muted-foreground hover:text-primary underline"
+              className="text-sm text-muted-foreground hover:text-primary underline block mx-auto"
             >
-              {useBackup ? "Use authenticator app instead" : "Use a backup code"}
+              {useRecovery ? "Use authenticator app instead" : "Use a recovery code"}
             </button>
           </div>
         </CardContent>

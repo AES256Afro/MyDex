@@ -46,6 +46,7 @@ model Organization {
   scimTokens       ScimToken[]
   scimEvents       ScimEvent[]
   workflows        Workflow[]
+  domainCategories DomainCategory[]
 }
 
 model User {
@@ -1021,13 +1022,15 @@ model AgentPolicy {
 // ============================================
 
 model MfaCredential {
-  id             String   @id @default(cuid())
-  userId         String
-  secret         String   // encrypted TOTP secret
-  verified       Boolean  @default(false)
-  backupCodes    String[] // hashed backup codes
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  userId             String
+  secret             String   // encrypted TOTP secret
+  verified           Boolean  @default(false)
+  backupCodes        String[] // hashed backup codes
+  recoveryCodes      String[] @default([])
+  recoveryCodesUsed  String[] @default([])
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1617,4 +1620,22 @@ model WorkflowLog {
 
   @@index([workflowId])
   @@index([organizationId, executedAt])
+}
+
+// ============================================
+// DOMAIN CATEGORIZATION
+// ============================================
+
+model DomainCategory {
+  id             String   @id @default(cuid())
+  organizationId String
+  domain         String
+  category       String   // "productive", "neutral", "unproductive"
+  label          String?  // Optional friendly name
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, domain])
 }
