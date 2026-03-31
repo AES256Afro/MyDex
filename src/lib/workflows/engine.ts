@@ -20,7 +20,7 @@ interface ActionConfig {
 
 // ── Condition evaluation ──
 
-function evaluateCondition(condition: Condition, data: Record<string, unknown>): boolean {
+export function evaluateCondition(condition: Condition, data: Record<string, unknown>): boolean {
   const fieldValue = data[condition.field];
   const expected = condition.value;
 
@@ -44,14 +44,14 @@ function evaluateCondition(condition: Condition, data: Record<string, unknown>):
   }
 }
 
-function evaluateAllConditions(conditions: Condition[], data: Record<string, unknown>): boolean {
+export function evaluateAllConditions(conditions: Condition[], data: Record<string, unknown>): boolean {
   if (!conditions || conditions.length === 0) return true;
   return conditions.every((c) => evaluateCondition(c, data));
 }
 
 // ── Action execution ──
 
-async function executeAction(
+export async function executeAction(
   orgId: string,
   action: ActionConfig,
   triggerData: Record<string, unknown>
