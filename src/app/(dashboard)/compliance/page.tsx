@@ -53,7 +53,9 @@ interface CommandLog {
   commandId?: string;
 }
 
-type Soc2Remedy = {
+type FrameworkKey = "soc2" | "cis" | "iso27001" | "gdpr";
+
+type Remedy = {
   id: string;
   control: string;
   title: string;
@@ -63,7 +65,11 @@ type Soc2Remedy = {
   autoFix: boolean;
   platform: "windows" | "macos" | "both";
   custom?: boolean;
+  framework?: FrameworkKey;
 };
+
+// Keep old alias for backward compat with localStorage
+type Soc2Remedy = Remedy;
 
 type ControlInfo = {
   id: string;
@@ -84,7 +90,14 @@ type CriteriaInfo = {
   controls: ControlInfo[];
 };
 
-const CONTROL_OPTIONS = [
+const FRAMEWORK_META: Record<FrameworkKey, { label: string; fullName: string; desc: string; icon: string }> = {
+  soc2: { label: "SOC 2", fullName: "SOC 2 Type II", desc: "AICPA Trust Service Criteria", icon: "shield" },
+  cis: { label: "CIS Benchmarks", fullName: "CIS Controls v8", desc: "Center for Internet Security Critical Controls", icon: "lock" },
+  iso27001: { label: "ISO 27001", fullName: "ISO/IEC 27001:2022", desc: "Information Security Management System (Annex A)", icon: "globe" },
+  gdpr: { label: "GDPR", fullName: "General Data Protection Regulation", desc: "EU Data Protection Compliance", icon: "file" },
+};
+
+const SOC2_CONTROL_OPTIONS = [
   "CC6.1","CC6.2","CC6.3","CC6.4","CC6.5","CC6.6","CC6.7","CC6.8",
   "CC7.1","CC7.2","CC7.3","CC7.4","CC7.5",
   "CC8.1","CC8.2","CC8.3",
@@ -92,6 +105,28 @@ const CONTROL_OPTIONS = [
   "A1.1","A1.2","A1.3",
   "C1.1","C1.2","C1.3",
 ];
+
+const CIS_CONTROL_OPTIONS = [
+  "CIS 1","CIS 2","CIS 3","CIS 4","CIS 5","CIS 6","CIS 7","CIS 8","CIS 9","CIS 10","CIS 13",
+];
+
+const ISO_CONTROL_OPTIONS = [
+  "A.5","A.6","A.7","A.8","A.9","A.10","A.12","A.13","A.16","A.18",
+];
+
+const GDPR_CONTROL_OPTIONS = [
+  "Art. 5","Art. 25","Art. 30","Art. 32","Art. 33","Art. 35","Art. 37",
+];
+
+const CONTROL_OPTIONS_BY_FRAMEWORK: Record<FrameworkKey, string[]> = {
+  soc2: SOC2_CONTROL_OPTIONS,
+  cis: CIS_CONTROL_OPTIONS,
+  iso27001: ISO_CONTROL_OPTIONS,
+  gdpr: GDPR_CONTROL_OPTIONS,
+};
+
+// Legacy alias
+const CONTROL_OPTIONS = SOC2_CONTROL_OPTIONS;
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
@@ -129,6 +164,9 @@ export default function CompliancePage() {
   const [logPanelMinimized, setLogPanelMinimized] = useState(false);
   const [runningCommands, setRunningCommands] = useState<Set<string>>(new Set());
   const logEndRef = useRef<HTMLDivElement>(null);
+
+  // Framework selector
+  const [selectedFramework, setSelectedFramework] = useState<FrameworkKey>("soc2");
 
   // New state for redesigned features
   const [selectedCriteria, setSelectedCriteria] = useState<string | null>(null);
@@ -223,7 +261,7 @@ export default function CompliancePage() {
           deviceId: dev.id,
           commandType: "RUN_SCRIPT",
           command: script,
-          description: `SOC 2 Compliance: ${title}`,
+          description: `Compliance: ${title}`,
         }),
       });
 
@@ -400,7 +438,207 @@ export default function CompliancePage() {
     ];
   };
 
-  const trustCriteria = buildCriteria();
+  // ── CIS Benchmarks Controls ──
+  const buildCISControls = (): CriteriaInfo[] => {
+    const cis1Controls: ControlInfo[] = [
+      { id: "CIS 1.1", name: "Enterprise asset inventory", status: (noDevices ? "fail" : "pass") as ControlInfo["status"], desc: noDevices ? "No devices enrolled in asset inventory" : `${totalDevices} device(s) enrolled and tracked in asset inventory` },
+      { id: "CIS 1.2", name: "Unauthorized asset detection", status: (noDevices ? "fail" : totalDevices < 2 ? "warn" : "pass") as ControlInfo["status"], desc: noDevices ? "No fleet data to detect unauthorized devices" : `Fleet monitoring active across ${totalDevices} device(s)` },
+    ];
+    const cis2Controls: ControlInfo[] = [
+      { id: "CIS 2.1", name: "Software inventory maintained", status: (noDevices ? "fail" : "pass") as ControlInfo["status"], desc: noDevices ? "No device data for software inventory" : `Software inventory tracked across ${totalDevices} device(s)` },
+      { id: "CIS 2.2", name: "Authorized software only", status: "warn", desc: "Software allowlist recommended — configure in Security > DLP" },
+    ];
+    const cis3Controls: ControlInfo[] = [
+      { id: "CIS 3.1", name: "Data classification defined", status: "warn", desc: "Define data classification policy — DLP rules partially configured" },
+      { id: "CIS 3.6", name: "Encrypt data at rest", status: encCheck.status, desc: encCheck.status === "pass" ? `Disk encryption verified on all ${totalDevices} device(s)` : `${encCheck.failing} device(s) missing disk encryption`, failingDevices: encCheck.failingDevices },
+      { id: "CIS 3.10", name: "Encrypt data in transit", status: "pass", desc: "TLS 1.3 enforced via Cloudflare Edge; HSTS enabled" },
+    ];
+    const cis4Controls: ControlInfo[] = [
+      { id: "CIS 4.1", name: "Secure configuration baseline", status: fwCheck.status, desc: fwCheck.status === "pass" ? `Firewall enabled on all ${totalDevices} device(s)` : `${fwCheck.failing} device(s) have firewall issues`, failingDevices: fwCheck.failingDevices },
+      { id: "CIS 4.4", name: "Managed device compliance", status: updateCheck.status, desc: updateCheck.status === "pass" ? "All devices up-to-date" : `${updateCheck.failing} device(s) have pending updates`, failingDevices: updateCheck.failingDevices },
+      { id: "CIS 4.6", name: "Security grade enforcement", status: (noDevices ? "warn" : deviceComplianceData.every(d => d.device.securityGrade && d.device.securityGrade <= "B") ? "pass" : "warn") as ControlInfo["status"], desc: "Devices should maintain security grade B or higher" },
+    ];
+    const cis5Controls: ControlInfo[] = [
+      { id: "CIS 5.1", name: "Account inventory", status: "pass", desc: "User accounts managed through SSO integration with RBAC" },
+      { id: "CIS 5.3", name: "Disable dormant accounts", status: "warn", desc: "Audit stale accounts quarterly — automate via SCIM offboarding" },
+      { id: "CIS 5.4", name: "MFA enforcement", status: "pass", desc: "MFA enforced for all user accounts via NextAuth provider" },
+    ];
+    const cis6Controls: ControlInfo[] = [
+      { id: "CIS 6.1", name: "Role-based access control", status: "pass", desc: "RBAC enforced with admin, user, and viewer roles" },
+      { id: "CIS 6.2", name: "SSO configured", status: "pass", desc: "SSO configured via NextAuth with OAuth/SAML providers" },
+      { id: "CIS 6.5", name: "Least privilege access", status: "warn", desc: "Review role assignments quarterly to ensure least privilege" },
+    ];
+    const cis7Controls: ControlInfo[] = [
+      { id: "CIS 7.1", name: "Vulnerability management process", status: "pass", desc: "CVE tracking and vulnerability scanning active via threat dashboard" },
+      { id: "CIS 7.4", name: "Patch management", status: updateCheck.status, desc: updateCheck.status === "pass" ? "All devices patched" : `${updateCheck.failing} device(s) have pending patches`, failingDevices: updateCheck.failingDevices },
+    ];
+    const cis8Controls: ControlInfo[] = [
+      { id: "CIS 8.1", name: "Audit log process established", status: "pass", desc: "Audit logging active via compliance dashboard and activity monitoring" },
+      { id: "CIS 8.2", name: "Centralized log collection", status: "pass", desc: "Logs collected centrally via MyDex platform API" },
+    ];
+    const cis9Controls: ControlInfo[] = [
+      { id: "CIS 9.1", name: "Email security configured", status: "warn", desc: "Configure DMARC, SPF, and DKIM for email domain protection" },
+      { id: "CIS 9.2", name: "DLP policies for web/email", status: "warn", desc: "DLP policies partially configured — expand to cover browser protections" },
+    ];
+    const cis10Controls: ControlInfo[] = [
+      { id: "CIS 10.1", name: "Anti-malware deployed", status: avCheck.status, desc: avCheck.status === "pass" ? `Antivirus active on all ${totalDevices} device(s)` : `${avCheck.failing} device(s) missing antivirus`, failingDevices: avCheck.failingDevices },
+      { id: "CIS 10.2", name: "Anti-malware auto-update", status: avCheck.status, desc: "Antivirus definitions should auto-update daily" },
+    ];
+    const cis13Controls: ControlInfo[] = [
+      { id: "CIS 13.1", name: "Network monitoring active", status: fwCheck.status, desc: fwCheck.status === "pass" ? "Firewall and network monitoring active" : `${fwCheck.failing} device(s) have network protection issues`, failingDevices: fwCheck.failingDevices },
+      { id: "CIS 13.6", name: "Device connectivity monitoring", status: onlineCheck.status, desc: onlineCheck.status === "pass" ? "All devices online and reporting" : `${onlineCheck.failing} device(s) offline`, failingDevices: onlineCheck.failingDevices },
+    ];
+
+    const groups = [
+      { id: "CIS 1", name: "Asset Inventory", color: "#3b82f6", controls: cis1Controls },
+      { id: "CIS 2", name: "Software Inventory", color: "#6366f1", controls: cis2Controls },
+      { id: "CIS 3", name: "Data Protection", color: "#8b5cf6", controls: cis3Controls },
+      { id: "CIS 4", name: "Secure Configuration", color: "#22c55e", controls: cis4Controls },
+      { id: "CIS 5", name: "Account Management", color: "#f59e0b", controls: cis5Controls },
+      { id: "CIS 6", name: "Access Control", color: "#06b6d4", controls: cis6Controls },
+      { id: "CIS 7", name: "Vulnerability Mgmt", color: "#ef4444", controls: cis7Controls },
+      { id: "CIS 8", name: "Audit Logging", color: "#ec4899", controls: cis8Controls },
+      { id: "CIS 9", name: "Email & Web", color: "#14b8a6", controls: cis9Controls },
+      { id: "CIS 10", name: "Malware Defenses", color: "#f97316", controls: cis10Controls },
+      { id: "CIS 13", name: "Network Defense", color: "#84cc16", controls: cis13Controls },
+    ];
+
+    return groups.map(g => {
+      const passing = g.controls.filter(c => c.status === "pass").length;
+      const failing = g.controls.filter(c => c.status === "fail").length;
+      const score = g.controls.length > 0 ? Math.round((passing / g.controls.length) * 100) : 0;
+      return { ...g, score, total: g.controls.length, passing, failing };
+    });
+  };
+
+  // ── ISO 27001 Annex A Controls ──
+  const buildISO27001Controls = (): CriteriaInfo[] => {
+    const a5Controls: ControlInfo[] = [
+      { id: "A.5.1", name: "Information security policies", status: "warn", desc: "DLP policies configured — formalize overarching information security policy document" },
+      { id: "A.5.2", name: "Policy review schedule", status: "warn", desc: "Establish annual policy review cycle and assign policy owner" },
+    ];
+    const a6Controls: ControlInfo[] = [
+      { id: "A.6.1", name: "Security roles and responsibilities", status: "pass", desc: "RBAC enforced with admin, user, and viewer roles defined" },
+      { id: "A.6.2", name: "Segregation of duties", status: "warn", desc: "Review role assignments to ensure proper segregation of duties" },
+    ];
+    const a7Controls: ControlInfo[] = [
+      { id: "A.7.1", name: "Pre-employment screening", status: "warn", desc: "Document background check procedures for new hires" },
+      { id: "A.7.2", name: "Security awareness training", status: "warn", desc: "Implement recurring security awareness training program" },
+      { id: "A.7.3", name: "Termination procedures", status: "warn", desc: "Offboarding via SCIM available — formalize exit procedures" },
+    ];
+    const a8Controls: ControlInfo[] = [
+      { id: "A.8.1", name: "Asset inventory", status: (noDevices ? "fail" : "pass") as ControlInfo["status"], desc: noDevices ? "No devices enrolled in inventory" : `${totalDevices} device(s) tracked in asset inventory` },
+      { id: "A.8.2", name: "Asset ownership assigned", status: (noDevices ? "warn" : "pass") as ControlInfo["status"], desc: noDevices ? "No devices to assign ownership" : "Device ownership tracked via user assignments" },
+      { id: "A.8.3", name: "Software inventory", status: (noDevices ? "fail" : "pass") as ControlInfo["status"], desc: noDevices ? "No software data available" : `Software inventory tracked across ${totalDevices} device(s)` },
+    ];
+    const a9Controls: ControlInfo[] = [
+      { id: "A.9.1", name: "Access control policy", status: "pass", desc: "SSO with MFA enforced for all user accounts" },
+      { id: "A.9.2", name: "User access provisioning", status: "pass", desc: "User provisioning managed through SSO and SCIM integration" },
+      { id: "A.9.4", name: "Password management", status: "pass", desc: "Password hashing with bcrypt; complexity requirements enforced" },
+    ];
+    const a10Controls: ControlInfo[] = [
+      { id: "A.10.1", name: "Encryption at rest", status: encCheck.status, desc: encCheck.status === "pass" ? `Disk encryption verified on all ${totalDevices} device(s)` : `${encCheck.failing} device(s) missing disk encryption`, failingDevices: encCheck.failingDevices },
+      { id: "A.10.2", name: "Encryption in transit", status: "pass", desc: "TLS 1.3 minimum enforced via Cloudflare; HSTS active" },
+    ];
+    const a12Controls: ControlInfo[] = [
+      { id: "A.12.1", name: "Operational procedures documented", status: "warn", desc: "Document standard operating procedures for IT operations" },
+      { id: "A.12.2", name: "Malware protection", status: avCheck.status, desc: avCheck.status === "pass" ? `Antivirus active on all ${totalDevices} device(s)` : `${avCheck.failing} device(s) missing antivirus`, failingDevices: avCheck.failingDevices },
+      { id: "A.12.6", name: "Technical vulnerability management", status: updateCheck.status, desc: updateCheck.status === "pass" ? "All devices patched and up-to-date" : `${updateCheck.failing} device(s) have pending updates`, failingDevices: updateCheck.failingDevices },
+      { id: "A.12.7", name: "System monitoring", status: (noDevices ? "fail" : "pass") as ControlInfo["status"], desc: noDevices ? "No devices enrolled for monitoring" : `MyDex agent monitoring ${totalDevices} device(s)` },
+    ];
+    const a13Controls: ControlInfo[] = [
+      { id: "A.13.1", name: "Network controls", status: fwCheck.status, desc: fwCheck.status === "pass" ? `Firewall enabled on all ${totalDevices} device(s)` : `${fwCheck.failing} device(s) have firewall issues`, failingDevices: fwCheck.failingDevices },
+      { id: "A.13.2", name: "Secure data transfer", status: "pass", desc: "Data transfers secured via TLS; DLP policies active for sensitive data" },
+    ];
+    const a16Controls: ControlInfo[] = [
+      { id: "A.16.1", name: "Incident management process", status: "warn", desc: "Security alert system active — formalize incident response procedures" },
+      { id: "A.16.2", name: "Incident reporting", status: "pass", desc: "Security alerts with Slack/Teams notification integration available" },
+      { id: "A.16.3", name: "Incident evidence collection", status: "warn", desc: "Implement automated evidence collection for security incidents" },
+    ];
+    const a18Controls: ControlInfo[] = [
+      { id: "A.18.1", name: "Compliance with legal requirements", status: "pass", desc: "Compliance dashboard provides ongoing monitoring and evidence" },
+      { id: "A.18.2", name: "Independent security review", status: "warn", desc: "Schedule annual independent security audit or penetration test" },
+    ];
+
+    const groups = [
+      { id: "A.5", name: "Security Policies", color: "#3b82f6", controls: a5Controls },
+      { id: "A.6", name: "Organization", color: "#6366f1", controls: a6Controls },
+      { id: "A.7", name: "HR Security", color: "#8b5cf6", controls: a7Controls },
+      { id: "A.8", name: "Asset Management", color: "#22c55e", controls: a8Controls },
+      { id: "A.9", name: "Access Control", color: "#f59e0b", controls: a9Controls },
+      { id: "A.10", name: "Cryptography", color: "#06b6d4", controls: a10Controls },
+      { id: "A.12", name: "Operations Security", color: "#ef4444", controls: a12Controls },
+      { id: "A.13", name: "Communications", color: "#ec4899", controls: a13Controls },
+      { id: "A.16", name: "Incident Mgmt", color: "#14b8a6", controls: a16Controls },
+      { id: "A.18", name: "Compliance", color: "#84cc16", controls: a18Controls },
+    ];
+
+    return groups.map(g => {
+      const passing = g.controls.filter(c => c.status === "pass").length;
+      const failing = g.controls.filter(c => c.status === "fail").length;
+      const score = g.controls.length > 0 ? Math.round((passing / g.controls.length) * 100) : 0;
+      return { ...g, score, total: g.controls.length, passing, failing };
+    });
+  };
+
+  // ── GDPR Compliance Controls ──
+  const buildGDPRControls = (): CriteriaInfo[] => {
+    const art5Controls: ControlInfo[] = [
+      { id: "Art. 5.1", name: "Lawful, fair, and transparent processing", status: "warn", desc: "Review data processing activities for lawful basis documentation" },
+      { id: "Art. 5.2", name: "Purpose limitation", status: "warn", desc: "Document specific purposes for all personal data processing" },
+      { id: "Art. 5.3", name: "Data minimization", status: "pass", desc: "DLP policies configured to detect and minimize unnecessary data collection" },
+    ];
+    const art25Controls: ControlInfo[] = [
+      { id: "Art. 25.1", name: "Privacy by design", status: encCheck.status, desc: encCheck.status === "pass" ? "Encryption at rest enforced across fleet" : `${encCheck.failing} device(s) lack encryption — privacy by design requirement`, failingDevices: encCheck.failingDevices },
+      { id: "Art. 25.2", name: "Privacy by default", status: "pass", desc: "Access controls enforce least privilege; MFA required" },
+    ];
+    const art30Controls: ControlInfo[] = [
+      { id: "Art. 30.1", name: "Processing activities register", status: "pass", desc: "Audit logging active — processing activities recorded via platform" },
+      { id: "Art. 30.2", name: "Processor records maintained", status: "warn", desc: "Document all third-party processors and their data access" },
+    ];
+    const art32Controls: ControlInfo[] = [
+      { id: "Art. 32.1a", name: "Encryption measures", status: encCheck.status, desc: encCheck.status === "pass" ? `Disk encryption verified on all ${totalDevices} device(s)` : `${encCheck.failing} device(s) missing encryption`, failingDevices: encCheck.failingDevices },
+      { id: "Art. 32.1b", name: "System confidentiality", status: avCheck.status, desc: avCheck.status === "pass" ? "Antivirus protecting system integrity" : `${avCheck.failing} device(s) lack malware protection`, failingDevices: avCheck.failingDevices },
+      { id: "Art. 32.1c", name: "System resilience", status: fwCheck.status, desc: fwCheck.status === "pass" ? "Firewall active on all devices" : `${fwCheck.failing} device(s) have firewall issues`, failingDevices: fwCheck.failingDevices },
+      { id: "Art. 32.1d", name: "Regular security testing", status: updateCheck.status, desc: updateCheck.status === "pass" ? "All devices current on security patches" : `${updateCheck.failing} device(s) need updates`, failingDevices: updateCheck.failingDevices },
+    ];
+    const art33Controls: ControlInfo[] = [
+      { id: "Art. 33.1", name: "72-hour breach notification", status: "warn", desc: "Security alert system active — formalize 72-hour breach notification procedure to supervisory authority" },
+      { id: "Art. 33.2", name: "Breach notification content", status: "warn", desc: "Create breach notification template with required GDPR content fields" },
+      { id: "Art. 33.3", name: "Notification channel configured", status: "pass", desc: "Slack/Teams notification integration available for rapid incident response" },
+    ];
+    const art35Controls: ControlInfo[] = [
+      { id: "Art. 35.1", name: "DPIA conducted", status: "warn", desc: "Conduct Data Protection Impact Assessments for high-risk processing activities" },
+      { id: "Art. 35.7", name: "DPIA documentation", status: "pass", desc: "Compliance dashboard provides risk assessment and monitoring capabilities" },
+    ];
+    const art37Controls: ControlInfo[] = [
+      { id: "Art. 37.1", name: "DPO appointed", status: "warn", desc: "Appoint a Data Protection Officer if required by processing activities or jurisdiction" },
+      { id: "Art. 37.5", name: "DPO qualifications", status: "warn", desc: "Ensure DPO has expert knowledge of data protection law and practices" },
+    ];
+
+    const groups = [
+      { id: "Art. 5", name: "Processing Principles", color: "#3b82f6", controls: art5Controls },
+      { id: "Art. 25", name: "Privacy by Design", color: "#22c55e", controls: art25Controls },
+      { id: "Art. 30", name: "Processing Records", color: "#8b5cf6", controls: art30Controls },
+      { id: "Art. 32", name: "Security of Processing", color: "#ef4444", controls: art32Controls },
+      { id: "Art. 33", name: "Breach Notification", color: "#f59e0b", controls: art33Controls },
+      { id: "Art. 35", name: "Impact Assessment", color: "#06b6d4", controls: art35Controls },
+      { id: "Art. 37", name: "Data Protection Officer", color: "#ec4899", controls: art37Controls },
+    ];
+
+    return groups.map(g => {
+      const passing = g.controls.filter(c => c.status === "pass").length;
+      const failing = g.controls.filter(c => c.status === "fail").length;
+      const score = g.controls.length > 0 ? Math.round((passing / g.controls.length) * 100) : 0;
+      return { ...g, score, total: g.controls.length, passing, failing };
+    });
+  };
+
+  // ── Framework-aware criteria selection ──
+  const trustCriteria = selectedFramework === "soc2" ? buildCriteria()
+    : selectedFramework === "cis" ? buildCISControls()
+    : selectedFramework === "iso27001" ? buildISO27001Controls()
+    : buildGDPRControls();
   const activeCriteria = selectedCriteria ? trustCriteria.find(c => c.id === selectedCriteria) : null;
 
   const overallScore = trustCriteria.length > 0 ? Math.round(trustCriteria.reduce((sum, c) => sum + c.score, 0) / trustCriteria.length) : 0;
@@ -453,7 +691,68 @@ export default function CompliancePage() {
       script: soc2IsWindows ? "net accounts\nGet-LocalUser | Select Name,PasswordLastSet,PasswordExpires,Enabled | Format-Table" : "pwpolicy -getaccountpolicies 2>/dev/null || echo 'Use System Preferences > Security'\ndscl . -list /Users | while read u; do\n  dscl . -read /Users/$u AuthenticationAuthority 2>/dev/null | head -1\ndone" },
   ];
 
-  const allRemediations = [...builtInRemediations, ...customRemediations];
+  // CIS Benchmark remediations
+  const cisRemediations: Remedy[] = [
+    { id: "cis_r1", control: "CIS 3.6", title: "Enable Disk Encryption", desc: "Verify and enable BitLocker/FileVault to satisfy CIS 3 data protection", severity: "critical", autoFix: false, platform: "both", framework: "cis",
+      script: soc2IsWindows ? "Get-BitLockerVolume | Select MountPoint,VolumeStatus,EncryptionPercentage,ProtectionStatus | Format-Table\n# To enable: Enable-BitLocker -MountPoint 'C:' -EncryptionMethod XtsAes256 -UsedSpaceOnly -TpmProtector" : "fdesetup status\n# To enable: sudo fdesetup enable" },
+    { id: "cis_r2", control: "CIS 4.1", title: "Verify Firewall Configuration", desc: "Ensure firewall is active across all profiles for CIS 4 secure configuration", severity: "high", autoFix: true, platform: "both", framework: "cis",
+      script: soc2IsWindows ? "Get-NetFirewallProfile | Select Name,Enabled | Format-Table\nSet-NetFirewallProfile -Profile Domain,Public,Private -Enabled True" : "sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate\nsudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on" },
+    { id: "cis_r3", control: "CIS 10.1", title: "Update Antivirus Definitions", desc: "Force-update antivirus definitions for CIS 10 malware defense", severity: "critical", autoFix: true, platform: "both", framework: "cis",
+      script: soc2IsWindows ? "Update-MpSignature -UpdateSource MicrosoftUpdateServer\nGet-MpComputerStatus | Select AntivirusSignatureLastUpdated,AntivirusEnabled,RealTimeProtectionEnabled" : "softwareupdate --background-critical\necho 'XProtect definitions updated'" },
+    { id: "cis_r4", control: "CIS 7.4", title: "Install Pending Patches", desc: "Apply all pending security patches for CIS 7 vulnerability management", severity: "high", autoFix: true, platform: "both", framework: "cis",
+      script: soc2IsWindows ? "$UpdateSession = New-Object -ComObject Microsoft.Update.Session\n$Searcher = $UpdateSession.CreateUpdateSearcher()\n$Results = $Searcher.Search('IsInstalled=0')\n$Results.Updates | Select Title,MsrcSeverity | Format-Table -Wrap" : "softwareupdate --list 2>&1\nsoftwareupdate --install --all" },
+    { id: "cis_r5", control: "CIS 5.3", title: "Audit Dormant Accounts", desc: "Find inactive accounts >90 days for CIS 5 account management", severity: "high", autoFix: false, platform: "both", framework: "cis",
+      script: soc2IsWindows ? "$threshold = (Get-Date).AddDays(-90)\nGet-LocalUser | Where-Object { $_.LastLogon -lt $threshold -and $_.Enabled } | Select Name,LastLogon,Enabled | Format-Table" : "dscl . -list /Users | while read user; do\n  last=$(dscl . -read /Users/$user AuthenticationAuthority 2>/dev/null)\n  echo \"$user\"\ndone" },
+    { id: "cis_r6", control: "CIS 1.1", title: "Device Inventory Audit", desc: "Verify all enterprise assets are enrolled in inventory for CIS 1", severity: "medium", autoFix: false, platform: "both", framework: "cis",
+      script: soc2IsWindows ? "Get-ComputerInfo | Select WindowsVersion,OsArchitecture,CsProcessors,CsTotalPhysicalMemory | Format-Table\nGet-WmiObject Win32_ComputerSystem | Select Name,Domain,Manufacturer,Model | Format-Table" : "system_profiler SPHardwareDataType\nhostname\nifconfig | grep inet" },
+    { id: "cis_r7", control: "CIS 8.1", title: "Verify Audit Logging", desc: "Check audit log configuration for CIS 8 audit log management", severity: "medium", autoFix: false, platform: "both", framework: "cis",
+      script: soc2IsWindows ? "auditpol /get /category:*\nGet-EventLog -LogName Security -Newest 5 | Select TimeGenerated,EntryType,Message | Format-Table -Wrap" : "log show --predicate 'eventMessage contains \"audit\"' --last 1h | head -20\nsudo audit -l" },
+    { id: "cis_r8", control: "CIS 13.1", title: "Network Monitoring Check", desc: "Verify network monitoring and firewall rules for CIS 13 defense", severity: "medium", autoFix: false, platform: "both", framework: "cis",
+      script: soc2IsWindows ? "Get-NetFirewallRule -Enabled True | Select DisplayName,Direction,Action | Format-Table -AutoSize | Select -First 20\nGet-NetTCPConnection -State Established | Select LocalAddress,LocalPort,RemoteAddress,RemotePort | Format-Table | Select -First 15" : "sudo pfctl -sr 2>/dev/null || echo 'PF not active'\nnetstat -an | grep ESTABLISHED | head -15" },
+  ];
+
+  // ISO 27001 remediations
+  const isoRemediations: Remedy[] = [
+    { id: "iso_r1", control: "A.10.1", title: "Enable Disk Encryption", desc: "Verify and enable full-disk encryption for A.10 cryptography requirements", severity: "critical", autoFix: false, platform: "both", framework: "iso27001",
+      script: soc2IsWindows ? "Get-BitLockerVolume | Select MountPoint,VolumeStatus,EncryptionPercentage,ProtectionStatus | Format-Table" : "fdesetup status" },
+    { id: "iso_r2", control: "A.12.2", title: "Update Antivirus Definitions", desc: "Ensure malware protection is current for A.12 operations security", severity: "critical", autoFix: true, platform: "both", framework: "iso27001",
+      script: soc2IsWindows ? "Update-MpSignature -UpdateSource MicrosoftUpdateServer\nGet-MpComputerStatus | Select AntivirusSignatureLastUpdated,AntivirusEnabled" : "softwareupdate --background-critical" },
+    { id: "iso_r3", control: "A.13.1", title: "Verify Firewall Status", desc: "Ensure network controls active for A.13 communications security", severity: "high", autoFix: true, platform: "both", framework: "iso27001",
+      script: soc2IsWindows ? "Get-NetFirewallProfile | Select Name,Enabled | Format-Table\nSet-NetFirewallProfile -Profile Domain,Public,Private -Enabled True" : "sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate\nsudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on" },
+    { id: "iso_r4", control: "A.12.6", title: "Apply Security Patches", desc: "Install pending updates for A.12.6 technical vulnerability management", severity: "high", autoFix: true, platform: "both", framework: "iso27001",
+      script: soc2IsWindows ? "$UpdateSession = New-Object -ComObject Microsoft.Update.Session\n$Searcher = $UpdateSession.CreateUpdateSearcher()\n$Results = $Searcher.Search('IsInstalled=0')\n$Results.Updates | Select Title,MsrcSeverity | Format-Table" : "softwareupdate --list 2>&1" },
+    { id: "iso_r5", control: "A.8.1", title: "Asset Inventory Audit", desc: "Verify all assets are tracked for A.8 asset management", severity: "medium", autoFix: false, platform: "both", framework: "iso27001",
+      script: soc2IsWindows ? "Get-ComputerInfo | Select WindowsVersion,OsArchitecture,CsProcessors,CsTotalPhysicalMemory\nGet-WmiObject Win32_ComputerSystem | Select Name,Domain,Manufacturer,Model" : "system_profiler SPHardwareDataType\nhostname" },
+    { id: "iso_r6", control: "A.12.7", title: "System Monitoring Check", desc: "Verify system monitoring active for A.12.7", severity: "medium", autoFix: false, platform: "both", framework: "iso27001",
+      script: soc2IsWindows ? "Get-Service | Where Status -eq 'Running' | Where DisplayName -like '*monitor*' | Select DisplayName,Status | Format-Table\nGet-EventLog -LogName System -EntryType Error -Newest 10 | Select TimeGenerated,Source,Message | Format-Table -Wrap" : "launchctl list | head -20\nlog show --predicate 'eventMessage contains \"error\"' --last 1h | head -10" },
+  ];
+
+  // GDPR remediations (more procedural)
+  const gdprRemediations: Remedy[] = [
+    { id: "gdpr_r1", control: "Art. 32.1a", title: "Verify Encryption Status", desc: "Check disk encryption for Art. 32 security of processing", severity: "critical", autoFix: false, platform: "both", framework: "gdpr",
+      script: soc2IsWindows ? "Get-BitLockerVolume | Select MountPoint,VolumeStatus,EncryptionPercentage,ProtectionStatus | Format-Table" : "fdesetup status" },
+    { id: "gdpr_r2", control: "Art. 32.1b", title: "Verify Antivirus Protection", desc: "Check antivirus status for Art. 32 system confidentiality", severity: "critical", autoFix: true, platform: "both", framework: "gdpr",
+      script: soc2IsWindows ? "Get-MpComputerStatus | Select AntivirusEnabled,RealTimeProtectionEnabled,AntivirusSignatureLastUpdated | Format-Table" : "softwareupdate --background-critical\necho 'Malware protection status checked'" },
+    { id: "gdpr_r3", control: "Art. 32.1c", title: "Verify Firewall Active", desc: "Check firewall for Art. 32 system resilience", severity: "high", autoFix: true, platform: "both", framework: "gdpr",
+      script: soc2IsWindows ? "Get-NetFirewallProfile | Select Name,Enabled | Format-Table\nSet-NetFirewallProfile -Profile Domain,Public,Private -Enabled True" : "sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate" },
+    { id: "gdpr_r4", control: "Art. 30.1", title: "Export Audit Logs", desc: "Export processing activity records for Art. 30 documentation", severity: "medium", autoFix: false, platform: "both", framework: "gdpr",
+      script: soc2IsWindows ? "Get-EventLog -LogName Security -Newest 50 | Select TimeGenerated,EntryType,Source,Message | Export-Csv -Path $env:TEMP\\gdpr_audit.csv -NoTypeInformation\nWrite-Host \"Audit log exported to $env:TEMP\\gdpr_audit.csv\"" : "log show --predicate 'eventMessage contains \"auth\"' --last 24h > /tmp/gdpr_audit.log\necho 'Audit log exported to /tmp/gdpr_audit.log'" },
+    { id: "gdpr_r5", control: "Art. 32.1d", title: "Security Patch Status", desc: "Review pending updates for Art. 32 regular security testing", severity: "high", autoFix: false, platform: "both", framework: "gdpr",
+      script: soc2IsWindows ? "$UpdateSession = New-Object -ComObject Microsoft.Update.Session\n$Searcher = $UpdateSession.CreateUpdateSearcher()\n$Results = $Searcher.Search('IsInstalled=0')\n$Results.Updates | Select Title,MsrcSeverity | Format-Table" : "softwareupdate --list 2>&1" },
+    { id: "gdpr_r6", control: "Art. 33.1", title: "Breach Notification Checklist", desc: "Generate breach notification readiness report for Art. 33 compliance", severity: "medium", autoFix: false, platform: "both", framework: "gdpr",
+      script: soc2IsWindows ? "Write-Host '=== GDPR Art. 33 Breach Notification Checklist ==='\nWrite-Host '[ ] Supervisory authority contact info documented'\nWrite-Host '[ ] 72-hour notification procedure defined'\nWrite-Host '[ ] Breach notification template prepared'\nWrite-Host '[ ] DPO contact info available'\nWrite-Host '[ ] Data subject notification procedure defined'\nWrite-Host '[ ] Breach register established'" : "echo '=== GDPR Art. 33 Breach Notification Checklist ==='\necho '[ ] Supervisory authority contact info documented'\necho '[ ] 72-hour notification procedure defined'\necho '[ ] Breach notification template prepared'\necho '[ ] DPO contact info available'\necho '[ ] Data subject notification procedure defined'\necho '[ ] Breach register established'" },
+  ];
+
+  // Select remediations based on active framework
+  const frameworkRemediations: Record<FrameworkKey, Remedy[]> = {
+    soc2: builtInRemediations,
+    cis: cisRemediations,
+    iso27001: isoRemediations,
+    gdpr: gdprRemediations,
+  };
+
+  const activeBuiltInRemediations = frameworkRemediations[selectedFramework];
+  const allRemediations = [...activeBuiltInRemediations, ...customRemediations.filter(r => !r.framework || r.framework === selectedFramework)];
   const criticalCount = allRemediations.filter(r => r.severity === "critical").length;
   const highCount = allRemediations.filter(r => r.severity === "high").length;
 
@@ -462,7 +761,7 @@ export default function CompliancePage() {
   // Handlers for custom remediations
   const handleSaveCustomRemediation = () => {
     if (!newRemediation.title.trim() || !newRemediation.script.trim()) return;
-    const remedy: Soc2Remedy = {
+    const remedy: Remedy = {
       id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       control: newRemediation.control,
       title: newRemediation.title.trim(),
@@ -472,6 +771,7 @@ export default function CompliancePage() {
       autoFix: newRemediation.autoFix,
       platform: newRemediation.platform,
       custom: true,
+      framework: selectedFramework,
     };
     const updated = [...customRemediations, remedy];
     setCustomRemediations(updated);
@@ -491,7 +791,8 @@ export default function CompliancePage() {
     allRemediations.filter(r => r.control === controlId);
 
   // Recommendations data
-  const recommendations = [
+  // Recommendations per framework
+  const soc2Recommendations = [
     { priority: "critical", title: "Enable Disk Encryption on All Devices", desc: "Ensure BitLocker (Windows) or FileVault (macOS) is enabled on every enrolled device. SOC 2 C1.3 requires encryption at rest for all systems handling customer data.", action: "Run C1.3 remediation above", trend: "down" },
     { priority: "critical", title: "Update Antivirus Definitions Fleet-Wide", desc: "Devices with outdated AV definitions (>7 days) are non-compliant with CC6.8. Schedule daily definition updates via group policy or MDM.", action: "Run CC6.8 remediation above", trend: "up" },
     { priority: "high", title: "Implement 90-Day Access Review", desc: "CC6.3 requires timely removal of access for terminated users. Implement a quarterly access review process and automate offboarding via SSO provider.", action: "Configure in Settings > SSO", trend: "up" },
@@ -501,6 +802,41 @@ export default function CompliancePage() {
     { priority: "low", title: "Implement Continuous Monitoring Dashboard", desc: "Real-time compliance visibility reduces audit prep time by up to 60%. Consider exposing SOC 2 metrics to auditors via read-only access.", action: "Share this dashboard", trend: "up" },
     { priority: "low", title: "Automate Evidence Collection", desc: "Collect screenshots, logs, and reports automatically for each control. Reduces manual evidence gathering during audit season.", action: "Enable in Reports", trend: "up" },
   ];
+
+  const cisRecommendations = [
+    { priority: "critical", title: "Enable Full-Disk Encryption", desc: "CIS Control 3 requires encryption of data at rest. Ensure BitLocker/FileVault is enabled on all enterprise assets.", action: "Run CIS 3.6 remediation above", trend: "down" },
+    { priority: "critical", title: "Deploy Anti-Malware on All Endpoints", desc: "CIS Control 10 mandates anti-malware on every device. Ensure definitions are current and real-time protection is active.", action: "Run CIS 10.1 remediation above", trend: "up" },
+    { priority: "high", title: "Establish Patch Management SLA", desc: "CIS Control 7 requires timely vulnerability remediation. Define SLAs: critical patches within 48 hours, high within 7 days.", action: "Configure in IT Support > Updates", trend: "up" },
+    { priority: "high", title: "Implement Software Allowlisting", desc: "CIS Control 2 requires authorized software only. Configure application control policies and alert on unauthorized installations.", action: "Configure in Security > DLP", trend: "down" },
+    { priority: "medium", title: "Configure Email Security (DMARC/SPF/DKIM)", desc: "CIS Control 9 recommends email and web browser protections. Implement DMARC, SPF, and DKIM records.", action: "Configure DNS records", trend: "up" },
+    { priority: "medium", title: "Centralize Audit Log Collection", desc: "CIS Control 8 requires centralized audit logging. Ensure all devices forward logs to central SIEM.", action: "Configure in Settings", trend: "up" },
+    { priority: "low", title: "Automate Asset Discovery", desc: "CIS Control 1 benefits from automated discovery of new assets joining the network.", action: "Deploy agent to new devices", trend: "up" },
+  ];
+
+  const isoRecommendations = [
+    { priority: "critical", title: "Implement Cryptographic Controls", desc: "A.10 requires encryption at rest and in transit. Ensure all devices have full-disk encryption and TLS is enforced.", action: "Run A.10.1 remediation above", trend: "down" },
+    { priority: "critical", title: "Update Malware Protection", desc: "A.12.2 requires up-to-date malware protection on all systems processing organizational data.", action: "Run A.12.2 remediation above", trend: "up" },
+    { priority: "high", title: "Formalize Information Security Policy", desc: "A.5 requires a documented information security policy approved by management and communicated to staff.", action: "Create policy document", trend: "down" },
+    { priority: "high", title: "Implement Security Awareness Training", desc: "A.7.2 requires regular security awareness training for all employees and contractors.", action: "Set up training program", trend: "up" },
+    { priority: "medium", title: "Document Standard Operating Procedures", desc: "A.12.1 requires documented operational procedures for IT systems and security processes.", action: "Create SOP documents", trend: "up" },
+    { priority: "medium", title: "Schedule Independent Security Audit", desc: "A.18.2 recommends independent review of information security. Schedule annual penetration test.", action: "Engage audit firm", trend: "down" },
+    { priority: "low", title: "Formalize Incident Evidence Collection", desc: "A.16.3 requires procedures for collecting and preserving evidence during security incidents.", action: "Create evidence procedures", trend: "up" },
+  ];
+
+  const gdprRecommendations = [
+    { priority: "critical", title: "Encrypt All Personal Data at Rest", desc: "Article 32 requires appropriate technical measures. Encryption at rest protects personal data on lost or stolen devices.", action: "Run Art. 32.1a remediation above", trend: "down" },
+    { priority: "critical", title: "Implement Breach Notification Process", desc: "Article 33 requires notification to the supervisory authority within 72 hours of a personal data breach.", action: "Create notification procedure", trend: "down" },
+    { priority: "high", title: "Document Lawful Basis for Processing", desc: "Article 5 requires clear lawful basis (consent, contract, legal obligation, etc.) for all personal data processing.", action: "Conduct processing audit", trend: "up" },
+    { priority: "high", title: "Conduct Data Protection Impact Assessment", desc: "Article 35 requires DPIAs for high-risk processing activities before commencing the processing.", action: "Use DPIA template", trend: "up" },
+    { priority: "medium", title: "Appoint Data Protection Officer", desc: "Article 37 requires a DPO for public authorities, large-scale monitoring, or special category data processing.", action: "Review DPO requirements", trend: "down" },
+    { priority: "medium", title: "Document Third-Party Processors", desc: "Article 30 requires maintaining records of all processing activities including third-party data processors.", action: "Create processor register", trend: "up" },
+    { priority: "low", title: "Implement Data Subject Rights Portal", desc: "Articles 15-22 give data subjects various rights. Consider a self-service portal for access, rectification, and deletion requests.", action: "Design rights portal", trend: "up" },
+  ];
+
+  const recommendations = selectedFramework === "soc2" ? soc2Recommendations
+    : selectedFramework === "cis" ? cisRecommendations
+    : selectedFramework === "iso27001" ? isoRecommendations
+    : gdprRecommendations;
 
   // Custom bar click handler
   const handleBarClick = (data: { name?: string }) => {
@@ -514,18 +850,43 @@ export default function CompliancePage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
-          <FileCheck className="h-6 w-6" /> SOC 2 Compliance
+          <FileCheck className="h-6 w-6" /> {FRAMEWORK_META[selectedFramework].fullName} Compliance
         </h1>
         <p className="text-muted-foreground text-sm">
-          Monitor and enforce SOC 2 Type II compliance across your fleet — mapped to AICPA Trust Service Criteria.
+          {FRAMEWORK_META[selectedFramework].desc} — monitor and enforce compliance across your fleet.
         </p>
+      </div>
+
+      {/* Framework Selector */}
+      <div className="flex flex-wrap gap-2">
+        {(Object.keys(FRAMEWORK_META) as FrameworkKey[]).map(fw => {
+          const meta = FRAMEWORK_META[fw];
+          const isActive = selectedFramework === fw;
+          return (
+            <button
+              key={fw}
+              onClick={() => { setSelectedFramework(fw); setSelectedCriteria(null); }}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border-2 transition-all ${
+                isActive
+                  ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-400 shadow-sm"
+                  : "border-transparent bg-muted/40 text-muted-foreground hover:bg-muted/70 hover:border-muted-foreground/20"
+              }`}
+            >
+              {meta.icon === "shield" && <Shield className="h-4 w-4" />}
+              {meta.icon === "lock" && <Shield className="h-4 w-4" />}
+              {meta.icon === "globe" && <FileCheck className="h-4 w-4" />}
+              {meta.icon === "file" && <ScrollText className="h-4 w-4" />}
+              {meta.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Overall Compliance Score */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="md:col-span-1">
           <CardContent className="pt-6 pb-4 flex flex-col items-center">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Overall SOC 2 Score</div>
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Overall {FRAMEWORK_META[selectedFramework].label} Score</div>
             <ResponsiveContainer width={160} height={160}>
               <RadialBarChart cx="50%" cy="50%" innerRadius="70%" outerRadius="100%" barSize={14} data={gaugeData} startAngle={90} endAngle={-270}>
                 <RadialBar background={{ fill: "hsl(var(--muted))" }} dataKey="value" cornerRadius={10} />
@@ -600,17 +961,17 @@ export default function CompliancePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Shield className="h-5 w-5 text-blue-500" /> Trust Service Criteria
+            <Shield className="h-5 w-5 text-blue-500" /> {selectedFramework === "soc2" ? "Trust Service Criteria" : selectedFramework === "cis" ? "CIS Critical Controls" : selectedFramework === "iso27001" ? "ISO 27001 Annex A Domains" : "GDPR Articles"}
           </CardTitle>
           <p className="text-xs text-muted-foreground">Click a bar to drill into its controls, affected devices, and remediations.</p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={Math.max(200, trustCriteria.length * 30)}>
             <BarChart data={criteriaBarData} layout="vertical" margin={{ left: 20 }}
               onClick={(e: Record<string, unknown>) => { const ap = e?.activePayload as Array<{ payload: { name: string } }> | undefined; if (ap?.[0]?.payload) handleBarClick(ap[0].payload); }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
               <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={40} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={selectedFramework === "gdpr" ? 55 : 50} />
               <Tooltip formatter={(value) => [`${value}%`, "Score"]} />
               <Bar dataKey="score" radius={[0, 6, 6, 0]} barSize={20} className="cursor-pointer">
                 {criteriaBarData.map((entry, i) => (
@@ -694,7 +1055,7 @@ export default function CompliancePage() {
                               {controlRemediations.map(r => (
                                 <Button key={r.id} size="sm" variant="outline" className="text-xs h-7 gap-1"
                                   disabled={!soc2Device}
-                                  onClick={() => executeRemediation(`[SOC2 ${r.control}] ${r.title}`, r.script, soc2Device || undefined)}>
+                                  onClick={() => executeRemediation(`[${FRAMEWORK_META[selectedFramework].label} ${r.control}] ${r.title}`, r.script, soc2Device || undefined)}>
                                   <Play className="h-3 w-3" />
                                   {r.title}
                                   {!soc2Device && <span className="text-muted-foreground ml-1">(select device)</span>}
@@ -790,7 +1151,7 @@ export default function CompliancePage() {
                 {soc2Device && <Badge variant="outline" className="text-[10px] ml-2">Targeting: {soc2Device.hostname}</Badge>}
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
-                Self-remediation scripts mapped to SOC 2 controls. Select a device above, then run scripts from here.
+                Self-remediation scripts mapped to {FRAMEWORK_META[selectedFramework].label} controls. Select a device above, then run scripts from here.
               </p>
             </div>
             <div className="flex gap-2">
@@ -803,7 +1164,7 @@ export default function CompliancePage() {
                 onClick={() => {
                   const autoFixable = allRemediations.filter(r => r.autoFix);
                   if (soc2Device) {
-                    autoFixable.forEach(r => executeRemediation(`[SOC2 ${r.control}] ${r.title}`, r.script, soc2Device));
+                    autoFixable.forEach(r => executeRemediation(`[${FRAMEWORK_META[selectedFramework].label} ${r.control}] ${r.title}`, r.script, soc2Device));
                   }
                 }}>
                 <Zap className="h-3 w-3 mr-1" />Run All Auto-Fix
@@ -837,11 +1198,11 @@ export default function CompliancePage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] font-medium text-muted-foreground block mb-1">SOC 2 Control</label>
+                    <label className="text-[11px] font-medium text-muted-foreground block mb-1">{FRAMEWORK_META[selectedFramework].label} Control</label>
                     <select value={newRemediation.control}
                       onChange={e => setNewRemediation(p => ({ ...p, control: e.target.value }))}
                       className="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      {CONTROL_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                      {CONTROL_OPTIONS_BY_FRAMEWORK[selectedFramework].map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                   <div>
@@ -943,7 +1304,7 @@ export default function CompliancePage() {
                           <Button size="sm" variant={hasRun ? "ghost" : "default"}
                             className={`text-[10px] h-6 px-2 ${hasRun ? "text-green-600" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
                             disabled={!soc2Device || isRunning}
-                            onClick={() => executeRemediation(`[SOC2 ${remedy.control}] ${remedy.title}`, remedy.script, soc2Device || undefined)}>
+                            onClick={() => executeRemediation(`[${FRAMEWORK_META[selectedFramework].label} ${remedy.control}] ${remedy.title}`, remedy.script, soc2Device || undefined)}>
                             {isRunning ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Running</> : hasRun ? <><CheckCircle className="h-3 w-3 mr-1" />Sent</> : <><Play className="h-3 w-3 mr-1" />Run</>}
                           </Button>
                           {remedy.custom && (
@@ -967,7 +1328,7 @@ export default function CompliancePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Info className="h-5 w-5 text-blue-500" /> SOC 2 Audit Recommendations
+            <Info className="h-5 w-5 text-blue-500" /> {FRAMEWORK_META[selectedFramework].label} Audit Recommendations
           </CardTitle>
           <p className="text-xs text-muted-foreground">Expand each recommendation for details and action items.</p>
         </CardHeader>

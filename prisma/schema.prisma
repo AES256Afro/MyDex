@@ -44,6 +44,7 @@ model Organization {
   integrations     Integration[]
   scimTokens       ScimToken[]
   scimEvents       ScimEvent[]
+  workflows        Workflow[]
 }
 
 model User {
@@ -95,6 +96,7 @@ model User {
   monitoringChangesBy  MonitoringChangeLog[] @relation("MonitoringChangedBy")
   patchNotes           PatchNote[]           @relation("PatchNoteAuthor")
   notifications        Notification[]
+  createdWorkflows     Workflow[]     @relation("WorkflowCreator")
 
   @@index([organizationId])
   @@index([email])
@@ -1550,4 +1552,48 @@ model ScimEvent {
 
   @@index([organizationId])
   @@index([createdAt])
+}
+
+// ============================================
+// AUTOMATED WORKFLOWS / PLAYBOOKS
+// ============================================
+
+model Workflow {
+  id              String    @id @default(cuid())
+  organizationId  String
+  name            String
+  description     String?
+  trigger         String    // "device_offline", "security_alert", "ticket_created", "compliance_drop", "clock_missed", "leave_approved"
+  conditions      Json      // Array of condition objects: [{ field, operator, value }]
+  actions         Json      // Array of action objects: [{ type, config }]
+  isActive        Boolean   @default(true)
+  lastTriggeredAt DateTime?
+  triggerCount    Int       @default(0)
+  createdBy       String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator      User         @relation("WorkflowCreator", fields: [createdBy], references: [id])
+  logs         WorkflowLog[]
+
+  @@index([organizationId, trigger])
+  @@index([organizationId, isActive])
+}
+
+model WorkflowLog {
+  id             String   @id @default(cuid())
+  workflowId     String
+  organizationId String
+  trigger        String
+  triggerData    Json?
+  actionsExecuted Json?
+  success        Boolean  @default(true)
+  errorMessage   String?
+  executedAt     DateTime @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([organizationId, executedAt])
 }

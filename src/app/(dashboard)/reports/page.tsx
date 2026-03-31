@@ -29,6 +29,7 @@ import {
   AlertTriangle,
   History,
   FileSpreadsheet,
+  Printer,
 } from "lucide-react";
 
 type ReportType = "productivity" | "attendance" | "security" | "time-tracking";
@@ -186,6 +187,29 @@ export default function ReportsPage() {
     }
   }
 
+  async function handlePrintReport() {
+    // Fetch the printable HTML report and open it in a new tab
+    const type = generatedReport?.reportType || reportType;
+    const dr = generatedReport?.dateRange || { from: dateFrom, to: dateTo };
+
+    try {
+      const res = await fetch("/api/v1/reports/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, dateRange: dr }),
+      });
+      if (!res.ok) throw new Error("Failed to generate printable report");
+      const html = await res.text();
+      const blob = new Blob([html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      // Clean up the blob URL after a delay
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    } catch {
+      setError("Failed to open printable report");
+    }
+  }
+
   async function handleDownloadCsv() {
     try {
       const res = await fetch("/api/v1/reports/generate", {
@@ -267,6 +291,9 @@ export default function ReportsPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handlePrintReport}>
+                <Printer className="h-4 w-4 mr-1" /> Print Report
+              </Button>
               <Button variant="outline" size="sm" onClick={handleDownloadCsv}>
                 <Download className="h-4 w-4 mr-1" /> Download CSV
               </Button>

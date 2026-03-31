@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
 import { sendIntegrationMessage } from "@/lib/integrations";
 import { notifyAdmins } from "@/lib/notifications";
+import { evaluateWorkflows } from "@/lib/workflows/engine";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -250,6 +251,16 @@ export async function POST(request: NextRequest) {
       title: "New Support Ticket",
       message: `${session.user.name} submitted: ${parsed.data.subject}`,
       link: `/it-support?ticket=${ticket.id}`,
+    }).catch(() => {});
+
+    // Evaluate automated workflows
+    evaluateWorkflows(session.user.organizationId, "ticket_created", {
+      ticketId: ticket.id,
+      subject: parsed.data.subject,
+      category: parsed.data.category,
+      priority,
+      description: parsed.data.description || "",
+      submittedBy: session.user.name || session.user.email || "",
     }).catch(() => {});
 
     return NextResponse.json(ticket, { status: 201 });

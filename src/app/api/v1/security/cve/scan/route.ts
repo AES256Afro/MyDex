@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendIntegrationMessage } from "@/lib/integrations";
 import { notifyAdmins } from "@/lib/notifications";
+import { evaluateWorkflows } from "@/lib/workflows/engine";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -100,6 +101,18 @@ export async function POST(request: NextRequest) {
         message: `Vulnerable software detected on ${hostname}: ${criticalMatches.map(m => m.cveId).join(", ")}`,
         link: "/security",
       }).catch(() => {});
+
+      // Evaluate automated workflows
+      for (const match of criticalMatches) {
+        evaluateWorkflows(orgId, "security_alert", {
+          severity: match.severity,
+          cveId: match.cveId,
+          software: match.software,
+          version: match.version,
+          hostname,
+          title: `CVE Detected: ${match.cveId}`,
+        }).catch(() => {});
+      }
     }
 
     return NextResponse.json({
