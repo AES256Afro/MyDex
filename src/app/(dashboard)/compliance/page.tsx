@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import {
   FileCheck, Shield, CheckCircle, XCircle, AlertTriangle, AlertCircle,
   Zap, Monitor, Terminal, Info, Play, ChevronRight, ChevronDown, ChevronUp,
-  ArrowUpRight, ArrowDownRight, Loader2, ScrollText, X, TrendingUp,
+  ArrowUpRight, ArrowDownRight, Loader2, ScrollText, X,
+  Plus, Trash2,
 } from "lucide-react";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
@@ -26,7 +27,6 @@ interface DeviceInfo {
   osVersion: string;
   user: { name: string; email: string };
   installedSoftware: { name: string; version: string }[];
-  // Security posture fields from AgentDevice
   antivirusName: string | null;
   defenderStatus: string | null;
   firewallStatus: Record<string, boolean> | null;
@@ -35,7 +35,6 @@ interface DeviceInfo {
   rebootPending: boolean;
   bsodCount: number;
   securityGrade: string | null;
-  // MFA tracked at user level
   openCves?: number;
   activeIocs?: number;
 }
@@ -54,6 +53,71 @@ interface CommandLog {
   commandId?: string;
 }
 
+type Soc2Remedy = {
+  id: string;
+  control: string;
+  title: string;
+  desc: string;
+  severity: "critical" | "high" | "medium" | "low";
+  script: string;
+  autoFix: boolean;
+  platform: "windows" | "macos" | "both";
+  custom?: boolean;
+};
+
+type ControlInfo = {
+  id: string;
+  name: string;
+  status: "pass" | "warn" | "fail";
+  desc: string;
+  failingDevices?: string[];
+};
+
+type CriteriaInfo = {
+  id: string;
+  name: string;
+  score: number;
+  total: number;
+  passing: number;
+  failing: number;
+  color: string;
+  controls: ControlInfo[];
+};
+
+const CONTROL_OPTIONS = [
+  "CC6.1","CC6.2","CC6.3","CC6.4","CC6.5","CC6.6","CC6.7","CC6.8",
+  "CC7.1","CC7.2","CC7.3","CC7.4","CC7.5",
+  "CC8.1","CC8.2","CC8.3",
+  "CC9.1","CC9.2","CC9.3",
+  "A1.1","A1.2","A1.3",
+  "C1.1","C1.2","C1.3",
+];
+
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  high: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+  medium: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+  low: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+};
+
+const LOCAL_STORAGE_KEY = "mydex_custom_remediations";
+
+function loadCustomRemediations(): Soc2Remedy[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomRemediations(items: Soc2Remedy[]) {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items));
+  } catch { /* ignore */ }
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function CompliancePage() {
@@ -66,6 +130,21 @@ export default function CompliancePage() {
   const [runningCommands, setRunningCommands] = useState<Set<string>>(new Set());
   const logEndRef = useRef<HTMLDivElement>(null);
 
+  // New state for redesigned features
+  const [selectedCriteria, setSelectedCriteria] = useState<string | null>(null);
+  const [customRemediations, setCustomRemediations] = useState<Soc2Remedy[]>([]);
+  const [showNewRemediation, setShowNewRemediation] = useState(false);
+  const [newRemediation, setNewRemediation] = useState<{
+    title: string; control: string; severity: "critical" | "high" | "medium" | "low";
+    script: string; platform: "windows" | "macos" | "both"; autoFix: boolean;
+  }>({ title: "", control: "CC6.1", severity: "medium", script: "", platform: "both", autoFix: false });
+  const [openAccordion, setOpenAccordion] = useState<number | null>(null);
+
+  // Load custom remediations from localStorage on mount
+  useEffect(() => {
+    setCustomRemediations(loadCustomRemediations());
+  }, []);
+
   // Fetch real devices from API
   useEffect(() => {
     async function fetchDevices() {
@@ -76,7 +155,7 @@ export default function CompliancePage() {
           setDevices(data.devices || []);
         }
       } catch {
-        // API not available — leave empty
+        // API not available
       } finally {
         setLoading(false);
       }
@@ -167,7 +246,6 @@ export default function CompliancePage() {
         l.id === logId ? { ...l, status: "SENT" as const, commandId: cmdData.id } : l
       ));
 
-      // Poll for completion (every 3 seconds, up to 2 minutes)
       let attempts = 0;
       const maxAttempts = 40;
       const pollInterval = setInterval(async () => {
@@ -216,15 +294,14 @@ export default function CompliancePage() {
     const noBsod = dev.bsodCount === 0;
     const online = dev.status === "ONLINE";
 
-    // Derive compliance checks from real device data
     const checks = {
-      encryption: dev.securityGrade ? dev.securityGrade <= "B" : false, // A+, A, B grades imply encryption
+      encryption: dev.securityGrade ? dev.securityGrade <= "B" : false,
       antivirus: antivirusOk,
       firewall: firewallOk,
       updates: updatesOk && lastUpdateRecent,
-      mfa: true, // MFA enforced at app level via NextAuth
-      diskSpace: true, // Would need disk telemetry
-      screenLock: true, // Would need policy check
+      mfa: true,
+      diskSpace: true,
+      screenLock: true,
     };
 
     const passCount = Object.values(checks).filter(Boolean).length;
@@ -233,18 +310,18 @@ export default function CompliancePage() {
     return { device: dev, ...checks, score, passCount, totalChecks: Object.keys(checks).length };
   });
 
-  // ── SOC 2 Trust Service Criteria — derived from real device data ──
+  // ── SOC 2 Trust Service Criteria ──
   const totalDevices = devices.length;
   const noDevices = totalDevices === 0;
 
-  // Helper: derive control status from fleet-wide compliance
   const fleetCheck = (check: (d: typeof deviceComplianceData[0]) => boolean) => {
-    if (noDevices) return { status: "warn" as const, passing: 0, failing: 0 };
+    if (noDevices) return { status: "warn" as const, passing: 0, failing: 0, failingDevices: [] as string[] };
     const passing = deviceComplianceData.filter(check).length;
-    const failing = totalDevices - passing;
-    if (failing === 0) return { status: "pass" as const, passing, failing };
-    if (failing <= Math.ceil(totalDevices * 0.15)) return { status: "warn" as const, passing, failing };
-    return { status: "fail" as const, passing, failing };
+    const failingList = deviceComplianceData.filter(d => !check(d)).map(d => d.device.hostname);
+    const failing = failingList.length;
+    if (failing === 0) return { status: "pass" as const, passing, failing, failingDevices: failingList };
+    if (failing <= Math.ceil(totalDevices * 0.15)) return { status: "warn" as const, passing, failing, failingDevices: failingList };
+    return { status: "fail" as const, passing, failing, failingDevices: failingList };
   };
 
   const avCheck = fleetCheck(d => d.antivirus);
@@ -253,44 +330,40 @@ export default function CompliancePage() {
   const updateCheck = fleetCheck(d => d.updates);
   const onlineCheck = fleetCheck(d => d.device.status === "ONLINE");
 
-  const buildCriteria = () => {
-    // CC6 — Logical & Physical Access
-    const cc6Controls = [
-      { id: "CC6.1", name: "Logical access restrictions", status: "pass" as const, desc: "User access provisioned through SSO with MFA enforcement via NextAuth" },
-      { id: "CC6.2", name: "Access credentials management", status: "pass" as const, desc: "Passwords hashed with bcrypt, MFA available for all accounts" },
-      { id: "CC6.3", name: "Access removal on termination", status: "warn" as const, desc: "Offboarding process exists — verify stale accounts via audit remediation below" },
-      { id: "CC6.6", name: "System boundary protection", status: fwCheck.status, desc: fwCheck.status === "pass" ? `Firewall enabled on all ${totalDevices} enrolled devices` : `${fwCheck.failing} of ${totalDevices} device(s) have firewall issues` },
-      { id: "CC6.7", name: "Data transmission encryption", status: "pass" as const, desc: "TLS 1.3 minimum enforced via Cloudflare Edge Certificates + HSTS" },
-      { id: "CC6.8", name: "Malware prevention", status: avCheck.status, desc: avCheck.status === "pass" ? `Antivirus active on all ${totalDevices} devices` : `${avCheck.failing} device(s) missing or have disabled antivirus` },
+  const buildCriteria = (): CriteriaInfo[] => {
+    const cc6Controls: ControlInfo[] = [
+      { id: "CC6.1", name: "Logical access restrictions", status: "pass", desc: "User access provisioned through SSO with MFA enforcement via NextAuth" },
+      { id: "CC6.2", name: "Access credentials management", status: "pass", desc: "Passwords hashed with bcrypt, MFA available for all accounts" },
+      { id: "CC6.3", name: "Access removal on termination", status: "warn", desc: "Offboarding process exists — verify stale accounts via audit remediation below" },
+      { id: "CC6.6", name: "System boundary protection", status: fwCheck.status, desc: fwCheck.status === "pass" ? `Firewall enabled on all ${totalDevices} enrolled devices` : `${fwCheck.failing} of ${totalDevices} device(s) have firewall issues`, failingDevices: fwCheck.failingDevices },
+      { id: "CC6.7", name: "Data transmission encryption", status: "pass", desc: "TLS 1.3 minimum enforced via Cloudflare Edge Certificates + HSTS" },
+      { id: "CC6.8", name: "Malware prevention", status: avCheck.status, desc: avCheck.status === "pass" ? `Antivirus active on all ${totalDevices} devices` : `${avCheck.failing} device(s) missing or have disabled antivirus`, failingDevices: avCheck.failingDevices },
     ];
     const cc6Pass = cc6Controls.filter(c => c.status === "pass").length;
     const cc6Fail = cc6Controls.filter(c => c.status === "fail").length;
     const cc6Score = cc6Controls.length > 0 ? Math.round((cc6Pass / cc6Controls.length) * 100) : 0;
 
-    // CC7 — System Operations
-    const cc7Controls = [
+    const cc7Controls: ControlInfo[] = [
       { id: "CC7.1", name: "Infrastructure monitoring", status: (noDevices ? "fail" : "pass") as "pass" | "warn" | "fail", desc: noDevices ? "No devices enrolled — deploy MyDex agent" : `MyDex agent reporting on ${totalDevices} device(s)` },
-      { id: "CC7.2", name: "Anomaly detection", status: "pass" as const, desc: "Activity monitoring and DLP policies active for anomaly detection" },
-      { id: "CC7.3", name: "Security event evaluation", status: "pass" as const, desc: "Security alerts and CVE tracking active via threat dashboard" },
-      { id: "CC7.4", name: "Incident response", status: "warn" as const, desc: "Response procedures documented — schedule tabletop exercise to validate" },
-      { id: "CC7.5", name: "Incident recovery", status: onlineCheck.status, desc: onlineCheck.status === "pass" ? "All devices online and reachable" : `${onlineCheck.failing} device(s) offline — may affect recovery capability` },
+      { id: "CC7.2", name: "Anomaly detection", status: "pass", desc: "Activity monitoring and DLP policies active for anomaly detection" },
+      { id: "CC7.3", name: "Security event evaluation", status: "pass", desc: "Security alerts and CVE tracking active via threat dashboard" },
+      { id: "CC7.4", name: "Incident response", status: "warn", desc: "Response procedures documented — schedule tabletop exercise to validate" },
+      { id: "CC7.5", name: "Incident recovery", status: onlineCheck.status, desc: onlineCheck.status === "pass" ? "All devices online and reachable" : `${onlineCheck.failing} device(s) offline — may affect recovery capability`, failingDevices: onlineCheck.failingDevices },
     ];
     const cc7Pass = cc7Controls.filter(c => c.status === "pass").length;
     const cc7Fail = cc7Controls.filter(c => c.status === "fail").length;
     const cc7Score = cc7Controls.length > 0 ? Math.round((cc7Pass / cc7Controls.length) * 100) : 0;
 
-    // CC8 — Change Management
-    const cc8Controls = [
-      { id: "CC8.1", name: "Change authorization", status: "pass" as const, desc: "Deployments require PR review; RBAC enforces role-based access" },
-      { id: "CC8.2", name: "Infrastructure changes tracked", status: updateCheck.status, desc: updateCheck.status === "pass" ? "All devices up-to-date with latest patches" : `${updateCheck.failing} device(s) have pending updates or outdated patches` },
+    const cc8Controls: ControlInfo[] = [
+      { id: "CC8.1", name: "Change authorization", status: "pass", desc: "Deployments require PR review; RBAC enforces role-based access" },
+      { id: "CC8.2", name: "Infrastructure changes tracked", status: updateCheck.status, desc: updateCheck.status === "pass" ? "All devices up-to-date with latest patches" : `${updateCheck.failing} device(s) have pending updates or outdated patches`, failingDevices: updateCheck.failingDevices },
       { id: "CC8.3", name: "Configuration management", status: (noDevices ? "warn" : "pass") as "pass" | "warn" | "fail", desc: noDevices ? "No devices to verify configuration drift" : "Software inventory tracked across fleet" },
     ];
     const cc8Pass = cc8Controls.filter(c => c.status === "pass").length;
     const cc8Fail = cc8Controls.filter(c => c.status === "fail").length;
     const cc8Score = cc8Controls.length > 0 ? Math.round((cc8Pass / cc8Controls.length) * 100) : 0;
 
-    // CC9 — Risk Mitigation
-    const cc9Controls: { id: string; name: string; status: "pass" | "warn" | "fail"; desc: string }[] = [
+    const cc9Controls: ControlInfo[] = [
       { id: "CC9.1", name: "Risk identification", status: "pass", desc: "CVE tracking and IOC matching active with vulnerability scanning" },
       { id: "CC9.2", name: "Vendor risk assessment", status: "pass", desc: `Software inventory tracked across ${totalDevices} device(s) with version monitoring` },
       { id: "CC9.3", name: "Risk remediation", status: "pass", desc: "Remediation queue operational with automated script deployment" },
@@ -299,21 +372,19 @@ export default function CompliancePage() {
     const cc9Fail = cc9Controls.filter(c => c.status === "fail").length;
     const cc9Score = cc9Controls.length > 0 ? Math.round((cc9Pass / cc9Controls.length) * 100) : 0;
 
-    // A1 — Availability
-    const a1Controls = [
+    const a1Controls: ControlInfo[] = [
       { id: "A1.1", name: "Capacity planning", status: (noDevices ? "warn" : "pass") as "pass" | "warn" | "fail", desc: noDevices ? "No device resource data available" : `Resource monitoring active on ${totalDevices} device(s)` },
-      { id: "A1.2", name: "Recovery objectives", status: "pass" as const, desc: "Vercel deployment with instant rollback and multi-region CDN" },
-      { id: "A1.3", name: "Environmental protections", status: "pass" as const, desc: "Cloud infrastructure with Cloudflare DDoS protection and WAF" },
+      { id: "A1.2", name: "Recovery objectives", status: "pass", desc: "Vercel deployment with instant rollback and multi-region CDN" },
+      { id: "A1.3", name: "Environmental protections", status: "pass", desc: "Cloud infrastructure with Cloudflare DDoS protection and WAF" },
     ];
     const a1Pass = a1Controls.filter(c => c.status === "pass").length;
     const a1Fail = a1Controls.filter(c => c.status === "fail").length;
     const a1Score = a1Controls.length > 0 ? Math.round((a1Pass / a1Controls.length) * 100) : 0;
 
-    // C1 — Confidentiality
-    const c1Controls = [
-      { id: "C1.1", name: "Confidential data identification", status: "pass" as const, desc: "DLP policies active for SSN, credit card, API key, and PII patterns" },
-      { id: "C1.2", name: "Confidential data disposal", status: "pass" as const, desc: "Secure deletion procedures defined for decommissioned devices" },
-      { id: "C1.3", name: "Encryption at rest", status: encCheck.status, desc: encCheck.status === "pass" ? `Disk encryption verified on all ${totalDevices} device(s)` : `${encCheck.failing} device(s) missing disk encryption (BitLocker/FileVault)` },
+    const c1Controls: ControlInfo[] = [
+      { id: "C1.1", name: "Confidential data identification", status: "pass", desc: "DLP policies active for SSN, credit card, API key, and PII patterns" },
+      { id: "C1.2", name: "Confidential data disposal", status: "pass", desc: "Secure deletion procedures defined for decommissioned devices" },
+      { id: "C1.3", name: "Encryption at rest", status: encCheck.status, desc: encCheck.status === "pass" ? `Disk encryption verified on all ${totalDevices} device(s)` : `${encCheck.failing} device(s) missing disk encryption (BitLocker/FileVault)`, failingDevices: encCheck.failingDevices },
     ];
     const c1Pass = c1Controls.filter(c => c.status === "pass").length;
     const c1Fail = c1Controls.filter(c => c.status === "fail").length;
@@ -330,75 +401,113 @@ export default function CompliancePage() {
   };
 
   const trustCriteria = buildCriteria();
+  const activeCriteria = selectedCriteria ? trustCriteria.find(c => c.id === selectedCriteria) : null;
 
   const overallScore = trustCriteria.length > 0 ? Math.round(trustCriteria.reduce((sum, c) => sum + c.score, 0) / trustCriteria.length) : 0;
   const totalControls = trustCriteria.reduce((sum, c) => sum + c.total, 0);
   const passingControls = trustCriteria.reduce((sum, c) => sum + c.passing, 0);
   const failingControls = trustCriteria.reduce((sum, c) => sum + c.failing, 0);
 
-  // Pie chart data
   const compliancePieData = [
     { name: "Passing", value: passingControls, color: "#22c55e" },
     { name: "Warnings", value: totalControls - passingControls - failingControls, color: "#f59e0b" },
     { name: "Failing", value: failingControls, color: "#ef4444" },
   ];
 
-  // Bar chart data for trust criteria scores
   const criteriaBarData = trustCriteria.map(c => ({
     name: c.id,
     score: c.score,
     fill: c.color,
   }));
 
-  // Trend line data — stable line at current score (no random noise)
   const trendData = Array.from({ length: 30 }, (_, i) => ({
     day: `Day ${30 - i}`,
     score: overallScore,
   }));
 
-  // SOC 2 compliance remediations
-  type Soc2Remedy = {
-    id: string;
-    control: string;
-    title: string;
-    desc: string;
-    severity: "critical" | "high" | "medium" | "low";
-    script: string;
-    autoFix: boolean;
-  };
-
-  const complianceRemediations: Soc2Remedy[] = [
-    { id: "soc_r1", control: "CC6.8", title: "Update Antivirus Definitions", desc: "Force-update Windows Defender / XProtect definitions to meet CC6.8 malware prevention", severity: "critical", autoFix: true,
+  // Built-in SOC 2 compliance remediations
+  const builtInRemediations: Soc2Remedy[] = [
+    { id: "soc_r1", control: "CC6.8", title: "Update Antivirus Definitions", desc: "Force-update Windows Defender / XProtect definitions to meet CC6.8 malware prevention", severity: "critical", autoFix: true, platform: "both",
       script: soc2IsWindows ? "Update-MpSignature -UpdateSource MicrosoftUpdateServer\nGet-MpComputerStatus | Select AntivirusSignatureLastUpdated,AntivirusEnabled,RealTimeProtectionEnabled" : "softwareupdate --background-critical\necho 'XProtect definitions updated'" },
-    { id: "soc_r2", control: "C1.3", title: "Enable Disk Encryption", desc: "Verify and enable BitLocker/FileVault to satisfy C1.3 encryption at rest requirement", severity: "critical", autoFix: false,
+    { id: "soc_r2", control: "C1.3", title: "Enable Disk Encryption", desc: "Verify and enable BitLocker/FileVault to satisfy C1.3 encryption at rest requirement", severity: "critical", autoFix: false, platform: "both",
       script: soc2IsWindows ? "Get-BitLockerVolume | Select MountPoint,VolumeStatus,EncryptionPercentage,ProtectionStatus | Format-Table\n# To enable: Enable-BitLocker -MountPoint 'C:' -EncryptionMethod XtsAes256 -UsedSpaceOnly -TpmProtector" : "fdesetup status\n# To enable: sudo fdesetup enable" },
-    { id: "soc_r3", control: "CC6.6", title: "Verify Firewall Status", desc: "Ensure firewall is active on all network profiles for CC6.6 boundary protection", severity: "high", autoFix: true,
-      script: soc2IsWindows ? "Get-NetFirewallProfile | Select Name,Enabled | Format-Table\n# Enable all profiles:\nSet-NetFirewallProfile -Profile Domain,Public,Private -Enabled True" : "sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate\nsudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on" },
-    { id: "soc_r4", control: "CC6.3", title: "Audit Stale User Accounts", desc: "Find accounts inactive >90 days that should be disabled per CC6.3 access removal", severity: "high", autoFix: false,
+    { id: "soc_r3", control: "CC6.6", title: "Verify Firewall Status", desc: "Ensure firewall is active on all network profiles for CC6.6 boundary protection", severity: "high", autoFix: true, platform: "both",
+      script: soc2IsWindows ? "Get-NetFirewallProfile | Select Name,Enabled | Format-Table\nSet-NetFirewallProfile -Profile Domain,Public,Private -Enabled True" : "sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate\nsudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on" },
+    { id: "soc_r4", control: "CC6.3", title: "Audit Stale User Accounts", desc: "Find accounts inactive >90 days that should be disabled per CC6.3 access removal", severity: "high", autoFix: false, platform: "both",
       script: soc2IsWindows ? "$threshold = (Get-Date).AddDays(-90)\nGet-LocalUser | Where-Object { $_.LastLogon -lt $threshold -and $_.Enabled } | Select Name,LastLogon,Enabled | Format-Table" : "dscl . -list /Users | while read user; do\n  last=$(dscl . -read /Users/$user AuthenticationAuthority 2>/dev/null)\n  echo \"$user\"\ndone" },
-    { id: "soc_r5", control: "CC8.2", title: "Detect Unauthorized Software", desc: "Scan for unapproved software installations violating CC8.2 change tracking", severity: "high", autoFix: false,
+    { id: "soc_r5", control: "CC8.2", title: "Detect Unauthorized Software", desc: "Scan for unapproved software installations violating CC8.2 change tracking", severity: "high", autoFix: false, platform: "both",
       script: soc2IsWindows ? "Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\* | Select DisplayName,DisplayVersion,Publisher,InstallDate | Sort InstallDate -Descending | Format-Table -AutoSize" : "ls -la /Applications/ | awk '{print $NF}' | sort" },
-    { id: "soc_r6", control: "CC8.3", title: "Group Policy Compliance Check", desc: "Verify group policy is applied and not drifted for CC8.3 configuration management", severity: "medium", autoFix: true,
+    { id: "soc_r6", control: "CC8.3", title: "Group Policy Compliance Check", desc: "Verify group policy is applied and not drifted for CC8.3 configuration management", severity: "medium", autoFix: true, platform: "both",
       script: soc2IsWindows ? "gpresult /R /SCOPE Computer\ngpupdate /force\nWrite-Host 'Group Policy refreshed successfully'" : "sudo profiles list -all\necho 'MDM profile compliance check complete'" },
-    { id: "soc_r7", control: "CC7.1", title: "System Health Audit", desc: "Comprehensive system health check for CC7.1 infrastructure monitoring", severity: "medium", autoFix: false,
+    { id: "soc_r7", control: "CC7.1", title: "System Health Audit", desc: "Comprehensive system health check for CC7.1 infrastructure monitoring", severity: "medium", autoFix: false, platform: "both",
       script: soc2IsWindows ? "Get-ComputerInfo | Select WindowsVersion,OsArchitecture,CsProcessors,CsTotalPhysicalMemory\nGet-Service | Where Status -eq 'Stopped' | Where StartType -eq 'Automatic' | Select Name,Status | Format-Table\nGet-EventLog -LogName System -EntryType Error -Newest 10 | Select TimeGenerated,Source,Message | Format-Table -Wrap" : "system_profiler SPHardwareDataType\nlaunchctl list | grep -v com.apple | head -20\nlog show --predicate 'eventMessage contains \"error\"' --last 1h | head -20" },
-    { id: "soc_r8", control: "CC6.1", title: "Verify MFA Enforcement", desc: "Check that MFA is enabled on all user accounts per CC6.1 access restrictions", severity: "high", autoFix: false,
-      script: soc2IsWindows ? "# Check Windows Hello / credential providers\nGet-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Providers\\*' -EA SilentlyContinue | Select PSChildName\nWrite-Host 'Check MyDex admin panel for MFA enrollment status'" : "# Check for MFA tokens\nsecurity find-generic-password -s 'com.apple.authkit.token' 2>/dev/null && echo 'MFA token found' || echo 'No MFA token'\necho 'Check MyDex admin panel for MFA enrollment status'" },
-    { id: "soc_r9", control: "CC6.7", title: "TLS Configuration Audit", desc: "Verify TLS 1.2+ is enforced and weak ciphers are disabled per CC6.7", severity: "medium", autoFix: true,
-      script: soc2IsWindows ? "# Check TLS settings\n[Net.ServicePointManager]::SecurityProtocol\n# Enforce TLS 1.2+\n[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13\nWrite-Host 'TLS 1.2+ enforced'" : "# Check OpenSSL version and TLS support\nopenssl version\ncurl -sI https://www.howsmyssl.com/a/check | head -5" },
-    { id: "soc_r10", control: "CC9.1", title: "Vulnerability Scan", desc: "Quick vulnerability assessment for CC9.1 risk identification", severity: "medium", autoFix: false,
-      script: soc2IsWindows ? "# Check for pending Windows updates (vulnerabilities)\n$UpdateSession = New-Object -ComObject Microsoft.Update.Session\n$Searcher = $UpdateSession.CreateUpdateSearcher()\n$Results = $Searcher.Search('IsInstalled=0')\n$Results.Updates | Select Title,MsrcSeverity | Format-Table -Wrap" : "# Check for pending macOS updates\nsoftwareupdate --list 2>&1\necho 'Vulnerability scan complete'" },
-    { id: "soc_r11", control: "A1.1", title: "Capacity & Resource Check", desc: "Monitor disk, memory, and CPU utilization for A1.1 capacity planning", severity: "low", autoFix: false,
+    { id: "soc_r8", control: "CC6.1", title: "Verify MFA Enforcement", desc: "Check that MFA is enabled on all user accounts per CC6.1 access restrictions", severity: "high", autoFix: false, platform: "both",
+      script: soc2IsWindows ? "Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Providers\\*' -EA SilentlyContinue | Select PSChildName\nWrite-Host 'Check MyDex admin panel for MFA enrollment status'" : "security find-generic-password -s 'com.apple.authkit.token' 2>/dev/null && echo 'MFA token found' || echo 'No MFA token'\necho 'Check MyDex admin panel for MFA enrollment status'" },
+    { id: "soc_r9", control: "CC6.7", title: "TLS Configuration Audit", desc: "Verify TLS 1.2+ is enforced and weak ciphers are disabled per CC6.7", severity: "medium", autoFix: true, platform: "both",
+      script: soc2IsWindows ? "[Net.ServicePointManager]::SecurityProtocol\n[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13\nWrite-Host 'TLS 1.2+ enforced'" : "openssl version\ncurl -sI https://www.howsmyssl.com/a/check | head -5" },
+    { id: "soc_r10", control: "CC9.1", title: "Vulnerability Scan", desc: "Quick vulnerability assessment for CC9.1 risk identification", severity: "medium", autoFix: false, platform: "both",
+      script: soc2IsWindows ? "$UpdateSession = New-Object -ComObject Microsoft.Update.Session\n$Searcher = $UpdateSession.CreateUpdateSearcher()\n$Results = $Searcher.Search('IsInstalled=0')\n$Results.Updates | Select Title,MsrcSeverity | Format-Table -Wrap" : "softwareupdate --list 2>&1\necho 'Vulnerability scan complete'" },
+    { id: "soc_r11", control: "A1.1", title: "Capacity & Resource Check", desc: "Monitor disk, memory, and CPU utilization for A1.1 capacity planning", severity: "low", autoFix: false, platform: "both",
       script: soc2IsWindows ? "Get-CimInstance Win32_LogicalDisk | Select DeviceID,@{N='SizeGB';E={[math]::Round($_.Size/1GB,1)}},@{N='FreeGB';E={[math]::Round($_.FreeSpace/1GB,1)}},@{N='UsedPct';E={[math]::Round(($_.Size-$_.FreeSpace)/$_.Size*100,1)}} | Format-Table\nGet-Process | Sort WorkingSet -Desc | Select -First 10 Name,@{N='MB';E={[math]::Round($_.WorkingSet/1MB)}} | Format-Table" : "df -h /\ntop -l 1 | head -10\nvm_stat | head -5" },
-    { id: "soc_r12", control: "CC6.2", title: "Password Policy Audit", desc: "Verify password policies meet SOC 2 complexity and rotation requirements", severity: "medium", autoFix: false,
+    { id: "soc_r12", control: "CC6.2", title: "Password Policy Audit", desc: "Verify password policies meet SOC 2 complexity and rotation requirements", severity: "medium", autoFix: false, platform: "both",
       script: soc2IsWindows ? "net accounts\nGet-LocalUser | Select Name,PasswordLastSet,PasswordExpires,Enabled | Format-Table" : "pwpolicy -getaccountpolicies 2>/dev/null || echo 'Use System Preferences > Security'\ndscl . -list /Users | while read u; do\n  dscl . -read /Users/$u AuthenticationAuthority 2>/dev/null | head -1\ndone" },
   ];
 
-  const criticalCount = complianceRemediations.filter(r => r.severity === "critical").length;
-  const highCount = complianceRemediations.filter(r => r.severity === "high").length;
+  const allRemediations = [...builtInRemediations, ...customRemediations];
+  const criticalCount = allRemediations.filter(r => r.severity === "critical").length;
+  const highCount = allRemediations.filter(r => r.severity === "high").length;
 
-  // Radial gauge data for overall score
   const gaugeData = [{ name: "Score", value: overallScore, fill: overallScore >= 90 ? "#22c55e" : overallScore >= 75 ? "#f59e0b" : "#ef4444" }];
+
+  // Handlers for custom remediations
+  const handleSaveCustomRemediation = () => {
+    if (!newRemediation.title.trim() || !newRemediation.script.trim()) return;
+    const remedy: Soc2Remedy = {
+      id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      control: newRemediation.control,
+      title: newRemediation.title.trim(),
+      desc: `Custom remediation for ${newRemediation.control}`,
+      severity: newRemediation.severity,
+      script: newRemediation.script,
+      autoFix: newRemediation.autoFix,
+      platform: newRemediation.platform,
+      custom: true,
+    };
+    const updated = [...customRemediations, remedy];
+    setCustomRemediations(updated);
+    saveCustomRemediations(updated);
+    setShowNewRemediation(false);
+    setNewRemediation({ title: "", control: "CC6.1", severity: "medium", script: "", platform: "both", autoFix: false });
+  };
+
+  const handleDeleteCustomRemediation = (id: string) => {
+    const updated = customRemediations.filter(r => r.id !== id);
+    setCustomRemediations(updated);
+    saveCustomRemediations(updated);
+  };
+
+  // Find remediations for a given control
+  const getRemediationsForControl = (controlId: string) =>
+    allRemediations.filter(r => r.control === controlId);
+
+  // Recommendations data
+  const recommendations = [
+    { priority: "critical", title: "Enable Disk Encryption on All Devices", desc: "Ensure BitLocker (Windows) or FileVault (macOS) is enabled on every enrolled device. SOC 2 C1.3 requires encryption at rest for all systems handling customer data.", action: "Run C1.3 remediation above", trend: "down" },
+    { priority: "critical", title: "Update Antivirus Definitions Fleet-Wide", desc: "Devices with outdated AV definitions (>7 days) are non-compliant with CC6.8. Schedule daily definition updates via group policy or MDM.", action: "Run CC6.8 remediation above", trend: "up" },
+    { priority: "high", title: "Implement 90-Day Access Review", desc: "CC6.3 requires timely removal of access for terminated users. Implement a quarterly access review process and automate offboarding via SSO provider.", action: "Configure in Settings > SSO", trend: "up" },
+    { priority: "high", title: "Document Incident Response Procedures", desc: "CC7.4 requires documented and tested incident response procedures. Schedule a tabletop exercise within 30 days and document results.", action: "Create runbook in Settings", trend: "down" },
+    { priority: "medium", title: "Enforce Software Allowlist", desc: "CC8.2 requires tracking of infrastructure changes. Implement a software allowlist and alert on unauthorized installations.", action: "Configure in Security > DLP", trend: "up" },
+    { priority: "medium", title: "Enable Automated Compliance Scanning", desc: "Schedule weekly compliance scans to track drift over time. Set up alerts for score drops below 85%.", action: "Configure in IT Support > Config", trend: "up" },
+    { priority: "low", title: "Implement Continuous Monitoring Dashboard", desc: "Real-time compliance visibility reduces audit prep time by up to 60%. Consider exposing SOC 2 metrics to auditors via read-only access.", action: "Share this dashboard", trend: "up" },
+    { priority: "low", title: "Automate Evidence Collection", desc: "Collect screenshots, logs, and reports automatically for each control. Reduces manual evidence gathering during audit season.", action: "Enable in Reports", trend: "up" },
+  ];
+
+  // Custom bar click handler
+  const handleBarClick = (data: { name?: string }) => {
+    if (data?.name) {
+      setSelectedCriteria(prev => prev === data.name ? null : (data.name ?? null));
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -475,7 +584,7 @@ export default function CompliancePage() {
           { label: "Passing", value: String(passingControls), icon: CheckCircle, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
           { label: "Failing", value: String(failingControls), icon: XCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
           { label: "Critical Fixes", value: String(criticalCount), icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
-          { label: "Auto-Fixable", value: String(complianceRemediations.filter(r => r.autoFix).length), icon: Zap, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30" },
+          { label: "Auto-Fixable", value: String(allRemediations.filter(r => r.autoFix).length), icon: Zap, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30" },
         ].map(s => (
           <Card key={s.label} className={s.bg}>
             <CardContent className="pt-4 pb-3 text-center">
@@ -487,77 +596,136 @@ export default function CompliancePage() {
         ))}
       </div>
 
-      {/* Trust Service Criteria Breakdown */}
+      {/* Trust Service Criteria — Clickable Bar Chart */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Shield className="h-5 w-5 text-blue-500" /> Trust Service Criteria
           </CardTitle>
-          <p className="text-xs text-muted-foreground">SOC 2 Type II compliance mapped to AICPA Trust Service Criteria</p>
+          <p className="text-xs text-muted-foreground">Click a bar to drill into its controls, affected devices, and remediations.</p>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {/* Bar Chart */}
+        <CardContent className="space-y-4">
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={criteriaBarData} layout="vertical" margin={{ left: 20 }}>
+            <BarChart data={criteriaBarData} layout="vertical" margin={{ left: 20 }}
+              onClick={(e: Record<string, unknown>) => { const ap = e?.activePayload as Array<{ payload: { name: string } }> | undefined; if (ap?.[0]?.payload) handleBarClick(ap[0].payload); }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
               <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={40} />
               <Tooltip formatter={(value) => [`${value}%`, "Score"]} />
-              <Bar dataKey="score" radius={[0, 6, 6, 0]} barSize={20}>
+              <Bar dataKey="score" radius={[0, 6, 6, 0]} barSize={20} className="cursor-pointer">
                 {criteriaBarData.map((entry, i) => (
-                  <Cell key={i} fill={entry.fill} />
+                  <Cell key={i} fill={selectedCriteria === entry.name ? entry.fill : entry.fill} stroke={selectedCriteria === entry.name ? "#fff" : "none"} strokeWidth={selectedCriteria === entry.name ? 2 : 0} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
 
-          {/* Detailed Criteria Cards */}
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {trustCriteria.map(criteria => (
-              <div key={criteria.id} className="rounded-xl border overflow-hidden">
-                <div className="p-3 bg-muted/30 flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Badge style={{ backgroundColor: criteria.color + "20", color: criteria.color, borderColor: criteria.color + "40" }} className="text-[10px] font-mono border">{criteria.id}</Badge>
-                      <span className="text-sm font-semibold">{criteria.name}</span>
-                    </div>
-                    <div className="text-[10px] text-muted-foreground mt-0.5">{criteria.passing}/{criteria.total} controls passing</div>
-                  </div>
-                  <div className="text-2xl font-bold" style={{ color: criteria.color }}>{criteria.score}%</div>
-                </div>
-                <div className="p-2 space-y-1">
-                  {criteria.controls.map(ctrl => (
-                    <div key={ctrl.id} className="flex items-start gap-2 p-2 rounded-lg hover:bg-muted/20 transition-colors">
-                      {ctrl.status === "pass" && <CheckCircle className="h-3.5 w-3.5 text-green-500 mt-0.5 shrink-0" />}
-                      {ctrl.status === "warn" && <AlertCircle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />}
-                      {ctrl.status === "fail" && <XCircle className="h-3.5 w-3.5 text-red-500 mt-0.5 shrink-0" />}
-                      <div className="min-w-0">
-                        <div className="text-[11px] font-medium flex items-center gap-1.5">
-                          <span className="font-mono text-muted-foreground">{ctrl.id}</span>
-                          {ctrl.name}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground leading-relaxed">{ctrl.desc}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          {/* Criteria selector pills (alternative click targets) */}
+          <div className="flex flex-wrap gap-2">
+            {trustCriteria.map(c => (
+              <button key={c.id} onClick={() => setSelectedCriteria(prev => prev === c.id ? null : c.id)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                  selectedCriteria === c.id
+                    ? "ring-2 ring-offset-1 shadow-sm"
+                    : "hover:bg-muted/40"
+                }`}
+                style={selectedCriteria === c.id ? { borderColor: c.color, color: c.color, backgroundColor: c.color + "15" } : {}}>
+                <span className="font-mono">{c.id}</span>
+                <span className="hidden sm:inline">{c.name}</span>
+                <span className="font-bold" style={{ color: c.color }}>{c.score}%</span>
+              </button>
             ))}
           </div>
+
+          {/* Expanded Criteria Detail Panel */}
+          {activeCriteria && (
+            <div className="rounded-xl border overflow-hidden animate-in slide-in-from-top-2 duration-200">
+              <div className="p-4 bg-muted/30 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Badge style={{ backgroundColor: activeCriteria.color + "20", color: activeCriteria.color, borderColor: activeCriteria.color + "40" }} className="text-xs font-mono border">{activeCriteria.id}</Badge>
+                    <span className="text-base font-semibold">{activeCriteria.name}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">{activeCriteria.passing}/{activeCriteria.total} controls passing</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-3xl font-bold" style={{ color: activeCriteria.color }}>{activeCriteria.score}%</div>
+                  <Button size="sm" variant="ghost" onClick={() => setSelectedCriteria(null)}><X className="h-4 w-4" /></Button>
+                </div>
+              </div>
+              <div className="divide-y">
+                {activeCriteria.controls.map(ctrl => {
+                  const controlRemediations = getRemediationsForControl(ctrl.id);
+                  return (
+                    <div key={ctrl.id} className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5">
+                          {ctrl.status === "pass" && <CheckCircle className="h-4 w-4 text-green-500" />}
+                          {ctrl.status === "warn" && <AlertCircle className="h-4 w-4 text-amber-500" />}
+                          {ctrl.status === "fail" && <XCircle className="h-4 w-4 text-red-500" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono text-xs text-muted-foreground">{ctrl.id}</span>
+                            <span className="text-sm font-medium">{ctrl.name}</span>
+                            <Badge className={`text-[9px] ${ctrl.status === "pass" ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300" : ctrl.status === "warn" ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300" : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"}`}>
+                              {ctrl.status.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{ctrl.desc}</p>
+
+                          {/* Affected devices */}
+                          {ctrl.failingDevices && ctrl.failingDevices.length > 0 && (
+                            <div className="mt-2">
+                              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Affected Devices</div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {ctrl.failingDevices.map(hostname => (
+                                  <Badge key={hostname} variant="outline" className="text-[10px] font-mono">
+                                    <XCircle className="h-2.5 w-2.5 mr-1 text-red-500" />{hostname}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Inline remediation buttons for non-passing controls */}
+                          {ctrl.status !== "pass" && controlRemediations.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {controlRemediations.map(r => (
+                                <Button key={r.id} size="sm" variant="outline" className="text-xs h-7 gap-1"
+                                  disabled={!soc2Device}
+                                  onClick={() => executeRemediation(`[SOC2 ${r.control}] ${r.title}`, r.script, soc2Device || undefined)}>
+                                  <Play className="h-3 w-3" />
+                                  {r.title}
+                                  {!soc2Device && <span className="text-muted-foreground ml-1">(select device)</span>}
+                                </Button>
+                              ))}
+                            </div>
+                          )}
+                          {ctrl.status !== "pass" && controlRemediations.length === 0 && (
+                            <div className="mt-2 text-[10px] text-muted-foreground italic">No remediation scripts available for this control.</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Device-Targeted Compliance */}
+      {/* Device Compliance Table */}
       {devices.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Monitor className="h-5 w-5 text-indigo-500" /> Device Compliance Status
             </CardTitle>
-            <p className="text-xs text-muted-foreground">Per-device SOC 2 compliance checks. Select a device for targeted recommendations.</p>
+            <p className="text-xs text-muted-foreground">Click a device row to select it as the remediation target.</p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Device Compliance Table */}
+          <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -571,39 +739,40 @@ export default function CompliancePage() {
                     <th className="pb-2 px-2 text-center">Disk</th>
                     <th className="pb-2 px-2 text-center">Screen Lock</th>
                     <th className="pb-2 px-2 text-center">Score</th>
-                    <th className="pb-2 pl-2"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {deviceComplianceData.map(d => (
-                    <tr key={d.device.id} className={`border-b hover:bg-muted/20 transition-colors ${soc2DeviceFilter === d.device.hostname ? "bg-indigo-50 dark:bg-indigo-950/20" : ""}`}>
-                      <td className="py-2.5 pr-4">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${d.device.status === "ONLINE" ? "bg-green-500" : "bg-red-400"}`} />
-                          <div>
-                            <div className="font-medium text-xs">{d.device.hostname}</div>
-                            <div className="text-[10px] text-muted-foreground">{d.device.platform === "win32" || d.device.platform?.toLowerCase() === "windows" ? "Windows" : "macOS"}</div>
+                  {deviceComplianceData.map(d => {
+                    const isSelected = soc2DeviceFilter === d.device.hostname;
+                    return (
+                      <tr key={d.device.id}
+                        className={`border-b cursor-pointer transition-colors ${isSelected ? "bg-indigo-50 dark:bg-indigo-950/30 ring-1 ring-indigo-300 dark:ring-indigo-700" : "hover:bg-muted/20"}`}
+                        onClick={() => setSoc2DeviceFilter(isSelected ? null : d.device.hostname)}>
+                        <td className="py-2.5 pr-4">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${d.device.status === "ONLINE" ? "bg-green-500" : "bg-red-400"}`} />
+                            <div>
+                              <div className="font-medium text-xs flex items-center gap-1.5">
+                                {d.device.hostname}
+                                {isSelected && <Badge className="text-[8px] bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">TARGET</Badge>}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">{d.device.platform === "win32" || d.device.platform?.toLowerCase() === "windows" ? "Windows" : "macOS"}</div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      {[d.encryption, d.antivirus, d.firewall, d.updates, d.mfa, d.diskSpace, d.screenLock].map((check, i) => (
-                        <td key={i} className="px-2 text-center">
-                          {check ? <CheckCircle className="h-3.5 w-3.5 text-green-500 mx-auto" /> : <XCircle className="h-3.5 w-3.5 text-red-500 mx-auto" />}
                         </td>
-                      ))}
-                      <td className="px-2 text-center">
-                        <Badge className={`text-[10px] ${d.score >= 90 ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : d.score >= 75 ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"}`}>
-                          {d.score}%
-                        </Badge>
-                      </td>
-                      <td className="pl-2">
-                        <Button size="sm" variant="outline" className="text-[10px] h-6"
-                          onClick={() => setSoc2DeviceFilter(soc2DeviceFilter === d.device.hostname ? null : d.device.hostname)}>
-                          {soc2DeviceFilter === d.device.hostname ? "Deselect" : "Fix"}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
+                        {[d.encryption, d.antivirus, d.firewall, d.updates, d.mfa, d.diskSpace, d.screenLock].map((check, i) => (
+                          <td key={i} className="px-2 text-center">
+                            {check ? <CheckCircle className="h-3.5 w-3.5 text-green-500 mx-auto" /> : <XCircle className="h-3.5 w-3.5 text-red-500 mx-auto" />}
+                          </td>
+                        ))}
+                        <td className="px-2 text-center">
+                          <Badge className={`text-[10px] ${d.score >= 90 ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : d.score >= 75 ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"}`}>
+                            {d.score}%
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -611,7 +780,7 @@ export default function CompliancePage() {
         </Card>
       )}
 
-      {/* Compliance Remediations */}
+      {/* Compliance Remediations — Redesigned Table View */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -621,13 +790,18 @@ export default function CompliancePage() {
                 {soc2Device && <Badge variant="outline" className="text-[10px] ml-2">Targeting: {soc2Device.hostname}</Badge>}
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-1">
-                Self-remediation scripts mapped to SOC 2 controls. Run these to fix compliance gaps.
+                Self-remediation scripts mapped to SOC 2 controls. Select a device above, then run scripts from here.
               </p>
             </div>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" className="text-xs"
+                onClick={() => setShowNewRemediation(!showNewRemediation)}>
+                <Plus className="h-3 w-3 mr-1" />New Remediation
+              </Button>
+              <Button size="sm" variant="outline" className="text-xs"
+                disabled={!soc2Device}
                 onClick={() => {
-                  const autoFixable = complianceRemediations.filter(r => r.autoFix);
+                  const autoFixable = allRemediations.filter(r => r.autoFix);
                   if (soc2Device) {
                     autoFixable.forEach(r => executeRemediation(`[SOC2 ${r.control}] ${r.title}`, r.script, soc2Device));
                   }
@@ -637,119 +811,201 @@ export default function CompliancePage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {/* Severity filter pills */}
+        <CardContent className="space-y-4">
+          {/* Severity summary pills */}
           <div className="flex gap-2 text-xs">
-            {[
-              { label: "Critical", count: criticalCount, color: "bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300" },
-              { label: "High", count: highCount, color: "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/30 dark:text-orange-300" },
-              { label: "Medium", count: complianceRemediations.filter(r => r.severity === "medium").length, color: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300" },
-              { label: "Low", count: complianceRemediations.filter(r => r.severity === "low").length, color: "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300" },
-            ].map(s => (
-              <Badge key={s.label} className={`${s.color} border`}>{s.label}: {s.count}</Badge>
+            {(["critical", "high", "medium", "low"] as const).map(sev => (
+              <Badge key={sev} className={`${SEVERITY_COLORS[sev]} border border-current/20`}>
+                {sev.charAt(0).toUpperCase() + sev.slice(1)}: {allRemediations.filter(r => r.severity === sev).length}
+              </Badge>
             ))}
           </div>
 
-          {/* Remediation Cards */}
-          <div className="grid gap-3 md:grid-cols-2">
-            {complianceRemediations.map(remedy => {
-              const hasRun = commandLogs.some(l => l.title.includes(remedy.title) && (l.status === "COMPLETED" || l.status === "SENT"));
-              return (
-                <div key={remedy.id} className={`rounded-xl border overflow-hidden ${hasRun ? "border-green-300 dark:border-green-800" : ""}`}>
-                  <div className="p-4 space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge className={`text-[9px] font-mono ${
-                          remedy.severity === "critical" ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" :
-                          remedy.severity === "high" ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" :
-                          remedy.severity === "medium" ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" :
-                          "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                        }`}>{remedy.severity.toUpperCase()}</Badge>
-                        <Badge variant="outline" className="text-[9px] font-mono">{remedy.control}</Badge>
-                        {remedy.autoFix && <Badge className="text-[9px] bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Auto-Fix</Badge>}
-                      </div>
-                    </div>
-                    <div className="text-sm font-semibold">{remedy.title}</div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{remedy.desc}</p>
+          {/* New Remediation Form */}
+          {showNewRemediation && (
+            <div className="rounded-xl border p-4 bg-muted/20 space-y-3">
+              <div className="text-sm font-semibold flex items-center gap-2">
+                <Plus className="h-4 w-4" /> Create Custom Remediation
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground block mb-1">Title</label>
+                  <input type="text" value={newRemediation.title}
+                    onChange={e => setNewRemediation(p => ({ ...p, title: e.target.value }))}
+                    placeholder="e.g., Check USB Policy"
+                    className="w-full rounded-md border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground block mb-1">SOC 2 Control</label>
+                    <select value={newRemediation.control}
+                      onChange={e => setNewRemediation(p => ({ ...p, control: e.target.value }))}
+                      className="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      {CONTROL_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   </div>
-
-                  {/* Script Preview */}
-                  <div className="border-t">
-                    <details className="group">
-                      <summary className="px-4 py-2 text-[11px] text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1">
-                        <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />
-                        {soc2IsWindows ? "PowerShell" : "Zsh"} Script
-                      </summary>
-                      <div className="bg-gray-950 text-green-400 px-4 py-2 font-mono text-[10px] overflow-x-auto max-h-40">
-                        <pre className="whitespace-pre-wrap">{remedy.script}</pre>
-                      </div>
-                    </details>
-                  </div>
-
-                  <div className="px-4 py-2.5 bg-muted/20 border-t flex items-center justify-between">
-                    <div className="text-[10px] text-muted-foreground">
-                      {soc2Device ? `Target: ${soc2Device.hostname}` : "Select a device first"}
-                    </div>
-                    <Button
-                      size="sm"
-                      className={`text-xs h-7 ${hasRun ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"} text-white`}
-                      disabled={!soc2Device}
-                      onClick={() => executeRemediation(`[SOC2 ${remedy.control}] ${remedy.title}`, remedy.script, soc2Device || undefined)}
-                    >
-                      {hasRun ? <><CheckCircle className="h-3 w-3 mr-1" />Sent</> : <><Play className="h-3 w-3 mr-1" />Run</>}
-                    </Button>
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground block mb-1">Severity</label>
+                    <select value={newRemediation.severity}
+                      onChange={e => setNewRemediation(p => ({ ...p, severity: e.target.value as Soc2Remedy["severity"] }))}
+                      className="w-full rounded-md border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="critical">Critical</option>
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                    </select>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">Script</label>
+                <textarea value={newRemediation.script}
+                  onChange={e => setNewRemediation(p => ({ ...p, script: e.target.value }))}
+                  placeholder="Enter PowerShell or shell script..."
+                  rows={5}
+                  className="w-full rounded-md border bg-background px-3 py-2 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y" />
+              </div>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3">
+                  <label className="text-[11px] font-medium text-muted-foreground">Platform:</label>
+                  {(["windows", "macos", "both"] as const).map(p => (
+                    <label key={p} className="flex items-center gap-1 text-xs cursor-pointer">
+                      <input type="radio" name="platform" checked={newRemediation.platform === p}
+                        onChange={() => setNewRemediation(prev => ({ ...prev, platform: p }))}
+                        className="accent-blue-600" />
+                      {p === "windows" ? "Windows" : p === "macos" ? "macOS" : "Both"}
+                    </label>
+                  ))}
+                </div>
+                <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                  <input type="checkbox" checked={newRemediation.autoFix}
+                    onChange={e => setNewRemediation(p => ({ ...p, autoFix: e.target.checked }))}
+                    className="accent-blue-600" />
+                  Auto-fix
+                </label>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button size="sm" className="text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={!newRemediation.title.trim() || !newRemediation.script.trim()}
+                  onClick={handleSaveCustomRemediation}>
+                  Save Remediation
+                </Button>
+                <Button size="sm" variant="ghost" className="text-xs" onClick={() => setShowNewRemediation(false)}>Cancel</Button>
+              </div>
+            </div>
+          )}
+
+          {/* Remediation Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-xs text-muted-foreground">
+                  <th className="pb-2 pr-2 w-8"></th>
+                  <th className="pb-2 px-2">Severity</th>
+                  <th className="pb-2 px-2">Control</th>
+                  <th className="pb-2 px-2">Title</th>
+                  <th className="pb-2 px-2 hidden lg:table-cell">Target</th>
+                  <th className="pb-2 pl-2 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allRemediations.map(remedy => {
+                  const hasRun = commandLogs.some(l => l.title.includes(remedy.title) && (l.status === "COMPLETED" || l.status === "SENT"));
+                  const isRunning = commandLogs.some(l => l.title.includes(remedy.title) && (l.status === "PENDING" || l.status === "EXECUTING"));
+                  return (
+                    <tr key={remedy.id} className={`border-b transition-colors hover:bg-muted/20 ${hasRun ? "bg-green-50/50 dark:bg-green-950/10" : ""}`}>
+                      <td className="py-2 pr-2">
+                        {hasRun ? <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                          : isRunning ? <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin" />
+                          : <AlertCircle className="h-3.5 w-3.5 text-muted-foreground/40" />}
+                      </td>
+                      <td className="px-2 py-2">
+                        <Badge className={`text-[9px] ${SEVERITY_COLORS[remedy.severity]}`}>
+                          {remedy.severity.toUpperCase()}
+                        </Badge>
+                      </td>
+                      <td className="px-2 py-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-xs">{remedy.control}</span>
+                          {remedy.autoFix && <Zap className="h-3 w-3 text-amber-500" />}
+                          {remedy.custom && <Badge className="text-[8px] bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">Custom</Badge>}
+                        </div>
+                      </td>
+                      <td className="px-2 py-2">
+                        <div className="text-xs font-medium">{remedy.title}</div>
+                        <div className="text-[10px] text-muted-foreground truncate max-w-xs">{remedy.desc}</div>
+                      </td>
+                      <td className="px-2 py-2 hidden lg:table-cell">
+                        <span className="text-[10px] text-muted-foreground">{soc2Device ? soc2Device.hostname : "—"}</span>
+                      </td>
+                      <td className="pl-2 py-2 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button size="sm" variant={hasRun ? "ghost" : "default"}
+                            className={`text-[10px] h-6 px-2 ${hasRun ? "text-green-600" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
+                            disabled={!soc2Device || isRunning}
+                            onClick={() => executeRemediation(`[SOC2 ${remedy.control}] ${remedy.title}`, remedy.script, soc2Device || undefined)}>
+                            {isRunning ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Running</> : hasRun ? <><CheckCircle className="h-3 w-3 mr-1" />Sent</> : <><Play className="h-3 w-3 mr-1" />Run</>}
+                          </Button>
+                          {remedy.custom && (
+                            <Button size="sm" variant="ghost" className="text-[10px] h-6 px-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                              onClick={() => handleDeleteCustomRemediation(remedy.id)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
 
-      {/* SOC 2 Recommendations */}
+      {/* SOC 2 Recommendations — Collapsible Accordion */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Info className="h-5 w-5 text-blue-500" /> SOC 2 Audit Recommendations
           </CardTitle>
+          <p className="text-xs text-muted-foreground">Expand each recommendation for details and action items.</p>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-2">
-            {[
-              { priority: "critical", title: "Enable Disk Encryption on All Devices", desc: "Ensure BitLocker (Windows) or FileVault (macOS) is enabled on every enrolled device. SOC 2 C1.3 requires encryption at rest for all systems handling customer data.", action: "Run C1.3 remediation above", trend: "down" },
-              { priority: "critical", title: "Update Antivirus Definitions Fleet-Wide", desc: "Devices with outdated AV definitions (>7 days) are non-compliant with CC6.8. Schedule daily definition updates via group policy or MDM.", action: "Run CC6.8 remediation above", trend: "up" },
-              { priority: "high", title: "Implement 90-Day Access Review", desc: "CC6.3 requires timely removal of access for terminated users. Implement a quarterly access review process and automate offboarding via SSO provider.", action: "Configure in Settings \u2192 SSO", trend: "up" },
-              { priority: "high", title: "Document Incident Response Procedures", desc: "CC7.4 requires documented and tested incident response procedures. Schedule a tabletop exercise within 30 days and document results.", action: "Create runbook in Settings", trend: "down" },
-              { priority: "medium", title: "Enforce Software Allowlist", desc: "CC8.2 requires tracking of infrastructure changes. Implement a software allowlist and alert on unauthorized installations.", action: "Configure in Security \u2192 DLP", trend: "up" },
-              { priority: "medium", title: "Enable Automated Compliance Scanning", desc: "Schedule weekly compliance scans to track drift over time. Set up alerts for score drops below 85%.", action: "Configure in IT Support \u2192 Config", trend: "up" },
-              { priority: "low", title: "Implement Continuous Monitoring Dashboard", desc: "Real-time compliance visibility reduces audit prep time by up to 60%. Consider exposing SOC 2 metrics to auditors via read-only access.", action: "Share this dashboard", trend: "up" },
-              { priority: "low", title: "Automate Evidence Collection", desc: "Collect screenshots, logs, and reports automatically for each control. Reduces manual evidence gathering during audit season.", action: "Enable in Reports", trend: "up" },
-            ].map((rec, i) => (
-              <div key={i} className={`p-4 rounded-xl border ${
-                rec.priority === "critical" ? "border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/20" :
-                rec.priority === "high" ? "border-orange-200 bg-orange-50/50 dark:border-orange-900 dark:bg-orange-950/20" :
-                rec.priority === "medium" ? "border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20" :
-                "border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20"
+        <CardContent className="space-y-1">
+          {recommendations.map((rec, i) => {
+            const isOpen = openAccordion === i;
+            return (
+              <div key={i} className={`rounded-lg border transition-colors ${
+                rec.priority === "critical" ? "border-red-200 dark:border-red-900" :
+                rec.priority === "high" ? "border-orange-200 dark:border-orange-900" :
+                rec.priority === "medium" ? "border-amber-200 dark:border-amber-900" :
+                "border-blue-200 dark:border-blue-900"
               }`}>
-                <div className="flex items-center justify-between mb-2">
-                  <Badge className={`text-[9px] ${
-                    rec.priority === "critical" ? "bg-red-200 text-red-800" :
-                    rec.priority === "high" ? "bg-orange-200 text-orange-800" :
-                    rec.priority === "medium" ? "bg-amber-200 text-amber-800" :
-                    "bg-blue-200 text-blue-800"
+                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-left"
+                  onClick={() => setOpenAccordion(isOpen ? null : i)}>
+                  <Badge className={`text-[9px] shrink-0 ${
+                    rec.priority === "critical" ? "bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200" :
+                    rec.priority === "high" ? "bg-orange-200 text-orange-800 dark:bg-orange-900 dark:text-orange-200" :
+                    rec.priority === "medium" ? "bg-amber-200 text-amber-800 dark:bg-amber-900 dark:text-amber-200" :
+                    "bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                   }`}>{rec.priority.toUpperCase()}</Badge>
+                  <span className="text-sm font-medium flex-1">{rec.title}</span>
                   {rec.trend === "up" ? (
-                    <div className="flex items-center gap-0.5 text-green-600 text-[10px]"><ArrowUpRight className="h-3 w-3" />Improving</div>
+                    <span className="flex items-center gap-0.5 text-green-600 text-[10px] shrink-0"><ArrowUpRight className="h-3 w-3" />Improving</span>
                   ) : (
-                    <div className="flex items-center gap-0.5 text-red-600 text-[10px]"><ArrowDownRight className="h-3 w-3" />Needs Work</div>
+                    <span className="flex items-center gap-0.5 text-red-600 text-[10px] shrink-0"><ArrowDownRight className="h-3 w-3" />Needs Work</span>
                   )}
-                </div>
-                <div className="text-sm font-semibold mb-1">{rec.title}</div>
-                <p className="text-xs text-muted-foreground leading-relaxed mb-2">{rec.desc}</p>
-                <div className="text-[10px] font-medium text-blue-600 dark:text-blue-400">{rec.action}</div>
+                  {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+                </button>
+                {isOpen && (
+                  <div className="px-4 pb-3 pt-0 border-t">
+                    <p className="text-xs text-muted-foreground leading-relaxed mt-2 mb-2">{rec.desc}</p>
+                    <div className="text-[10px] font-medium text-blue-600 dark:text-blue-400">{rec.action}</div>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+            );
+          })}
         </CardContent>
       </Card>
 
