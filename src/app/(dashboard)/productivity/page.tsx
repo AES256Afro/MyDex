@@ -117,7 +117,6 @@ export default async function ProductivityPage() {
           totalActiveSeconds: totalActive,
           totalIdleSeconds: 0,
           topApps: {},
-          topSites: {},
           topDomains: {},
           productivityScore: score,
           createdAt: new Date(),
