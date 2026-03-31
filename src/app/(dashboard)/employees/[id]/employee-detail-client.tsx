@@ -1239,6 +1239,61 @@ export default function EmployeeDetailClient({
               </CardContent>
             </Card>
           )}
+
+          {/* MDM Devices (including unmatched to AgentDevice) */}
+          {mdmDevices.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Smartphone className="h-4 w-4" /> MDM Devices
+                  <span className="text-xs font-normal text-muted-foreground">({mdmDevices.length} device{mdmDevices.length !== 1 ? "s" : ""})</span>
+                </CardTitle>
+                <CardDescription>Devices enrolled via MDM providers matched to this employee</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {mdmDevices.map((m) => {
+                    const enrollCls = m.enrollmentStatus === "enrolled"
+                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                      : m.enrollmentStatus === "pending"
+                        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                        : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
+                    const compCls = m.complianceStatus === "compliant"
+                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                      : m.complianceStatus === "noncompliant"
+                        ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                        : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
+                    return (
+                      <div key={m.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <Smartphone className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                          <div>
+                            <div className="text-sm font-medium">{m.deviceName || m.model || "MDM Device"}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {m.platform && <span>{m.platform}</span>}
+                              {m.serialNumber && <span> &middot; {m.serialNumber}</span>}
+                              {m.agentDevice && <span> &middot; Agent: {m.agentDevice.hostname}</span>}
+                              {!m.agentDevice && <span> &middot; No agent match</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Badge className={`text-xs ${enrollCls}`}>{m.enrollmentStatus || "Unknown"}</Badge>
+                          <Badge className={`text-xs ${compCls}`}>{m.complianceStatus === "noncompliant" ? "Non-Compliant" : m.complianceStatus || "Unknown"}</Badge>
+                          <Badge className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">{m.mdmProvider.name}</Badge>
+                          {m.lastCheckIn && (
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {formatDistanceToNow(new Date(m.lastCheckIn), { addSuffix: true })}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
     </div>
