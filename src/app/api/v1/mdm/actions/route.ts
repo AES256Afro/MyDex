@@ -58,26 +58,32 @@ export async function POST(request: NextRequest) {
       instanceUrl: provider.instanceUrl || undefined,
     });
 
+    let result: { success: boolean; error?: string };
+
     switch (actionType) {
       case "lock":
-        await client.lockDevice(mdmDeviceId);
+        result = await client.lockDevice(mdmDeviceId);
         break;
       case "wipe":
-        await client.wipeDevice(mdmDeviceId);
+        result = await client.wipeDevice(mdmDeviceId);
         break;
       case "restart":
-        await client.restartDevice(mdmDeviceId);
+        result = await client.restartDevice(mdmDeviceId);
         break;
       case "retire":
-        await client.retireDevice(mdmDeviceId);
+        result = await client.retireDevice(mdmDeviceId);
         break;
       case "sync":
-        await client.syncDevice(mdmDeviceId);
+        result = await client.syncDevice(mdmDeviceId);
         break;
       case "deploy_app":
         if (!payload?.appId) throw new Error("appId required for deploy_app");
-        await client.deployApp(mdmDeviceId, payload.appId as string);
+        result = await client.deployApp(mdmDeviceId, payload.appId as string);
         break;
+    }
+
+    if (!result!.success) {
+      throw new Error(result!.error || `${actionType} failed`);
     }
 
     await prisma.mdmAction.update({

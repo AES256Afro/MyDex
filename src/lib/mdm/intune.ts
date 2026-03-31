@@ -1,4 +1,4 @@
-import type { MdmClient, MdmDeviceData, MdmManagedApp } from "./types";
+import type { MdmClient, MdmDeviceData } from "./types";
 
 interface IntuneToken {
   access_token: string;
@@ -69,7 +69,7 @@ export class IntuneClient implements MdmClient {
     return res;
   }
 
-  async testConnection(): Promise<{ success: boolean; error?: string; deviceCount?: number }> {
+  async testConnection(): Promise<{ success: boolean; message?: string; error?: string }> {
     try {
       const res = await this.graphFetch(
         "https://graph.microsoft.com/v1.0/deviceManagement/managedDevices?$top=1&$count=true",
@@ -80,7 +80,8 @@ export class IntuneClient implements MdmClient {
         return { success: false, error: `Graph API error: ${res.status} ${err}` };
       }
       const data = await res.json();
-      return { success: true, deviceCount: data["@odata.count"] ?? data.value?.length ?? 0 };
+      const count = data["@odata.count"] ?? data.value?.length ?? 0;
+      return { success: true, message: `Connected. ${count} managed device(s) found.` };
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : "Unknown error" };
     }
@@ -115,54 +116,72 @@ export class IntuneClient implements MdmClient {
     return this.mapDevice(d);
   }
 
-  async lockDevice(mdmDeviceId: string): Promise<void> {
-    const res = await this.graphFetch(
-      `https://graph.microsoft.com/v1.0/deviceManagement/managedDevices/${mdmDeviceId}/remoteLock`,
-      { method: "POST" }
-    );
-    if (!res.ok && res.status !== 204) throw new Error(`Lock failed: ${res.status}`);
+  async lockDevice(mdmDeviceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await this.graphFetch(
+        `https://graph.microsoft.com/v1.0/deviceManagement/managedDevices/${mdmDeviceId}/remoteLock`,
+        { method: "POST" }
+      );
+      if (!res.ok && res.status !== 204) return { success: false, error: `Lock failed: ${res.status}` };
+      return { success: true };
+    } catch (e) { return { success: false, error: e instanceof Error ? e.message : "Lock failed" }; }
   }
 
-  async wipeDevice(mdmDeviceId: string): Promise<void> {
-    const res = await this.graphFetch(
-      `https://graph.microsoft.com/v1.0/deviceManagement/managedDevices/${mdmDeviceId}/wipe`,
-      { method: "POST", body: JSON.stringify({ keepEnrollmentData: false, keepUserData: false }) }
-    );
-    if (!res.ok && res.status !== 204) throw new Error(`Wipe failed: ${res.status}`);
+  async wipeDevice(mdmDeviceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await this.graphFetch(
+        `https://graph.microsoft.com/v1.0/deviceManagement/managedDevices/${mdmDeviceId}/wipe`,
+        { method: "POST", body: JSON.stringify({ keepEnrollmentData: false, keepUserData: false }) }
+      );
+      if (!res.ok && res.status !== 204) return { success: false, error: `Wipe failed: ${res.status}` };
+      return { success: true };
+    } catch (e) { return { success: false, error: e instanceof Error ? e.message : "Wipe failed" }; }
   }
 
-  async restartDevice(mdmDeviceId: string): Promise<void> {
-    const res = await this.graphFetch(
-      `https://graph.microsoft.com/v1.0/deviceManagement/managedDevices/${mdmDeviceId}/rebootNow`,
-      { method: "POST" }
-    );
-    if (!res.ok && res.status !== 204) throw new Error(`Restart failed: ${res.status}`);
+  async restartDevice(mdmDeviceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await this.graphFetch(
+        `https://graph.microsoft.com/v1.0/deviceManagement/managedDevices/${mdmDeviceId}/rebootNow`,
+        { method: "POST" }
+      );
+      if (!res.ok && res.status !== 204) return { success: false, error: `Restart failed: ${res.status}` };
+      return { success: true };
+    } catch (e) { return { success: false, error: e instanceof Error ? e.message : "Restart failed" }; }
   }
 
-  async retireDevice(mdmDeviceId: string): Promise<void> {
-    const res = await this.graphFetch(
-      `https://graph.microsoft.com/v1.0/deviceManagement/managedDevices/${mdmDeviceId}/retire`,
-      { method: "POST" }
-    );
-    if (!res.ok && res.status !== 204) throw new Error(`Retire failed: ${res.status}`);
+  async retireDevice(mdmDeviceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await this.graphFetch(
+        `https://graph.microsoft.com/v1.0/deviceManagement/managedDevices/${mdmDeviceId}/retire`,
+        { method: "POST" }
+      );
+      if (!res.ok && res.status !== 204) return { success: false, error: `Retire failed: ${res.status}` };
+      return { success: true };
+    } catch (e) { return { success: false, error: e instanceof Error ? e.message : "Retire failed" }; }
   }
 
-  async syncDevice(mdmDeviceId: string): Promise<void> {
-    const res = await this.graphFetch(
-      `https://graph.microsoft.com/v1.0/deviceManagement/managedDevices/${mdmDeviceId}/syncDevice`,
-      { method: "POST" }
-    );
-    if (!res.ok && res.status !== 204) throw new Error(`Sync failed: ${res.status}`);
+  async syncDevice(mdmDeviceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await this.graphFetch(
+        `https://graph.microsoft.com/v1.0/deviceManagement/managedDevices/${mdmDeviceId}/syncDevice`,
+        { method: "POST" }
+      );
+      if (!res.ok && res.status !== 204) return { success: false, error: `Sync failed: ${res.status}` };
+      return { success: true };
+    } catch (e) { return { success: false, error: e instanceof Error ? e.message : "Sync failed" }; }
   }
 
-  async deployApp(mdmDeviceId: string, appId: string): Promise<void> {
-    // Intune app assignment is group-based, not per-device
-    // For simplicity, we trigger an app install intent
-    const res = await this.graphFetch(
-      `https://graph.microsoft.com/v1.0/deviceManagement/managedDevices/${mdmDeviceId}/installApp`,
-      { method: "POST", body: JSON.stringify({ "@odata.type": "#microsoft.graph.managedDeviceMobileAppConfigurationAssignment", appId }) }
-    );
-    if (!res.ok && res.status !== 204) throw new Error(`Deploy failed: ${res.status}`);
+  async deployApp(mdmDeviceId: string, appId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Intune app assignment is group-based, not per-device
+      // For simplicity, we trigger an app install intent
+      const res = await this.graphFetch(
+        `https://graph.microsoft.com/v1.0/deviceManagement/managedDevices/${mdmDeviceId}/installApp`,
+        { method: "POST", body: JSON.stringify({ "@odata.type": "#microsoft.graph.managedDeviceMobileAppConfigurationAssignment", appId }) }
+      );
+      if (!res.ok && res.status !== 204) return { success: false, error: `Deploy failed: ${res.status}` };
+      return { success: true };
+    } catch (e) { return { success: false, error: e instanceof Error ? e.message : "Deploy failed" }; }
   }
 
   private mapDevice(d: Record<string, unknown>): MdmDeviceData {
