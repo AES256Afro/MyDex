@@ -3,7 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
 import crypto from "crypto";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY || "");
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -51,7 +53,7 @@ export async function POST(req: NextRequest) {
         process.env.RESEND_FROM_EMAIL || "MyDex <noreply@mydexnow.com>";
 
       // Send email via Resend
-      await resend.emails.send({
+      await getResend().emails.send({
         from: fromEmail,
         to: normalizedEmail,
         subject: "Reset your MyDex password",
