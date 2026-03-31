@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
+import { createNotification } from "@/lib/notifications";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -117,6 +118,31 @@ export async function POST(
         where: { id: ticketId },
         data: ticketUpdate,
       });
+    }
+
+    // Notify the other party about the response
+    if (!isInternal) {
+      if (isActingAsIT && ticket.submittedBy) {
+        // IT responded → notify the reporter
+        createNotification({
+          organizationId: session.user.organizationId,
+          userId: ticket.submittedBy,
+          type: "TICKET_UPDATE",
+          title: "IT Support Responded",
+          message: `${session.user.name} replied to your ticket: "${ticket.subject}"`,
+          link: `/support?ticket=${ticketId}`,
+        }).catch(() => {});
+      } else if (isSubmitter && ticket.assignedTo) {
+        // Reporter responded → notify the assigned IT staff
+        createNotification({
+          organizationId: session.user.organizationId,
+          userId: ticket.assignedTo,
+          type: "TICKET_UPDATE",
+          title: "User Responded to Ticket",
+          message: `${session.user.name} replied to ticket: "${ticket.subject}"`,
+          link: `/it-support?ticket=${ticketId}`,
+        }).catch(() => {});
+      }
     }
 
     return NextResponse.json(message, { status: 201 });

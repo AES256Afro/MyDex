@@ -39,6 +39,14 @@ export async function POST() {
         },
       });
 
+      // Update today's attendance record with clock-out time
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      await prisma.attendanceRecord.updateMany({
+        where: { userId, organizationId: orgId, date: todayStart },
+        data: { checkOut: now },
+      }).catch(() => { /* ignore if no record */ });
+
       return NextResponse.json({
         action: "clock_out",
         timeEntry: updatedEntry,
@@ -72,14 +80,33 @@ export async function POST() {
         }
       }
 
+      const now = new Date();
       const newEntry = await prisma.timeEntry.create({
         data: {
           userId,
           organizationId: orgId,
-          clockIn: new Date(),
+          clockIn: now,
           status: "ACTIVE",
         },
       });
+
+      // Auto-create attendance record for today if none exists
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      const existingAttendance = await prisma.attendanceRecord.findFirst({
+        where: { userId, organizationId: orgId, date: todayStart },
+      });
+      if (!existingAttendance) {
+        await prisma.attendanceRecord.create({
+          data: {
+            userId,
+            organizationId: orgId,
+            date: todayStart,
+            status: "PRESENT",
+            checkIn: now,
+          },
+        }).catch(() => { /* ignore if duplicate race */ });
+      }
 
       return NextResponse.json({
         action: "clock_in",

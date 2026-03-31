@@ -1,5 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendIntegrationMessage } from "@/lib/integrations";
+import { notifyAdmins } from "@/lib/notifications";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -76,6 +78,28 @@ export async function POST(request: NextRequest) {
           metadata: { cveId: m.cveId, software: m.software, version: m.version, hostname },
         })),
       });
+
+      // Send Slack/Teams notification for critical CVEs
+      sendIntegrationMessage(orgId, {
+        title: `🛡️ ${criticalMatches.length} Critical CVE${criticalMatches.length > 1 ? "s" : ""} Detected`,
+        message: criticalMatches.map(m => `• *${m.cveId}*: ${m.software} v${m.version}`).join("\n"),
+        color: "#EF4444",
+        link: `${process.env.NEXTAUTH_URL || "https://mydexnow.com"}/security`,
+        fields: [
+          { label: "Host", value: hostname },
+          { label: "Total Vulnerabilities", value: String(matchedCves.length) },
+          { label: "Critical/High", value: String(criticalMatches.length) },
+        ],
+      }).catch(() => {});
+
+      // In-app notification for admins
+      notifyAdmins({
+        organizationId: orgId,
+        type: "SECURITY_ALERT",
+        title: `${criticalMatches.length} Critical CVE${criticalMatches.length > 1 ? "s" : ""} Found`,
+        message: `Vulnerable software detected on ${hostname}: ${criticalMatches.map(m => m.cveId).join(", ")}`,
+        link: "/security",
+      }).catch(() => {});
     }
 
     return NextResponse.json({

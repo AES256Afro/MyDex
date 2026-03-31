@@ -397,7 +397,7 @@ export default function ActivityPage() {
     return siteSecs + appSecs;
   }, [eventsWithDurations]);
 
-  const uniqueDomains = useMemo(() => new Set(websiteEvents.map((e) => e.domain).filter(Boolean)).size, [websiteEvents]);
+  const uniqueDomains = useMemo(() => new Set(websiteEvents.map((e) => e.domain || e.windowTitle || e.appName || "unknown").filter(Boolean)).size, [websiteEvents]);
   const uniqueApps = useMemo(() => new Set(appEvents.map((e) => e.appName).filter(Boolean)).size, [appEvents]);
 
   const selectedEmployee = employees.find((e) => e.id === selectedUserId);

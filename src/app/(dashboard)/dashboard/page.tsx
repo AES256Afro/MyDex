@@ -12,9 +12,24 @@ import {
   ShieldCheck,
   ShieldX,
   ArrowRight,
+  Activity,
+  Ticket,
 } from "lucide-react";
 import Link from "next/link";
 import { hasMinRole } from "@/lib/permissions";
+import {
+  ActivityTrendChart,
+  DeviceFleetDonut,
+  ActivityFeed,
+  QuickActionsGrid,
+  TopAppsChart,
+} from "@/components/dashboard/dashboard-charts";
+import type {
+  ActivityDay,
+  DeviceBreakdown,
+  FeedItem,
+  TopApp,
+} from "@/components/dashboard/dashboard-charts";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -29,30 +44,120 @@ export default async function DashboardPage() {
   today.setHours(0, 0, 0, 0);
 
   if (isAdmin || isManager) {
-    // Admin/Manager dashboard
-    const [totalEmployees, activeTimeEntries, presentToday, openAlerts, totalDevices, onlineDevices] =
-      await Promise.all([
-        prisma.user.count({
-          where: { organizationId: orgId, status: "ACTIVE" },
-        }),
-        prisma.timeEntry.count({
-          where: { organizationId: orgId, status: "ACTIVE" },
-        }),
-        prisma.attendanceRecord.count({
-          where: { organizationId: orgId, date: today, status: "PRESENT" },
-        }),
-        prisma.securityAlert.count({
-          where: { organizationId: orgId, status: "OPEN" },
-        }),
-        prisma.agentDevice.count({
-          where: { organizationId: orgId },
-        }),
-        prisma.agentDevice.count({
-          where: { organizationId: orgId, status: "ONLINE" },
-        }),
-      ]);
+    // ── Build date range for 7-day trend ────────────────────────────
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
 
-    // Compute org-level DEX score from device data
+    // ── Parallel data fetch ─────────────────────────────────────────
+    const [
+      totalEmployees,
+      activeTimeEntries,
+      presentToday,
+      openAlerts,
+      totalDevices,
+      onlineDevices,
+      offlineDevices,
+      staleDevices,
+      activitySummaries,
+      recentAlerts,
+      recentTimeEntries,
+      topAppsRaw,
+      openTickets,
+      resolvedTickets,
+    ] = await Promise.all([
+      // KPI cards
+      prisma.user.count({
+        where: { organizationId: orgId, status: "ACTIVE" },
+      }),
+      prisma.timeEntry.count({
+        where: { organizationId: orgId, status: "ACTIVE" },
+      }),
+      prisma.attendanceRecord.count({
+        where: { organizationId: orgId, date: today, status: "PRESENT" },
+      }),
+      prisma.securityAlert.count({
+        where: { organizationId: orgId, status: "OPEN" },
+      }),
+      prisma.agentDevice.count({
+        where: { organizationId: orgId },
+      }),
+      prisma.agentDevice.count({
+        where: { organizationId: orgId, status: "ONLINE" },
+      }),
+
+      // Device breakdown
+      prisma.agentDevice.count({
+        where: { organizationId: orgId, status: "OFFLINE" },
+      }),
+      prisma.agentDevice.count({
+        where: { organizationId: orgId, status: "STALE" },
+      }),
+
+      // 7-day activity trend
+      prisma.activitySummary.groupBy({
+        by: ["date"],
+        where: {
+          organizationId: orgId,
+          date: { gte: sevenDaysAgo, lte: today },
+          hour: null, // daily summaries only
+        },
+        _sum: { totalActiveSeconds: true },
+        orderBy: { date: "asc" },
+      }),
+
+      // Recent security alerts
+      prisma.securityAlert.findMany({
+        where: { organizationId: orgId },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          alertType: true,
+          severity: true,
+          title: true,
+          createdAt: true,
+          status: true,
+        },
+      }),
+
+      // Recent time entries (clock in/out)
+      prisma.timeEntry.findMany({
+        where: { organizationId: orgId },
+        orderBy: { clockIn: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          clockIn: true,
+          clockOut: true,
+          status: true,
+          user: { select: { name: true } },
+        },
+      }),
+
+      // Top apps today
+      prisma.activityEvent.groupBy({
+        by: ["appName"],
+        where: {
+          organizationId: orgId,
+          eventType: "APP_SWITCH",
+          timestamp: { gte: today },
+          appName: { not: null },
+        },
+        _count: { appName: true },
+        orderBy: { _count: { appName: "desc" } },
+        take: 5,
+      }),
+
+      // Support ticket stats
+      prisma.supportTicket.count({
+        where: { organizationId: orgId, status: { in: ["OPEN", "IN_PROGRESS", "WAITING_ON_IT"] } },
+      }),
+      prisma.supportTicket.count({
+        where: { organizationId: orgId, status: { in: ["RESOLVED", "CLOSED"] } },
+      }),
+    ]);
+
+    // ── Compute org-level DEX score ─────────────────────────────────
     let orgDexScore = 0;
     if (isAdmin && totalDevices > 0) {
       const devices = await prisma.agentDevice.findMany({
@@ -87,8 +192,83 @@ export default async function DashboardPage() {
       orgDexScore = Math.round(totalScore / devices.length);
     }
 
+    // ── Prepare serialized data for client components ───────────────
+
+    // 7-day activity trend: fill in missing days
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const activityTrend: ActivityDay[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(sevenDaysAgo);
+      d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().slice(0, 10);
+      const match = activitySummaries.find(
+        (s) => new Date(s.date).toISOString().slice(0, 10) === dateStr
+      );
+      const totalSec = match?._sum?.totalActiveSeconds ?? 0;
+      activityTrend.push({
+        label: dayNames[d.getDay()],
+        date: d.toISOString(),
+        hours: Math.round((totalSec / 3600) * 10) / 10,
+      });
+    }
+
+    // Device breakdown
+    const deviceBreakdown: DeviceBreakdown = {
+      online: onlineDevices,
+      offline: offlineDevices,
+      stale: staleDevices,
+    };
+
+    // Build activity feed (merge alerts + time entries, sort by time)
+    const feedItems: FeedItem[] = [];
+
+    for (const entry of recentTimeEntries) {
+      if (entry.clockOut) {
+        feedItems.push({
+          id: `te-out-${entry.id}`,
+          type: "clock_out",
+          description: `${entry.user.name ?? "Unknown"} clocked out`,
+          timestamp: entry.clockOut.toISOString(),
+        });
+      }
+      feedItems.push({
+        id: `te-in-${entry.id}`,
+        type: "clock_in",
+        description: `${entry.user.name ?? "Unknown"} clocked in`,
+        timestamp: entry.clockIn.toISOString(),
+      });
+    }
+
+    for (const alert of recentAlerts) {
+      feedItems.push({
+        id: `alert-${alert.id}`,
+        type: "alert",
+        description: `${alert.severity} alert: ${alert.title}`,
+        timestamp: alert.createdAt.toISOString(),
+        severity: alert.severity,
+      });
+    }
+
+    // Sort by timestamp descending, take 8
+    feedItems.sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+    const feedSlice = feedItems.slice(0, 8);
+
+    // Top apps
+    const topApps: TopApp[] = topAppsRaw.map((r) => ({
+      appName: r.appName ?? "Unknown",
+      count: r._count.appName,
+    }));
+
+    // Attendance percentage
+    const attendancePct =
+      totalEmployees > 0 ? Math.round((presentToday / totalEmployees) * 100) : 0;
+
+    // ── Render ──────────────────────────────────────────────────────
     return (
       <div className="space-y-6">
+        {/* Header */}
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
@@ -96,16 +276,26 @@ export default async function DashboardPage() {
           </p>
         </div>
 
+        {/* Row 1: KPI Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          {/* DEX Score */}
           {isAdmin && totalDevices > 0 && (
             <Link href="/fleet-health">
-              <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">DEX Score</CardTitle>
                   <ShieldCheck className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className={`text-2xl font-bold ${orgDexScore >= 80 ? "text-green-600" : orgDexScore >= 60 ? "text-yellow-600" : "text-red-600"}`}>
+                  <div
+                    className={`text-2xl font-bold ${
+                      orgDexScore >= 80
+                        ? "text-green-600"
+                        : orgDexScore >= 60
+                        ? "text-yellow-600"
+                        : "text-red-600"
+                    }`}
+                  >
                     {orgDexScore}/100
                   </div>
                   <p className="text-xs text-muted-foreground">Digital Employee Experience</p>
@@ -113,6 +303,8 @@ export default async function DashboardPage() {
               </Card>
             </Link>
           )}
+
+          {/* Total Employees */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
@@ -120,9 +312,13 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{totalEmployees}</div>
-              <p className="text-xs text-muted-foreground">Active team members</p>
+              <p className="text-xs text-muted-foreground">
+                {attendancePct}% present today
+              </p>
             </CardContent>
           </Card>
+
+          {/* Currently Working */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Currently Working</CardTitle>
@@ -133,83 +329,115 @@ export default async function DashboardPage() {
               <p className="text-xs text-muted-foreground">Clocked in right now</p>
             </CardContent>
           </Card>
+
+          {/* Devices Online */}
           {isAdmin && totalDevices > 0 && (
             <Link href="/devices">
-              <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Devices Online</CardTitle>
                   <Shield className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-green-600">{onlineDevices}/{totalDevices}</div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {onlineDevices}/{totalDevices}
+                  </div>
                   <p className="text-xs text-muted-foreground">Connected agents</p>
                 </CardContent>
               </Card>
             </Link>
           )}
+
+          {/* Open Alerts */}
+          <Link href="/security">
+            <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium">Open Alerts</CardTitle>
+                <Shield className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div
+                  className={`text-2xl font-bold ${
+                    openAlerts > 0 ? "text-red-600" : "text-green-600"
+                  }`}
+                >
+                  {openAlerts}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {openAlerts === 0 ? "All clear" : "Security alerts pending"}
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+
+        {/* Row 1b: Secondary KPI row */}
+        <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Open Alerts</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Attendance Today</CardTitle>
+              <CalendarCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${openAlerts > 0 ? "text-red-600" : ""}`}>{openAlerts}</div>
-              <p className="text-xs text-muted-foreground">Security alerts pending</p>
+              <div className="text-2xl font-bold">{attendancePct}%</div>
+              <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-green-500 transition-all"
+                  style={{ width: `${attendancePct}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {presentToday} of {totalEmployees} employees
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Support Tickets</CardTitle>
+              <Ticket className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-baseline gap-3">
+                <div className="text-2xl font-bold">{openTickets}</div>
+                <span className="text-sm text-muted-foreground">open</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {resolvedTickets} resolved total
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Activity Today</CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {activityTrend[activityTrend.length - 1]?.hours ?? 0}h
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Total active hours across org
+              </p>
             </CardContent>
           </Card>
         </div>
 
+        {/* Row 2: Charts — Activity Trend + Device Fleet */}
         <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Real-time Monitoring</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Continuous data collection providing immediate insights into employee experience across all locations and devices.
-              </p>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <Link href="/productivity" className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="h-2 w-2 rounded-full bg-green-500" />
-                  Productivity & Engagement
-                </Link>
-                <Link href="/fleet-health" className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="h-2 w-2 rounded-full bg-blue-500" />
-                  Fleet Health & DEX
-                </Link>
-                <Link href="/security" className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="h-2 w-2 rounded-full bg-red-500" />
-                  Security & Alerts
-                </Link>
-                <Link href="/compliance" className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="h-2 w-2 rounded-full bg-purple-500" />
-                  SOC 2 Compliance
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="grid grid-cols-1 gap-2 text-sm">
-                <Link href="/settings/team" className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                  <ArrowRight className="h-4 w-4 text-primary" /> Invite team members
-                </Link>
-                <Link href="/settings/agent-setup" className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                  <ArrowRight className="h-4 w-4 text-primary" /> Deploy monitoring agents
-                </Link>
-                <Link href="/settings/mdm" className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                  <ArrowRight className="h-4 w-4 text-primary" /> Connect MDM provider
-                </Link>
-                <Link href="/reports" className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                  <ArrowRight className="h-4 w-4 text-primary" /> Generate reports
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+          <ActivityTrendChart data={activityTrend} />
+          <DeviceFleetDonut data={deviceBreakdown} />
         </div>
+
+        {/* Row 3: Activity Feed + Quick Actions */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <ActivityFeed items={feedSlice} />
+          <QuickActionsGrid />
+        </div>
+
+        {/* Row 4: Top Apps */}
+        <TopAppsChart data={topApps} />
       </div>
     );
   }

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Play, Square } from "lucide-react";
+import { toast } from "sonner";
 
 interface ActiveEntry {
   id: string;
@@ -58,7 +59,7 @@ export function ClockWidget({ initialActiveEntry }: ClockWidgetProps) {
 
       if (!res.ok) {
         const error = await res.json();
-        console.error("Clock error:", error);
+        toast.error(error.message || "Failed to process clock action");
         return;
       }
 
@@ -68,6 +69,10 @@ export function ClockWidget({ initialActiveEntry }: ClockWidgetProps) {
       if (entry.clockOut) {
         // Clocked out
         setActiveEntry(null);
+        const dur = Math.floor((new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime()) / 1000);
+        const h = Math.floor(dur / 3600);
+        const m = Math.floor((dur % 3600) / 60);
+        toast.success(`Clocked out — ${h > 0 ? `${h}h ` : ""}${m}m recorded`);
       } else {
         // Clocked in
         setActiveEntry({
@@ -75,9 +80,11 @@ export function ClockWidget({ initialActiveEntry }: ClockWidgetProps) {
           clockIn: entry.clockIn,
           status: entry.status,
         });
+        toast.success("Clocked in — have a productive session!");
       }
     } catch (err) {
       console.error("Clock toggle failed:", err);
+      toast.error("Network error — please try again");
     } finally {
       setLoading(false);
     }
