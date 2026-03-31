@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import Link from "next/link";
 import { FileText } from "lucide-react";
+import { ExportButton } from "@/components/shared/export-button";
 
 interface SearchParams {
   page?: string;
@@ -84,12 +85,15 @@ export default async function AuditLogPage({
             {totalCount} audit event{totalCount !== 1 ? "s" : ""} recorded
           </p>
         </div>
-        <Link
-          href="/security"
-          className="text-sm text-muted-foreground hover:underline"
-        >
-          Back to Security
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportButton type="audit-log" />
+          <Link
+            href="/security"
+            className="text-sm text-muted-foreground hover:underline"
+          >
+            Back to Security
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}

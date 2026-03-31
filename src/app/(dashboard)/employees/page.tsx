@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { Users, UserPlus } from "lucide-react";
 import type { Role, UserStatus } from "@/generated/prisma";
+import { ExportButton } from "@/components/shared/export-button";
 
 function roleBadgeVariant(role: Role) {
   switch (role) {
@@ -77,15 +78,18 @@ export default async function EmployeesPage() {
             your organization
           </p>
         </div>
-        {canInvite && (
-          <Link
-            href="/settings/team"
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
-          >
-            <UserPlus className="h-4 w-4" />
-            Invite Employee
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          <ExportButton type="employees" />
+          {canInvite && (
+            <Link
+              href="/settings/team"
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+            >
+              <UserPlus className="h-4 w-4" />
+              Invite Employee
+            </Link>
+          )}
+        </div>
       </div>
 
       <Card>

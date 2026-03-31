@@ -13,6 +13,8 @@ import {
   Users,
   CheckCheck,
 } from "lucide-react";
+import { useRealtimeStore } from "@/stores/realtime-store";
+import type { RealtimeNotification } from "@/stores/realtime-store";
 
 interface Notification {
   id: string;
@@ -48,12 +50,58 @@ function relativeTime(dateStr: string): string {
   return `${diffDay}d ago`;
 }
 
+/** Convert a realtime SSE notification into the local Notification shape */
+function toLocalNotification(n: RealtimeNotification): Notification {
+  return {
+    id: n.id,
+    type: n.type ?? "SYSTEM",
+    title: n.title,
+    message: n.message,
+    link: n.link ?? null,
+    read: false,
+    createdAt: new Date().toISOString(),
+  };
+}
+
 export function NotificationBell() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [hasNewPulse, setHasNewPulse] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const prevRealtimeCountRef = useRef(0);
+
+  // Subscribe to realtime notifications from SSE
+  const realtimeNotifications = useRealtimeStore(
+    (s) => s.pendingNotifications
+  );
+
+  // When SSE pushes new notifications, prepend them to the list
+  useEffect(() => {
+    const currentCount = realtimeNotifications.length;
+    if (currentCount > prevRealtimeCountRef.current) {
+      // New notifications arrived via SSE
+      const newCount = currentCount - prevRealtimeCountRef.current;
+      const newOnes = realtimeNotifications
+        .slice(0, newCount)
+        .map(toLocalNotification);
+
+      setNotifications((prev) => {
+        // Deduplicate by id
+        const existingIds = new Set(prev.map((n) => n.id));
+        const unique = newOnes.filter((n) => !existingIds.has(n.id));
+        return [...unique, ...prev];
+      });
+      setUnreadCount((c) => c + newCount);
+
+      // Trigger pulse animation
+      setHasNewPulse(true);
+      const timeout = setTimeout(() => setHasNewPulse(false), 2000);
+      return () => clearTimeout(timeout);
+    }
+    prevRealtimeCountRef.current = currentCount;
+  }, [realtimeNotifications]);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -67,10 +115,10 @@ export function NotificationBell() {
     }
   }, []);
 
-  // Fetch on mount + poll every 30s
+  // Fetch on mount + poll every 60s (reduced from 30s since SSE handles real-time)
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
+    const interval = setInterval(fetchNotifications, 60000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
@@ -118,7 +166,7 @@ export function NotificationBell() {
       <Button
         variant="ghost"
         size="icon"
-        className="relative"
+        className={`relative ${hasNewPulse ? "animate-bounce" : ""}`}
         onClick={() => setOpen(!open)}
       >
         <Bell className="h-5 w-5" />

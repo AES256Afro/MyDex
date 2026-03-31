@@ -8,6 +8,7 @@ import { Clock } from "lucide-react";
 import { ClockWidget } from "@/components/time-tracking/clock-widget";
 import { LocalTime } from "@/components/local-time";
 import type { TimeEntryStatus } from "@/generated/prisma";
+import { ExportButton } from "@/components/shared/export-button";
 
 function statusVariant(status: TimeEntryStatus) {
   switch (status) {
@@ -76,11 +77,14 @@ export default async function TimeTrackingPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Time Tracking</h1>
-        <p className="text-muted-foreground">
-          Track your work hours and view time entries
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Time Tracking</h1>
+          <p className="text-muted-foreground">
+            Track your work hours and view time entries
+          </p>
+        </div>
+        <ExportButton type="time-entries" />
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">

@@ -41,6 +41,7 @@ model Organization {
   energyReadings   EnergyReading[]
   sustainabilityGoals SustainabilityGoal[]
   notifications    Notification[]
+  realtimeEvents   RealtimeEvent[]
   integrations     Integration[]
   scimTokens       ScimToken[]
   scimEvents       ScimEvent[]
@@ -1482,6 +1483,24 @@ model Notification {
 
   @@index([userId, read])
   @@index([organizationId])
+}
+
+// ============================================
+// REALTIME EVENTS (SSE)
+// ============================================
+
+model RealtimeEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  channel        String
+  eventType      String
+  payload        Json
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([channel, createdAt])
+  @@index([organizationId, createdAt])
 }
 
 // ============================================

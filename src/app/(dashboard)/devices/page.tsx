@@ -36,6 +36,7 @@ import {
   Wrench,
   Loader2,
 } from "lucide-react";
+import { ExportButton } from "@/components/shared/export-button";
 import { MdmActions } from "@/components/mdm/mdm-actions";
 
 interface Device {
@@ -228,9 +229,12 @@ export default function DevicesPage() {
           </h1>
           <p className="text-muted-foreground text-sm">Connected agents and system health</p>
         </div>
-        <Button onClick={fetchDevices} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" /> Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportButton type="devices" />
+          <Button onClick={fetchDevices} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}

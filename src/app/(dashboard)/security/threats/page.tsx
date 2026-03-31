@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import type { AlertSeverity, AlertStatus } from "@/generated/prisma";
 import Link from "next/link";
 import { Shield, AlertTriangle, AlertCircle, Info } from "lucide-react";
+import { ExportButton } from "@/components/shared/export-button";
 
 function severityBadgeVariant(severity: AlertSeverity) {
   switch (severity) {
@@ -137,12 +138,15 @@ export default async function ThreatsPage({
             Security alerts for your organization
           </p>
         </div>
-        <Link
-          href="/security"
-          className="text-sm text-muted-foreground hover:underline"
-        >
-          Back to Security
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportButton type="security-alerts" />
+          <Link
+            href="/security"
+            className="text-sm text-muted-foreground hover:underline"
+          >
+            Back to Security
+          </Link>
+        </div>
       </div>
 
       {/* Severity Breakdown Cards */}

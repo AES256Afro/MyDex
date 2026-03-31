@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { emitRealtimeEvent, userChannel, adminsChannel } from "@/lib/realtime";
 
 export async function createNotification(params: {
   organizationId: string;
@@ -8,7 +9,22 @@ export async function createNotification(params: {
   message: string;
   link?: string;
 }) {
-  return prisma.notification.create({ data: params });
+  const notification = await prisma.notification.create({ data: params });
+
+  emitRealtimeEvent({
+    organizationId: params.organizationId,
+    channel: userChannel(params.userId),
+    eventType: "NOTIFICATION",
+    payload: {
+      id: notification.id,
+      title: params.title,
+      message: params.message,
+      type: params.type,
+      link: params.link,
+    },
+  }).catch(() => {});
+
+  return notification;
 }
 
 export async function notifyAdmins(params: {
@@ -37,4 +53,16 @@ export async function notifyAdmins(params: {
       link: params.link,
     })),
   });
+
+  emitRealtimeEvent({
+    organizationId: params.organizationId,
+    channel: adminsChannel(params.organizationId),
+    eventType: "NOTIFICATION",
+    payload: {
+      title: params.title,
+      message: params.message,
+      type: params.type,
+      link: params.link,
+    },
+  }).catch(() => {});
 }
