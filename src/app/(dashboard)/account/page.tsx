@@ -33,6 +33,9 @@ import {
   Briefcase,
   Pause,
   Play,
+  Monitor,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 
 export default function AccountPage() {
@@ -69,10 +72,24 @@ export default function AccountPage() {
   const [monitoringPausedAt, setMonitoringPausedAt] = useState<string | null>(null);
   const [monitoringToggling, setMonitoringToggling] = useState(false);
 
+  // My Devices state
+  interface MyDevice {
+    id: string;
+    hostname: string;
+    platform: string;
+    osVersion: string | null;
+    status: string;
+    securityGrade: string | null;
+    lastSeenAt: string;
+  }
+  const [myDevices, setMyDevices] = useState<MyDevice[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(true);
+
   useEffect(() => {
     if (session?.user?.name) setName(session.user.name);
     fetchMfaStatus();
     fetchMonitoringStatus();
+    fetchMyDevices();
   }, [session]);
 
   async function fetchMfaStatus() {
@@ -100,6 +117,20 @@ export default function AccountPage() {
       }
     } catch (e) {
       console.error(e);
+    }
+  }
+
+  async function fetchMyDevices() {
+    try {
+      const res = await fetch("/api/v1/agents/devices?userId=me");
+      if (res.ok) {
+        const data = await res.json();
+        setMyDevices(data.devices ?? data ?? []);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDevicesLoading(false);
     }
   }
 
@@ -402,6 +433,80 @@ export default function AccountPage() {
               />
             </button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* My Devices Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Monitor className="h-5 w-5" />
+            My Devices
+          </CardTitle>
+          <CardDescription>
+            Devices assigned to your account
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {devicesLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : myDevices.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              No devices assigned to your account
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {myDevices.map((device) => (
+                <div
+                  key={device.id}
+                  className="flex items-center justify-between rounded-lg border p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    {device.status === "ONLINE" ? (
+                      <Wifi className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <WifiOff className="h-5 w-5 text-muted-foreground" />
+                    )}
+                    <div>
+                      <p className="font-medium text-sm">{device.hostname}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {device.platform}
+                        {device.osVersion ? ` — ${device.osVersion}` : ""}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Last seen:{" "}
+                        {new Date(device.lastSeenAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {device.securityGrade && (
+                      <Badge
+                        variant="outline"
+                        className={
+                          device.securityGrade <= "B"
+                            ? "border-green-300 text-green-700 dark:text-green-300"
+                            : device.securityGrade === "C"
+                            ? "border-yellow-300 text-yellow-700 dark:text-yellow-300"
+                            : "border-red-300 text-red-700 dark:text-red-300"
+                        }
+                      >
+                        Grade {device.securityGrade}
+                      </Badge>
+                    )}
+                    <Badge
+                      variant={device.status === "ONLINE" ? "default" : "secondary"}
+                      className={device.status === "ONLINE" ? "bg-green-500" : ""}
+                    >
+                      {device.status === "ONLINE" ? "Online" : device.status === "STALE" ? "Stale" : "Offline"}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

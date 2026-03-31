@@ -286,6 +286,15 @@ export const MODULE_REGISTRY: ModuleConfig[] = [
     configurable: false,
     category: "admin",
   },
+  {
+    id: "workflows",
+    label: "Workflows",
+    href: "/settings/workflows",
+    description: "Automated workflows and playbooks for alerts, tickets, and notifications",
+    minRole: "ADMIN",
+    configurable: false,
+    category: "admin",
+  },
   // Insights
   {
     id: "cost-optimization",

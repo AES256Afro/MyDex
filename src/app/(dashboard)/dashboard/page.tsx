@@ -30,6 +30,19 @@ import type {
   FeedItem,
   TopApp,
 } from "@/components/dashboard/dashboard-charts";
+import {
+  WelcomeBanner,
+  MyScheduleTodayCard,
+  MyDevicesCard,
+  MyOpenTicketsCard,
+  MyLeaveBalanceCard,
+  EmployeeQuickActions,
+  WeeklyProductivityChart,
+} from "@/components/dashboard/employee-dashboard";
+import type {
+  EmployeeDevice,
+  WeeklyHoursDay,
+} from "@/components/dashboard/employee-dashboard";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -442,13 +455,24 @@ export default async function DashboardPage() {
     );
   }
 
-  // Employee dashboard — focused on their own data
+  // ── Employee dashboard — focused on their own data ───────────────────
+  const weekStart = new Date(today);
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Sunday
+  const yearStart = new Date(today.getFullYear(), 0, 1);
+
   const [
     myActiveEntry,
     myAttendanceToday,
     myTasks,
     myLeaveRequests,
     myMfa,
+    myDevices,
+    myOpenTickets,
+    myLatestTicket,
+    myApprovedLeaveThisYear,
+    myWeekEntries,
+    myTodayEntries,
+    hasAnyTimeEntry,
   ] = await Promise.all([
     prisma.timeEntry.findFirst({
       where: { userId, status: "ACTIVE" },
@@ -467,9 +491,129 @@ export default async function DashboardPage() {
       where: { userId },
       select: { verified: true },
     }),
+    prisma.agentDevice.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        hostname: true,
+        platform: true,
+        osVersion: true,
+        status: true,
+        securityGrade: true,
+        lastSeenAt: true,
+      },
+      orderBy: { lastSeenAt: "desc" },
+      take: 5,
+    }),
+    prisma.supportTicket.count({
+      where: {
+        submittedBy: userId,
+        status: { in: ["OPEN", "IN_PROGRESS", "WAITING_ON_IT"] },
+      },
+    }),
+    prisma.supportTicket.findFirst({
+      where: {
+        submittedBy: userId,
+        status: { in: ["OPEN", "IN_PROGRESS", "WAITING_ON_IT"] },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { subject: true, status: true },
+    }),
+    prisma.leaveRequest.count({
+      where: {
+        userId,
+        status: "APPROVED",
+        startDate: { gte: yearStart },
+      },
+    }),
+    // Weekly time entries for productivity chart
+    prisma.timeEntry.findMany({
+      where: {
+        userId,
+        clockIn: { gte: weekStart },
+      },
+      select: { clockIn: true, clockOut: true, activeSeconds: true },
+      orderBy: { clockIn: "asc" },
+    }),
+    // Today's completed entries for hours worked
+    prisma.timeEntry.findMany({
+      where: {
+        userId,
+        clockIn: { gte: today },
+      },
+      select: { clockIn: true, clockOut: true, activeSeconds: true },
+    }),
+    // Check if user has ever clocked in (for welcome banner)
+    prisma.timeEntry.findFirst({
+      where: { userId },
+      select: { id: true },
+    }),
   ]);
 
   const mfaEnabled = myMfa?.verified ?? false;
+
+  // Compute hours worked today from completed + active entries
+  const now = new Date();
+  let hoursWorkedToday = 0;
+  for (const entry of myTodayEntries) {
+    if (entry.clockOut) {
+      hoursWorkedToday += (entry.clockOut.getTime() - entry.clockIn.getTime()) / 3600000;
+    } else {
+      // Active entry: count up to now
+      hoursWorkedToday += (now.getTime() - entry.clockIn.getTime()) / 3600000;
+    }
+  }
+  hoursWorkedToday = Math.round(hoursWorkedToday * 10) / 10;
+
+  // Build weekly productivity data
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const weeklyHours: WeeklyHoursDay[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() + i);
+    const dayStart = new Date(d);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(d);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    let dayHours = 0;
+    for (const entry of myWeekEntries) {
+      const clockIn = new Date(entry.clockIn);
+      if (clockIn >= dayStart && clockIn <= dayEnd) {
+        if (entry.clockOut) {
+          dayHours += (entry.clockOut.getTime() - clockIn.getTime()) / 3600000;
+        } else if (dayStart.toDateString() === now.toDateString()) {
+          // Active entry on today
+          dayHours += (now.getTime() - clockIn.getTime()) / 3600000;
+        }
+      }
+    }
+    weeklyHours.push({
+      label: dayNames[i],
+      hours: Math.round(dayHours * 10) / 10,
+    });
+  }
+
+  // Serialize devices for client component
+  const serializedDevices: EmployeeDevice[] = myDevices.map((d) => ({
+    id: d.id,
+    hostname: d.hostname,
+    platform: d.platform,
+    osVersion: d.osVersion,
+    status: d.status,
+    securityGrade: d.securityGrade,
+    lastSeenAt: d.lastSeenAt.toISOString(),
+  }));
+
+  const clockInTime = myActiveEntry
+    ? new Date(myActiveEntry.clockIn).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
+
+  // Determine if this is effectively a "first login" scenario
+  const isFirstLogin = !hasAnyTimeEntry;
 
   return (
     <div className="space-y-6">
@@ -482,8 +626,18 @@ export default async function DashboardPage() {
         </p>
       </div>
 
+      {/* First-login welcome banner */}
+      {isFirstLogin && (
+        <WelcomeBanner
+          userName={session.user.name}
+          mfaEnabled={mfaEnabled}
+          hasClockHistory={!!hasAnyTimeEntry}
+          hasProfileUpdate={!!session.user.name}
+        />
+      )}
+
       {/* MFA warning banner */}
-      {!mfaEnabled && (
+      {!mfaEnabled && !isFirstLogin && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -507,38 +661,31 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Employee stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Status</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${myActiveEntry ? "text-green-600" : "text-muted-foreground"}`}>
-              {myActiveEntry ? "Clocked In" : "Not Clocked In"}
-            </div>
-            {myActiveEntry && (
-              <p className="text-xs text-muted-foreground">
-                Since {new Date(myActiveEntry.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-              </p>
-            )}
-          </CardContent>
-        </Card>
+      {/* Quick Actions */}
+      <EmployeeQuickActions isClockedIn={!!myActiveEntry} />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Attendance</CardTitle>
-            <CalendarCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {myAttendanceToday ? myAttendanceToday.status : "Not Recorded"}
-            </div>
-            <p className="text-xs text-muted-foreground">Today</p>
-          </CardContent>
-        </Card>
+      {/* Row 1: Schedule Today + Devices */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <MyScheduleTodayCard
+          isClockedIn={!!myActiveEntry}
+          clockInTime={clockInTime}
+          hoursWorkedToday={hoursWorkedToday}
+          attendanceStatus={myAttendanceToday?.status ?? null}
+        />
+        <MyDevicesCard devices={serializedDevices} />
+      </div>
 
+      {/* Row 2: Tickets + Leave + Tasks */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <MyOpenTicketsCard
+          openCount={myOpenTickets}
+          latestSubject={myLatestTicket?.subject ?? null}
+          latestStatus={myLatestTicket?.status ?? null}
+        />
+        <MyLeaveBalanceCard
+          pendingCount={myLeaveRequests}
+          approvedThisYear={myApprovedLeaveThisYear}
+        />
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Open Tasks</CardTitle>
@@ -549,20 +696,12 @@ export default async function DashboardPage() {
             <p className="text-xs text-muted-foreground">Assigned to you</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Leave Requests</CardTitle>
-            <FolderKanban className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{myLeaveRequests}</div>
-            <p className="text-xs text-muted-foreground">Pending approval</p>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Quick actions for employees */}
+      {/* Row 3: Weekly Productivity */}
+      <WeeklyProductivityChart data={weeklyHours} />
+
+      {/* Row 4: Navigation cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Link href="/time-tracking">
           <Card className="hover:border-primary/50 transition-colors cursor-pointer">

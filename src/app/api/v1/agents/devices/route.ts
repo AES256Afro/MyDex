@@ -18,17 +18,43 @@ const registerSchema = z.object({
   })).optional(),
 });
 
-// GET - list all devices for the org (admin/manager)
+// GET - list devices for the org (admin/manager) or own devices (employee with userId=me)
 export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const orgId = session.user.organizationId;
+  const userIdParam = request.nextUrl.searchParams.get("userId");
+  const status = request.nextUrl.searchParams.get("status");
+  const deviceId = request.nextUrl.searchParams.get("id");
+
+  // Allow employees to fetch their own devices with userId=me
+  if (userIdParam === "me") {
+    try {
+      const devices = await prisma.agentDevice.findMany({
+        where: { organizationId: orgId, userId: session.user.id },
+        select: {
+          id: true,
+          hostname: true,
+          platform: true,
+          osVersion: true,
+          status: true,
+          securityGrade: true,
+          lastSeenAt: true,
+        },
+        orderBy: { lastSeenAt: "desc" },
+        take: 10,
+      });
+      return NextResponse.json({ devices });
+    } catch (error) {
+      console.error("Error fetching own devices:", error);
+      return NextResponse.json({ error: "Failed to fetch devices" }, { status: 500 });
+    }
+  }
+
   if (!hasPermission(session.user.role, "security:read")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-
-  const orgId = session.user.organizationId;
-  const status = request.nextUrl.searchParams.get("status");
-  const deviceId = request.nextUrl.searchParams.get("id");
 
   const where: Record<string, unknown> = { organizationId: orgId };
   if (status) where.status = status;
