@@ -11,6 +11,7 @@ const createSchema = z.object({
   schedule: z.string().min(1).max(100),
   recipients: z.array(z.string().email()).min(1),
   format: z.enum(["pdf", "csv"]).default("pdf"),
+  sendToChannel: z.boolean().default(false),
 });
 
 const updateSchema = z.object({
@@ -22,6 +23,7 @@ const updateSchema = z.object({
   recipients: z.array(z.string().email()).optional(),
   format: z.enum(["pdf", "csv"]).optional(),
   isActive: z.boolean().optional(),
+  sendToChannel: z.boolean().optional(),
 });
 
 const deleteSchema = z.object({
@@ -79,7 +81,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, reportType, config, schedule, recipients, format } =
+    const { name, reportType, config, schedule, recipients, format, sendToChannel } =
       parsed.data;
 
     const report = await prisma.scheduledReport.create({
@@ -91,6 +93,7 @@ export async function POST(request: NextRequest) {
         schedule,
         recipients: recipients as string[],
         format,
+        sendToChannel,
       },
     });
 
@@ -127,7 +130,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { id, config, recipients, ...rest } = parsed.data;
+    const { id, config, recipients, sendToChannel, ...rest } = parsed.data;
 
     // Verify the report belongs to this org
     const existing = await prisma.scheduledReport.findFirst({
@@ -147,6 +150,7 @@ export async function PATCH(request: NextRequest) {
         ...rest,
         ...(config !== undefined && { config: config as object }),
         ...(recipients !== undefined && { recipients: recipients as string[] }),
+        ...(sendToChannel !== undefined && { sendToChannel }),
       },
     });
 

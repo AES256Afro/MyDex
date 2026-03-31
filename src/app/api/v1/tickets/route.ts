@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
+import { sendIntegrationMessage } from "@/lib/integrations";
+import { notifyAdmins } from "@/lib/notifications";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -227,6 +229,28 @@ export async function POST(request: NextRequest) {
         device: { select: { id: true, hostname: true, platform: true } },
       },
     });
+
+    // Send Slack/Teams notification for new ticket
+    sendIntegrationMessage(session.user.organizationId, {
+      title: "🎫 New Support Ticket",
+      message: `*${parsed.data.subject}*\n${(parsed.data.description || "").slice(0, 200)}`,
+      color: priority === "URGENT" ? "#EF4444" : priority === "HIGH" ? "#F59E0B" : "#3B82F6",
+      link: `${process.env.NEXTAUTH_URL || "https://mydexnow.com"}/it-support?ticket=${ticket.id}`,
+      fields: [
+        { label: "Priority", value: priority },
+        { label: "Category", value: parsed.data.category || "General" },
+        { label: "Submitted By", value: session.user.name || session.user.email || "Unknown" },
+      ],
+    }).catch(() => {});
+
+    // Notify admins in-app
+    notifyAdmins({
+      organizationId: session.user.organizationId,
+      type: "TICKET_UPDATE",
+      title: "New Support Ticket",
+      message: `${session.user.name} submitted: ${parsed.data.subject}`,
+      link: `/it-support?ticket=${ticket.id}`,
+    }).catch(() => {});
 
     return NextResponse.json(ticket, { status: 201 });
   } catch (error) {

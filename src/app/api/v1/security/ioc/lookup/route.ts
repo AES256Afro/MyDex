@@ -1,5 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendIntegrationMessage } from "@/lib/integrations";
+import { notifyAdmins } from "@/lib/notifications";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -75,6 +77,28 @@ export async function POST(request: NextRequest) {
             metadata: { iocEntryId: m.id, hashType: m.hashType, hashValue: m.hashValue, hostname },
           })),
         });
+
+        // Send Slack/Teams notification for IOC matches
+        sendIntegrationMessage(orgId, {
+          title: `🚨 ${criticalMatches.length} Malicious IOC${criticalMatches.length > 1 ? "s" : ""} Detected`,
+          message: criticalMatches.map(m => `• *${m.threatName || "Unknown Threat"}*: ${m.hashValue.slice(0, 16)}… (${m.hashType})`).join("\n"),
+          color: "#DC2626",
+          link: `${process.env.NEXTAUTH_URL || "https://mydexnow.com"}/security`,
+          fields: [
+            ...(hostname ? [{ label: "Host", value: hostname }] : []),
+            { label: "Matches", value: String(matches.length) },
+            { label: "Blocked", value: String(blocked.length) },
+          ],
+        }).catch(() => {});
+
+        // In-app notification for admins
+        notifyAdmins({
+          organizationId: orgId,
+          type: "SECURITY_ALERT",
+          title: `Malicious IOC${criticalMatches.length > 1 ? "s" : ""} Detected`,
+          message: `${criticalMatches.length} known threat${criticalMatches.length > 1 ? "s" : ""} found${hostname ? ` on ${hostname}` : ""}`,
+          link: "/security",
+        }).catch(() => {});
       }
     }
 

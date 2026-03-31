@@ -277,6 +277,15 @@ export const MODULE_REGISTRY: ModuleConfig[] = [
     configurable: false,
     category: "admin",
   },
+  {
+    id: "integrations",
+    label: "Integrations",
+    href: "/settings/integrations",
+    description: "Connect Slack, Microsoft Teams, and other tools",
+    minRole: "ADMIN",
+    configurable: false,
+    category: "admin",
+  },
   // Insights
   {
     id: "cost-optimization",

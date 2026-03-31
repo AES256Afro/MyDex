@@ -7,6 +7,8 @@ import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { useBranding } from "@/components/branding-provider";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { GlobalSearch } from "@/components/global-search";
 import { getVisibleModules } from "@/lib/module-access";
 import type { Role } from "@/generated/prisma";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -80,6 +82,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   "cost-optimization": TrendingUp,
   sustainability: Leaf,
   "patch-notes": Megaphone,
+  "integrations": Blocks,
 };
 
 export function Topbar() {
@@ -112,7 +115,9 @@ export function Topbar() {
           <Menu className="h-5 w-5" />
         </Button>
 
-        <div className="flex-1" />
+        <div className="flex-1 flex justify-center">
+          <GlobalSearch />
+        </div>
 
         <Button
           variant="ghost"
@@ -123,9 +128,7 @@ export function Topbar() {
           {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
 
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-        </Button>
+        <NotificationBell />
 
         <div className="relative">
           <button

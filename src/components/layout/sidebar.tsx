@@ -72,6 +72,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   "cost-optimization": TrendingUp,
   sustainability: Leaf,
   "patch-notes": Megaphone,
+  "integrations": Blocks,
 };
 
 // Category labels and order

@@ -40,6 +40,10 @@ model Organization {
   itBudgetEntries  ItBudgetEntry[]
   energyReadings   EnergyReading[]
   sustainabilityGoals SustainabilityGoal[]
+  notifications    Notification[]
+  integrations     Integration[]
+  scimTokens       ScimToken[]
+  scimEvents       ScimEvent[]
 }
 
 model User {
@@ -90,6 +94,7 @@ model User {
   monitoringChangeLogs MonitoringChangeLog[] @relation("MonitoringUser")
   monitoringChangesBy  MonitoringChangeLog[] @relation("MonitoringChangedBy")
   patchNotes           PatchNote[]           @relation("PatchNoteAuthor")
+  notifications        Notification[]
 
   @@index([organizationId])
   @@index([email])
@@ -607,6 +612,7 @@ model ScheduledReport {
   recipients     Json
   format         String    @default("pdf")
   isActive       Boolean   @default(true)
+  sendToChannel  Boolean   @default(false)  // Also post summary to Slack/Teams
   lastRunAt      DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -1450,4 +1456,98 @@ model SustainabilityGoal {
   organization Organization @relation(fields: [organizationId], references: [id])
 
   @@index([organizationId])
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  type           String   // SECURITY_ALERT, DEVICE_OFFLINE, CLOCK_REMINDER, TICKET_UPDATE, SYSTEM, LEAVE_REQUEST, ONBOARDING
+  title          String
+  message        String
+  link           String?  // optional link to navigate to
+  read           Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([organizationId])
+}
+
+// ============================================
+// PASSWORD RESET
+// ============================================
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+model Integration {
+  id             String   @id @default(cuid())
+  organizationId String
+  provider       String   // "slack" | "teams"
+  enabled        Boolean  @default(false)
+  webhookUrl     String?
+  botToken       String?
+  channelId      String?
+  channelName    String?
+  settings       Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, provider])
+  @@index([organizationId])
+}
+
+// SCIM provisioning tokens for Slack/Teams directory sync
+model ScimToken {
+  id             String   @id @default(cuid())
+  organizationId String
+  provider       String   // "slack" | "teams"
+  token          String   @unique
+  description    String?
+  isActive       Boolean  @default(true)
+  lastUsedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, provider])
+  @@index([organizationId])
+  @@index([token])
+}
+
+// SCIM provisioning audit log
+model ScimEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  provider       String
+  action         String   // "CREATE_USER" | "UPDATE_USER" | "DEACTIVATE_USER" | "REACTIVATE_USER"
+  externalId     String?  // SCIM user ID from provider
+  userId         String?  // Matched MyDex user ID
+  email          String?
+  details        Json?
+  success        Boolean  @default(true)
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([createdAt])
 }
