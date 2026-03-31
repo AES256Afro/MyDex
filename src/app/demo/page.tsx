@@ -617,11 +617,14 @@ const sectionGroups = [
       { id: "alert-thresholds", label: "Alert Thresholds", icon: Bell },
       { id: "workflows", label: "Workflows", icon: GitBranch },
       { id: "integrations", label: "Integrations", icon: Plug },
+      { id: "domain-categories", label: "Domain Categories", icon: Globe },
+      { id: "api-docs", label: "API Docs", icon: FileText },
     ],
   },
   {
     category: "INSIGHTS",
     items: [
+      { id: "insights", label: "AI Insights", icon: Sparkles },
       { id: "cost-optimization", label: "Cost Optimization", icon: TrendingUp },
       { id: "sustainability", label: "Sustainability", icon: Leaf },
       { id: "patch-notes", label: "Patch Notes", icon: Megaphone },
@@ -812,6 +815,19 @@ function DemoPage() {
                   </div>
                 </div>
               </div>
+              {/* PWA Install Banner */}
+              <div className="flex items-center gap-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 px-4 py-3">
+                <Smartphone className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <span className="text-sm font-medium">Install MyDex on your device</span>
+                  <span className="text-xs text-muted-foreground ml-2">Works offline &middot; Fast access from your home screen</span>
+                </div>
+                <Button size="sm" variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/40 gap-1.5">
+                  <Download className="h-3.5 w-3.5" /> Install
+                </Button>
+                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground"><X className="h-4 w-4" /></Button>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {[
                   { title: "Employees", value: 32, icon: Users, desc: "Active team members" },
@@ -1101,6 +1117,46 @@ function DemoPage() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Daily Attendance Records with Auto-Mark Absent */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg">Daily Attendance Records</CardTitle>
+                  <Badge variant="outline" className="text-xs gap-1"><Clock className="h-3 w-3" /> Auto-mark at 9 PM UTC</Badge>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead><tr className="border-b bg-muted/30"><th className="text-left p-3">Employee</th><th className="text-left p-3">Date</th><th className="text-left p-3">Clock In</th><th className="text-left p-3">Clock Out</th><th className="text-center p-3">Status</th></tr></thead>
+                      <tbody>
+                        {[
+                          { name: "Jordan Miller", date: "Mar 31", clockIn: "8:52 AM", clockOut: "5:15 PM", status: "PRESENT" },
+                          { name: "Sarah Chen", date: "Mar 31", clockIn: "9:03 AM", clockOut: "5:45 PM", status: "PRESENT" },
+                          { name: "Tom Garcia", date: "Mar 31", clockIn: "--", clockOut: "--", status: "ABSENT" },
+                          { name: "Anita Patel", date: "Mar 31", clockIn: "8:30 AM", clockOut: "4:58 PM", status: "PRESENT" },
+                          { name: "Marcus Lee", date: "Mar 31", clockIn: "--", clockOut: "--", status: "ABSENT" },
+                          { name: "Jordan Miller", date: "Mar 30", clockIn: "8:48 AM", clockOut: "5:22 PM", status: "PRESENT" },
+                          { name: "Tom Garcia", date: "Mar 30", clockIn: "9:10 AM", clockOut: "6:01 PM", status: "PRESENT" },
+                        ].map((r, i) => (
+                          <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
+                            <td className="p-3 font-medium">{r.name}</td>
+                            <td className="p-3 text-muted-foreground">{r.date}</td>
+                            <td className="p-3 text-muted-foreground">{r.clockIn}</td>
+                            <td className="p-3 text-muted-foreground">{r.clockOut}</td>
+                            <td className="p-3 text-center">
+                              <Badge className={r.status === "PRESENT" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"}>{r.status}</Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">
+                    <Info className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span>Employees not clocked in by 9 PM UTC are automatically marked absent. Managers can override attendance status.</span>
                   </div>
                 </CardContent>
               </Card>
@@ -2140,6 +2196,32 @@ function DemoPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Email Template Preview */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Mail className="h-5 w-5" /> Email Template Preview</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="border rounded-lg overflow-hidden max-w-lg mx-auto">
+                    <div className="bg-blue-600 px-6 py-4 text-center">
+                      <div className="text-white font-bold text-lg">MyDex</div>
+                      <div className="text-blue-200 text-xs">Workforce Intelligence Platform</div>
+                    </div>
+                    <div className="bg-background px-6 py-5 space-y-3">
+                      <div className="text-sm font-semibold">Weekly Security Report - Mar 30, 2026</div>
+                      <div className="text-xs text-muted-foreground">Hi Admin, here is your weekly security summary for Acme Corp.</div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-green-50 dark:bg-green-900/20 rounded p-2 text-center"><div className="font-bold text-green-600">4/5</div><div className="text-muted-foreground">Online</div></div>
+                        <div className="bg-orange-50 dark:bg-orange-900/20 rounded p-2 text-center"><div className="font-bold text-orange-600">2</div><div className="text-muted-foreground">Open CVEs</div></div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">View full report in your dashboard.</div>
+                      <div className="text-center"><Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-xs">View Dashboard</Button></div>
+                    </div>
+                    <div className="bg-muted/30 px-6 py-3 text-center text-[10px] text-muted-foreground border-t">
+                      Acme Corp &middot; Powered by MyDex &middot; <span className="underline cursor-pointer">Unsubscribe</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
 
@@ -3172,6 +3254,9 @@ function DemoPage() {
                       </div>
                     </div>
                     <Button className="w-full bg-blue-600 hover:bg-blue-700">Verify & Activate</Button>
+                    <div className="text-center mt-2">
+                      <button className="text-xs text-blue-600 hover:underline">Use a recovery code instead</button>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -3181,9 +3266,12 @@ function DemoPage() {
                 <CardHeader><CardTitle className="text-lg flex items-center gap-2"><KeyRound className="h-5 w-5" /> Backup Codes</CardTitle></CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">Store these codes in a safe place. Each code can only be used once.</p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {["A1B2-C3D4", "E5F6-G7H8", "J9K0-L1M2", "N3P4-Q5R6", "S7T8-U9V0", "W1X2-Y3Z4", "B5C6-D7E8", "F9G0-H1J2"].map((code, i) => (
-                      <div key={i} className={`font-mono text-sm px-3 py-2 rounded-lg text-center border ${i < 8 ? "bg-muted/50" : "bg-red-50 dark:bg-red-950/20 line-through text-muted-foreground"}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge variant="outline" className="text-xs">8 of 10 recovery codes remaining</Badge>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {["A3F2-8B1C", "E5F6-G7H8", "J9K0-L1M2", "N3P4-Q5R6", "S7T8-U9V0", "W1X2-Y3Z4", "B5C6-D7E8", "F9G0-H1J2", "K4P7-R2S9", "T6V8-W3X5"].map((code, i) => (
+                      <div key={i} className={`font-mono text-sm px-3 py-2 rounded-lg text-center border ${i >= 8 ? "bg-red-50 dark:bg-red-950/20 line-through text-muted-foreground" : "bg-muted/50"}`}>
                         {code}
                       </div>
                     ))}
@@ -6063,6 +6151,304 @@ function DemoPage() {
             </div>
             );
           })()}
+
+          {/* ═══ AI INSIGHTS ═══ */}
+          {activeSection === "insights" && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2"><Sparkles className="h-6 w-6" /> AI Insights &amp; Analytics</h1>
+                <p className="text-muted-foreground text-sm">AI-powered anomaly detection, recommendations, and workforce analytics</p>
+              </div>
+
+              {/* Summary Cards */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {[
+                  { label: "Productivity Score", value: "74%", change: "+3%", up: true, icon: TrendingUp, color: "text-blue-600" },
+                  { label: "Engagement Score", value: "78%", change: "+1%", up: true, icon: Users, color: "text-green-600" },
+                  { label: "Attendance Rate", value: "94.2%", change: "-0.5%", up: false, icon: CalendarCheck, color: "text-purple-600" },
+                  { label: "Anomalies Detected", value: "3", change: "this week", up: false, icon: AlertTriangle, color: "text-orange-600" },
+                ].map((kpi) => (
+                  <Card key={kpi.label}>
+                    <CardContent className="pt-4 pb-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm text-muted-foreground">{kpi.label}</div>
+                          <div className="text-2xl font-bold">{kpi.value}</div>
+                          <div className={`text-xs mt-1 flex items-center gap-1 ${kpi.up ? "text-green-600" : kpi.label === "Anomalies Detected" ? "text-orange-600" : "text-red-500"}`}>
+                            {kpi.up ? <ArrowUpRight className="h-3 w-3" /> : kpi.label !== "Anomalies Detected" && <ArrowDownRight className="h-3 w-3" />}
+                            {kpi.change}
+                          </div>
+                        </div>
+                        <kpi.icon className={`h-8 w-8 ${kpi.color} opacity-60`} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Anomaly Alerts */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-orange-500" /> Anomaly Alerts</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  {[
+                    { message: "Engineering productivity dropped 18% this week", severity: "warning", icon: AlertTriangle, color: "border-l-orange-500 bg-orange-50 dark:bg-orange-950/20" },
+                    { message: "2 employees working past 10pm regularly", severity: "info", icon: Info, color: "border-l-blue-500 bg-blue-50 dark:bg-blue-950/20" },
+                    { message: "Device fleet: 3 devices offline >48h", severity: "warning", icon: AlertTriangle, color: "border-l-orange-500 bg-orange-50 dark:bg-orange-950/20" },
+                  ].map((alert, i) => (
+                    <div key={i} className={`flex items-center gap-3 p-3 rounded-lg border-l-4 ${alert.color}`}>
+                      <alert.icon className={`h-5 w-5 flex-shrink-0 ${alert.severity === "warning" ? "text-orange-500" : "text-blue-500"}`} />
+                      <span className="text-sm flex-1">{alert.message}</span>
+                      <Badge variant="outline" className="text-xs">{alert.severity}</Badge>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Recommendations */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Sparkles className="h-5 w-5 text-purple-500" /> AI Recommendations</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  {[
+                    { text: "Schedule check-in with Jordan Miller — productivity declining 3 consecutive weeks", priority: "High", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" },
+                    { text: "Engineering peak hours 10am-2pm — avoid scheduling meetings during this window", priority: "Medium", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300" },
+                    { text: "Consider enabling MFA for 4 remaining accounts without two-factor authentication", priority: "High", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" },
+                    { text: "Design team underutilizing Figma licenses — consider downgrading 2 seats", priority: "Low", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" },
+                  ].map((rec, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                      <CheckCircle className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                      <span className="text-sm flex-1">{rec.text}</span>
+                      <Badge className={`text-xs ${rec.color}`}>{rec.priority}</Badge>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Top & Bottom Performers */}
+              <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                  <CardHeader><CardTitle className="text-lg flex items-center gap-2"><ArrowUpRight className="h-5 w-5 text-green-500" /> Top Performers</CardTitle></CardHeader>
+                  <CardContent>
+                    <table className="w-full text-sm">
+                      <thead><tr className="border-b bg-muted/30"><th className="text-left p-2">Employee</th><th className="text-left p-2">Dept</th><th className="text-right p-2">Score</th></tr></thead>
+                      <tbody>
+                        {[
+                          { name: "Anita Patel", dept: "Engineering", score: 94 },
+                          { name: "Sarah Chen", dept: "Design", score: 91 },
+                          { name: "Jordan Miller", dept: "Engineering", score: 88 },
+                          { name: "Maria Santos", dept: "Marketing", score: 86 },
+                        ].map((p) => (
+                          <tr key={p.name} className="border-b last:border-0 hover:bg-muted/30">
+                            <td className="p-2 font-medium">{p.name}</td>
+                            <td className="p-2 text-muted-foreground">{p.dept}</td>
+                            <td className="p-2 text-right"><Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">{p.score}%</Badge></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader><CardTitle className="text-lg flex items-center gap-2"><ArrowDownRight className="h-5 w-5 text-red-500" /> Needs Attention</CardTitle></CardHeader>
+                  <CardContent>
+                    <table className="w-full text-sm">
+                      <thead><tr className="border-b bg-muted/30"><th className="text-left p-2">Employee</th><th className="text-left p-2">Dept</th><th className="text-right p-2">Score</th></tr></thead>
+                      <tbody>
+                        {[
+                          { name: "Tom Garcia", dept: "Sales", score: 52 },
+                          { name: "Marcus Lee", dept: "Support", score: 58 },
+                          { name: "Pat Kim", dept: "Engineering", score: 61 },
+                        ].map((p) => (
+                          <tr key={p.name} className="border-b last:border-0 hover:bg-muted/30">
+                            <td className="p-2 font-medium">{p.name}</td>
+                            <td className="p-2 text-muted-foreground">{p.dept}</td>
+                            <td className="p-2 text-right"><Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">{p.score}%</Badge></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {/* ═══ DOMAIN CATEGORIES ═══ */}
+          {activeSection === "domain-categories" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold flex items-center gap-2"><Globe className="h-6 w-6" /> Domain Categories</h1>
+                  <p className="text-muted-foreground text-sm">Categorize domains as productive, neutral, or unproductive for activity scoring</p>
+                </div>
+                <Button className="gap-2"><Plus className="h-4 w-4" /> Add Domain</Button>
+              </div>
+
+              {/* Categorized Domains Table */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Categorized Domains</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="mb-4">
+                    <Input placeholder="Search domains..." className="max-w-sm" />
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead><tr className="border-b bg-muted/30"><th className="text-left p-3">Domain</th><th className="text-left p-3">Category</th><th className="text-left p-3">Added</th><th className="text-right p-3">Actions</th></tr></thead>
+                      <tbody>
+                        {[
+                          { domain: "github.com", category: "Productive", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" },
+                          { domain: "slack.com", category: "Productive", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" },
+                          { domain: "docs.google.com", category: "Productive", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" },
+                          { domain: "stackoverflow.com", category: "Productive", color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" },
+                          { domain: "youtube.com", category: "Unproductive", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" },
+                          { domain: "reddit.com", category: "Unproductive", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" },
+                          { domain: "twitter.com", category: "Neutral", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
+                        ].map((d) => (
+                          <tr key={d.domain} className="border-b last:border-0 hover:bg-muted/30">
+                            <td className="p-3 font-mono text-sm">{d.domain}</td>
+                            <td className="p-3"><Badge className={d.color}>{d.category}</Badge></td>
+                            <td className="p-3 text-muted-foreground text-xs">Mar 15, 2026</td>
+                            <td className="p-3 text-right">
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Add Domain Form Mockup */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Plus className="h-5 w-5" /> Add New Domain</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div>
+                      <Label className="text-sm">Domain</Label>
+                      <Input placeholder="e.g. notion.so" className="mt-1" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Category</Label>
+                      <div className="mt-1 flex gap-2">
+                        <Button size="sm" variant="outline" className="border-green-300 text-green-700">Productive</Button>
+                        <Button size="sm" variant="outline">Neutral</Button>
+                        <Button size="sm" variant="outline" className="border-red-300 text-red-700">Unproductive</Button>
+                      </div>
+                    </div>
+                    <div className="flex items-end">
+                      <Button className="bg-blue-600 hover:bg-blue-700">Add Domain</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Suggested Uncategorized Domains */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Sparkles className="h-5 w-5 text-purple-500" /> Suggested from Activity</CardTitle>
+                  <CardDescription>Uncategorized domains seen in recent employee activity</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {[
+                      { domain: "notion.so", visits: 142, suggestion: "Productive" },
+                      { domain: "figma.com", visits: 98, suggestion: "Productive" },
+                      { domain: "linkedin.com", visits: 67, suggestion: "Neutral" },
+                      { domain: "twitch.tv", visits: 23, suggestion: "Unproductive" },
+                      { domain: "canva.com", visits: 45, suggestion: "Productive" },
+                    ].map((d) => (
+                      <div key={d.domain} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                        <Globe className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span className="font-mono text-sm flex-1">{d.domain}</span>
+                        <span className="text-xs text-muted-foreground">{d.visits} visits</span>
+                        <Badge variant="outline" className="text-xs">{d.suggestion}</Badge>
+                        <Button size="sm" variant="outline" className="h-7 text-xs">Accept</Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-xs">Dismiss</Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* ═══ API DOCS ═══ */}
+          {activeSection === "api-docs" && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2"><FileText className="h-6 w-6" /> API Documentation</h1>
+                <p className="text-muted-foreground text-sm">REST API reference for integrating with MyDex programmatically</p>
+              </div>
+
+              <div className="mb-4">
+                <Input placeholder="Search endpoints..." className="max-w-md" />
+              </div>
+
+              {[
+                {
+                  category: "Authentication",
+                  endpoints: [
+                    { method: "POST", path: "/api/v1/auth/login", desc: "Authenticate and receive JWT token" },
+                    { method: "POST", path: "/api/v1/auth/refresh", desc: "Refresh an expired access token" },
+                  ],
+                },
+                {
+                  category: "Employees",
+                  endpoints: [
+                    { method: "GET", path: "/api/v1/employees", desc: "List all employees with pagination" },
+                    { method: "GET", path: "/api/v1/employees/:id", desc: "Get employee details by ID" },
+                    { method: "PATCH", path: "/api/v1/employees/:id", desc: "Update employee profile" },
+                  ],
+                },
+                {
+                  category: "Devices",
+                  endpoints: [
+                    { method: "GET", path: "/api/v1/devices", desc: "List all registered devices" },
+                    { method: "POST", path: "/api/v1/devices/heartbeat", desc: "Submit device heartbeat" },
+                    { method: "DELETE", path: "/api/v1/devices/:id", desc: "Remove a device from inventory" },
+                  ],
+                },
+                {
+                  category: "Activity & Productivity",
+                  endpoints: [
+                    { method: "POST", path: "/api/v1/activity/events", desc: "Submit activity events batch" },
+                    { method: "GET", path: "/api/v1/productivity/scores", desc: "Get productivity scores with filters" },
+                  ],
+                },
+                {
+                  category: "Integrations",
+                  endpoints: [
+                    { method: "GET", path: "/api/v1/integrations/:provider", desc: "Get integration status" },
+                    { method: "POST", path: "/api/v1/integrations/:provider/webhook", desc: "Receive webhook events" },
+                  ],
+                },
+              ].map((group) => (
+                <Card key={group.category}>
+                  <CardHeader className="pb-2"><CardTitle className="text-lg">{group.category}</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {group.endpoints.map((ep) => {
+                        const methodColors: Record<string, string> = {
+                          GET: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+                          POST: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+                          PATCH: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
+                          DELETE: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+                          PUT: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+                        };
+                        return (
+                          <div key={ep.path + ep.method} className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/30 cursor-pointer">
+                            <Badge className={`${methodColors[ep.method] || ""} font-mono text-xs min-w-[60px] justify-center`}>{ep.method}</Badge>
+                            <code className="font-mono text-sm flex-1">{ep.path}</code>
+                            <span className="text-xs text-muted-foreground hidden md:block">{ep.desc}</span>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
 
         </div>
       </main>

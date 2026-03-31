@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
-import { generateMfaSecret, confirmMfaSetup, disableMfa, isMfaEnabled, verifyMfaCode, getBackupCodesCount } from "@/lib/mfa";
+import { generateMfaSecret, confirmMfaSetup, disableMfa, isMfaEnabled, verifyMfaCode, getBackupCodesCount, getRecoveryCodesCount } from "@/lib/mfa";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import QRCode from "qrcode";
 
@@ -13,10 +13,12 @@ export async function GET() {
 
   const enabled = await isMfaEnabled(session.user.id);
   const backupCodesRemaining = enabled ? await getBackupCodesCount(session.user.id) : 0;
+  const recoveryCodesRemaining = enabled ? await getRecoveryCodesCount(session.user.id) : 0;
 
   return NextResponse.json({
     enabled,
     backupCodesRemaining,
+    recoveryCodesRemaining,
   });
 }
 
@@ -32,7 +34,7 @@ export async function POST(request: NextRequest) {
 
   if (action === "setup") {
     // Generate new TOTP secret
-    const { secret, uri, backupCodes } = await generateMfaSecret(
+    const { secret, uri, backupCodes, recoveryCodes } = await generateMfaSecret(
       session.user.id,
       session.user.email!
     );
@@ -48,6 +50,7 @@ export async function POST(request: NextRequest) {
       secret,
       qrCode: qrCodeDataUrl,
       backupCodes,
+      recoveryCodes,
     });
   }
 

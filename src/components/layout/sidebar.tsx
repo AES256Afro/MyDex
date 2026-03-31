@@ -37,6 +37,9 @@ import {
   Megaphone,
   TrendingUp,
   Leaf,
+  Sparkles,
+  Globe,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -69,10 +72,13 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   "mdm-providers": Smartphone,
   branding: Palette,
   "alert-thresholds": Bell,
+  insights: Sparkles,
   "cost-optimization": TrendingUp,
   sustainability: Leaf,
   "patch-notes": Megaphone,
   "integrations": Blocks,
+  "domain-categories": Globe,
+  "api-docs": FileText,
 };
 
 // Category labels and order

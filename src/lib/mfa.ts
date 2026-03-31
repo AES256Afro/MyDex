@@ -4,6 +4,22 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
 /**
+ * Generate formatted recovery codes (XXXX-XXXX).
+ */
+function generateRecoveryCodes(count = 10): string[] {
+  return Array.from({ length: count }, () =>
+    crypto.randomBytes(4).toString("hex").toUpperCase().match(/.{4}/g)!.join("-")
+  );
+}
+
+/**
+ * Hash a recovery code with SHA-256.
+ */
+function hashRecoveryCode(code: string): string {
+  return crypto.createHash("sha256").update(code.toUpperCase().replace(/-/g, "")).digest("hex");
+}
+
+/**
  * Generate a new TOTP secret for a user.
  * Returns the secret and a provisioning URI for QR code generation.
  */
@@ -29,6 +45,10 @@ export async function generateMfaSecret(userId: string, userEmail: string) {
     hashedBackupCodes.push(await bcrypt.hash(code, 10));
   }
 
+  // Generate 10 recovery codes (XXXX-XXXX format, hashed with SHA-256)
+  const recoveryCodes = generateRecoveryCodes(10);
+  const hashedRecoveryCodes = recoveryCodes.map((c) => hashRecoveryCode(c));
+
   // Upsert MFA credential (unverified until user confirms with a valid code)
   await prisma.mfaCredential.upsert({
     where: { userId },
@@ -36,16 +56,20 @@ export async function generateMfaSecret(userId: string, userEmail: string) {
       secret,
       verified: false,
       backupCodes: hashedBackupCodes,
+      recoveryCodes: hashedRecoveryCodes,
+      recoveryCodesUsed: [],
     },
     create: {
       userId,
       secret,
       verified: false,
       backupCodes: hashedBackupCodes,
+      recoveryCodes: hashedRecoveryCodes,
+      recoveryCodesUsed: [],
     },
   });
 
-  return { secret, uri, backupCodes };
+  return { secret, uri, backupCodes, recoveryCodes };
 }
 
 /**
@@ -130,4 +154,43 @@ export async function getBackupCodesCount(userId: string): Promise<number> {
     where: { userId },
   });
   return credential?.backupCodes.length ?? 0;
+}
+
+/**
+ * Get remaining recovery codes count.
+ */
+export async function getRecoveryCodesCount(userId: string): Promise<number> {
+  const credential = await prisma.mfaCredential.findUnique({
+    where: { userId },
+  });
+  if (!credential) return 0;
+  return credential.recoveryCodes.length - credential.recoveryCodesUsed.length;
+}
+
+/**
+ * Verify a recovery code. If valid, mark as used and return true.
+ */
+export async function verifyRecoveryCode(userId: string, code: string): Promise<boolean> {
+  const credential = await prisma.mfaCredential.findUnique({
+    where: { userId },
+  });
+  if (!credential || !credential.verified) return false;
+
+  const hashed = hashRecoveryCode(code);
+
+  // Check if code exists in recoveryCodes and not in recoveryCodesUsed
+  if (!credential.recoveryCodes.includes(hashed)) return false;
+  if (credential.recoveryCodesUsed.includes(hashed)) return false;
+
+  // Mark as used
+  await prisma.mfaCredential.update({
+    where: { userId },
+    data: {
+      recoveryCodesUsed: {
+        push: hashed,
+      },
+    },
+  });
+
+  return true;
 }

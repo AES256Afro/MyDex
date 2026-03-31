@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { PWARegister } from "@/components/pwa-register";
 import "@/styles/globals.css";
 
 const inter = Inter({
@@ -41,8 +42,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#6d28d9" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="MyDex" />
+      </head>
       <body className={`${inter.variable} antialiased`}>
         <Providers>{children}</Providers>
+        <PWARegister />
       </body>
     </html>
   );

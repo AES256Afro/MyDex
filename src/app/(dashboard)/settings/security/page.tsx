@@ -52,12 +52,15 @@ export default function SecuritySettingsPage() {
   const [qrCode, setQrCode] = useState("");
   const [mfaSecret, setMfaSecret] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [backupCodesRemaining, setBackupCodesRemaining] = useState(0);
+  const [recoveryCodesRemaining, setRecoveryCodesRemaining] = useState(0);
   const [verifyCode, setVerifyCode] = useState("");
   const [mfaError, setMfaError] = useState("");
   const [showSecret, setShowSecret] = useState(false);
   const [copiedSecret, setCopiedSecret] = useState(false);
   const [copiedBackup, setCopiedBackup] = useState(false);
+  const [copiedRecovery, setCopiedRecovery] = useState(false);
 
   // Login history
   const [loginHistory, setLoginHistory] = useState<LoginAttempt[]>([]);
@@ -75,6 +78,7 @@ export default function SecuritySettingsPage() {
         const data = await res.json();
         setMfaEnabled(data.enabled);
         setBackupCodesRemaining(data.backupCodesRemaining);
+        setRecoveryCodesRemaining(data.recoveryCodesRemaining ?? 0);
       }
     } catch (e) {
       console.error("Failed to fetch MFA status:", e);
@@ -109,6 +113,7 @@ export default function SecuritySettingsPage() {
         setQrCode(data.qrCode);
         setMfaSecret(data.secret);
         setBackupCodes(data.backupCodes);
+        setRecoveryCodes(data.recoveryCodes || []);
         setSetupStep("qr");
       } else {
         setMfaError(data.error || "Setup failed");
@@ -131,6 +136,7 @@ export default function SecuritySettingsPage() {
         setMfaEnabled(true);
         setSetupStep("done");
         setBackupCodesRemaining(backupCodes.length);
+        setRecoveryCodesRemaining(recoveryCodes.length);
       } else {
         setMfaError(data.error || "Invalid code");
       }
@@ -149,22 +155,42 @@ export default function SecuritySettingsPage() {
         setMfaEnabled(false);
         setSetupStep("idle");
         setBackupCodes([]);
+        setRecoveryCodes([]);
         setBackupCodesRemaining(0);
+        setRecoveryCodesRemaining(0);
       }
     } catch {
       setMfaError("Failed to disable MFA");
     }
   }
 
-  function copyToClipboard(text: string, type: "secret" | "backup") {
+  function copyToClipboard(text: string, type: "secret" | "backup" | "recovery") {
     navigator.clipboard.writeText(text);
     if (type === "secret") {
       setCopiedSecret(true);
       setTimeout(() => setCopiedSecret(false), 2000);
+    } else if (type === "recovery") {
+      setCopiedRecovery(true);
+      setTimeout(() => setCopiedRecovery(false), 2000);
     } else {
       setCopiedBackup(true);
       setTimeout(() => setCopiedBackup(false), 2000);
     }
+  }
+
+  function downloadRecoveryCodes() {
+    const text = "MyDex Recovery Codes\n" +
+      "======================\n" +
+      "Save these codes in a secure location.\n" +
+      "Each code can only be used once.\n\n" +
+      recoveryCodes.join("\n") + "\n";
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "mydex-recovery-codes.txt";
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function parseUserAgent(ua: string | null): string {
@@ -375,7 +401,56 @@ export default function SecuritySettingsPage() {
                 </div>
               </div>
 
-              <Button onClick={() => { setSetupStep("idle"); setBackupCodes([]); }}>
+              {recoveryCodes.length > 0 && (
+                <div className="rounded-lg border p-4 bg-muted/50">
+                  <div className="flex items-center justify-between mb-3">
+                    <Label className="flex items-center gap-2">
+                      <Key className="h-4 w-4" />
+                      Recovery Codes (XXXX-XXXX)
+                    </Label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(recoveryCodes.join("\n"), "recovery")}
+                      >
+                        {copiedRecovery ? (
+                          <><Check className="mr-1 h-3 w-3 text-green-500" /> Copied</>
+                        ) : (
+                          <><Copy className="mr-1 h-3 w-3" /> Copy All</>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={downloadRecoveryCodes}
+                      >
+                        Download
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {recoveryCodes.map((code, i) => (
+                      <code
+                        key={i}
+                        className="rounded bg-background px-3 py-1.5 font-mono text-sm text-center"
+                      >
+                        {code}
+                      </code>
+                    ))}
+                  </div>
+                  <div className="mt-3 rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3">
+                    <div className="flex items-start gap-2 text-sm text-amber-700 dark:text-amber-300">
+                      <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>
+                        Save these recovery codes now. They will not be shown again. Use them if you lose access to your authenticator app.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <Button onClick={() => { setSetupStep("idle"); setBackupCodes([]); setRecoveryCodes([]); }}>
                 Done
               </Button>
             </div>
@@ -393,7 +468,8 @@ export default function SecuritySettingsPage() {
                     </p>
                     <p className="text-sm text-green-700 dark:text-green-300 mt-1">
                       Your account is protected. You have{" "}
-                      <strong>{backupCodesRemaining}</strong> backup codes remaining.
+                      <strong>{backupCodesRemaining}</strong> backup codes and{" "}
+                      <strong>{recoveryCodesRemaining}</strong> recovery codes remaining.
                     </p>
                   </div>
                 </div>

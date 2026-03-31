@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { z } from "zod";
+import { contactEmailTemplate } from "@/lib/email-templates";
 
 const contactSchema = z.object({
   email: z.string().email(),
@@ -54,25 +55,27 @@ export async function POST(request: NextRequest) {
     if (process.env.RESEND_API_KEY) {
       const resend = new Resend(process.env.RESEND_API_KEY);
 
+      const rowStyle = "padding:8px 0;border-bottom:1px solid #27272a;";
+      const labelStyle = `${rowStyle}font-weight:600;color:#a1a1aa;width:140px;font-size:13px;`;
+      const valueStyle = `${rowStyle}color:#fafafa;font-size:14px;`;
+
+      const tableRows = `
+        <tr><td style="${labelStyle}">Name</td><td style="${valueStyle}">${data.firstName} ${data.lastName}</td></tr>
+        <tr><td style="${labelStyle}">Email</td><td style="${valueStyle}"><a href="mailto:${data.email}" style="color:#6d28d9;text-decoration:none;">${data.email}</a></td></tr>
+        <tr><td style="${labelStyle}">Company</td><td style="${valueStyle}">${data.companyName}</td></tr>
+        <tr><td style="${labelStyle}">Job Title</td><td style="${valueStyle}">${data.jobTitle}</td></tr>
+        <tr><td style="${labelStyle}">Country</td><td style="${valueStyle}">${data.country}</td></tr>
+        <tr><td style="${labelStyle}">Phone</td><td style="${valueStyle}">${data.phone}</td></tr>
+        <tr><td style="${labelStyle}">Company Size</td><td style="${valueStyle}">${data.companySize || "Not specified"}</td></tr>
+        ${data.message ? `<tr><td style="${labelStyle}">Message</td><td style="${valueStyle}">${data.message}</td></tr>` : ""}
+      `;
+
       await resend.emails.send({
         from: process.env.RESEND_FROM_EMAIL || "MyDex <noreply@mydexnow.com>",
         to: ["sales@mydexnow.com"],
         replyTo: data.email,
         subject: `New Contact Request from ${data.firstName} ${data.lastName} at ${data.companyName}`,
-        html: `
-          <h2>New Contact Form Submission</h2>
-          <table style="border-collapse:collapse;width:100%;max-width:600px;">
-            <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;width:140px;">Name</td><td style="padding:8px;border-bottom:1px solid #eee;">${data.firstName} ${data.lastName}</td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;">Email</td><td style="padding:8px;border-bottom:1px solid #eee;"><a href="mailto:${data.email}">${data.email}</a></td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;">Company</td><td style="padding:8px;border-bottom:1px solid #eee;">${data.companyName}</td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;">Job Title</td><td style="padding:8px;border-bottom:1px solid #eee;">${data.jobTitle}</td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;">Country</td><td style="padding:8px;border-bottom:1px solid #eee;">${data.country}</td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;">Phone</td><td style="padding:8px;border-bottom:1px solid #eee;">${data.phone}</td></tr>
-            <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;">Company Size</td><td style="padding:8px;border-bottom:1px solid #eee;">${data.companySize || "Not specified"}</td></tr>
-            ${data.message ? `<tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:600;">Message</td><td style="padding:8px;border-bottom:1px solid #eee;">${data.message}</td></tr>` : ""}
-          </table>
-          <p style="margin-top:20px;color:#666;font-size:12px;">Submitted from the MyDex contact page</p>
-        `,
+        html: contactEmailTemplate({ tableRows }),
       });
     } else {
       // Log to console in development when Resend is not configured
