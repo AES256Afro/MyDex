@@ -149,9 +149,8 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching agent policy:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to fetch policy", detail: message },
+      { error: "Failed to fetch policy" },
       { status: 500 }
     );
   }

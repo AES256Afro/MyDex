@@ -42,7 +42,7 @@ export async function generateMfaSecret(userId: string, userEmail: string) {
   for (let i = 0; i < 10; i++) {
     const code = crypto.randomBytes(4).toString("hex").toUpperCase();
     backupCodes.push(code);
-    hashedBackupCodes.push(await bcrypt.hash(code, 10));
+    hashedBackupCodes.push(await bcrypt.hash(code, 12));
   }
 
   // Generate 10 recovery codes (XXXX-XXXX format, hashed with SHA-256)

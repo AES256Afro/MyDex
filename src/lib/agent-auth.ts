@@ -3,7 +3,10 @@ import { NextRequest } from "next/server";
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 
-const AGENT_JWT_SECRET = process.env.AGENT_JWT_SECRET || process.env.NEXTAUTH_SECRET || "fallback-dev-secret";
+const AGENT_JWT_SECRET = process.env.AGENT_JWT_SECRET || process.env.NEXTAUTH_SECRET;
+if (!AGENT_JWT_SECRET) {
+  throw new Error("AGENT_JWT_SECRET or NEXTAUTH_SECRET environment variable must be set");
+}
 
 interface AgentAuthResult {
   deviceId: string;

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { applySecurityHeaders } from "@/lib/security-headers";
 
 const publicPaths = [
-  "/", "/login", "/register", "/forgot-password", "/reset-password", "/demo", "/licensing", "/contact", "/onboarding",
+  "/", "/login", "/register", "/forgot-password", "/reset-password", "/demo", "/licensing", "/contact",
   "/api/auth", "/api/register", "/api/health",
   "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password",
   "/api/v1/agents/auth", "/api/v1/agents/telemetry", "/api/v1/agents/policy",

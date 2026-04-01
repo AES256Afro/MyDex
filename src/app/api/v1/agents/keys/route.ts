@@ -49,9 +49,8 @@ export async function GET() {
     return NextResponse.json({ keys });
   } catch (error) {
     console.error("Error fetching API keys:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to fetch API keys", detail: message },
+      { error: "Failed to fetch API keys" },
       { status: 500 }
     );
   }
@@ -83,7 +82,7 @@ export async function POST(request: NextRequest) {
     const keyPrefix = plainTextKey.slice(0, 8);
 
     // Hash the key for storage
-    const keyHash = await bcrypt.hash(plainTextKey, 10);
+    const keyHash = await bcrypt.hash(plainTextKey, 12);
 
     // Calculate expiration
     const expiresAt = parsed.data.expiresInDays
@@ -120,9 +119,8 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("Error creating API key:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to create API key", detail: message },
+      { error: "Failed to create API key" },
       { status: 500 }
     );
   }
@@ -167,9 +165,8 @@ export async function DELETE(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error revoking API key:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to revoke API key", detail: message },
+      { error: "Failed to revoke API key" },
       { status: 500 }
     );
   }

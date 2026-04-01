@@ -97,9 +97,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true, batchesProcessed });
   } catch (error) {
     console.error("Error processing telemetry:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to process telemetry", detail: message },
+      { error: "Failed to process telemetry" },
       { status: 500 }
     );
   }
