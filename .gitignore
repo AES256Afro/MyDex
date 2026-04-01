@@ -48,3 +48,9 @@ mydex-agent/mydex-agent.exe
 mydex-agent/dist/
 
 .vercel
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

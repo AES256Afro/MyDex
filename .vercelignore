@@ -5,3 +5,7 @@ agent/dist
 scripts
 tests
 *.test.ts
+*.spec.ts
+playwright-report
+test-results
+playwright.config.ts
