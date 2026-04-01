@@ -610,6 +610,7 @@ const sectionGroups = [
       { id: "branding", label: "Branding", icon: Palette },
       { id: "mfa-security", label: "MFA & Security", icon: Fingerprint },
       { id: "sso-providers", label: "SSO Providers", icon: LinkIcon },
+      { id: "scim-provisioning", label: "SCIM Provisioning", icon: Users },
       { id: "module-access", label: "Module Access", icon: Layers },
       { id: "agent-setup", label: "Agent Setup", icon: Download },
       { id: "alert-thresholds", label: "Alert Thresholds", icon: Bell },
@@ -653,6 +654,7 @@ function DemoPage() {
       setActiveSection(section);
     }
   }, [searchParams]);
+  const [dashboardView, setDashboardView] = useState<"admin" | "employee">("admin");
   const [expandedDevice, setExpandedDevice] = useState<string | null>("dev-1");
   const [deviceTab, setDeviceTab] = useState("overview");
   const [expandedGroup, setExpandedGroup] = useState<string | null>("hg1");
@@ -796,23 +798,195 @@ function DemoPage() {
           {/* ═══ DASHBOARD ═══ */}
           {activeSection === "dashboard" && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                   <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                  <p className="text-muted-foreground">Welcome back, Admin</p>
+                  <p className="text-muted-foreground">{dashboardView === "admin" ? "Welcome back, Admin" : "Welcome, Sarah Chen"}</p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" /><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" /></span>
-                    <span className="font-medium text-green-600">Live</span>
+                <div className="flex items-center gap-3">
+                  {/* Admin/Employee View Toggle */}
+                  <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                    <button onClick={() => setDashboardView("admin")}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${dashboardView === "admin" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                      <Shield className="h-3.5 w-3.5 inline mr-1" /> Admin
+                    </button>
+                    <button onClick={() => setDashboardView("employee")}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${dashboardView === "employee" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                      <User className="h-3.5 w-3.5 inline mr-1" /> Employee
+                    </button>
                   </div>
-                  <div className="flex items-center gap-1.5 rounded-lg border bg-muted/40 px-3 py-1.5 text-sm">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-semibold">Active Now:</span>
-                    <span className="text-blue-600 font-bold">12</span>
-                  </div>
+                  {dashboardView === "admin" && (
+                    <>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" /><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" /></span>
+                        <span className="font-medium text-green-600">Live</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 rounded-lg border bg-muted/40 px-3 py-1.5 text-sm">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-semibold">Active Now:</span>
+                        <span className="text-blue-600 font-bold">12</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
+
+              {/* ─── EMPLOYEE DASHBOARD VIEW ─── */}
+              {dashboardView === "employee" && (
+                <>
+                  {/* Quick Actions */}
+                  <Card>
+                    <CardHeader className="pb-3"><CardTitle className="text-sm font-medium">Quick Actions</CardTitle></CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <Button variant="default" className="w-full justify-start gap-2"><Clock className="h-4 w-4" /> View Timesheet</Button>
+                        <Button variant="outline" className="w-full justify-start gap-2"><LifeBuoy className="h-4 w-4" /> Submit Ticket</Button>
+                        <Button variant="outline" className="w-full justify-start gap-2"><Calendar className="h-4 w-4" /> Request Leave</Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Row 1: Schedule Today + My Devices */}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">My Schedule Today</CardTitle>
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Clock-in status</span>
+                          <Badge>Clocked In</Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Since</span>
+                          <span className="text-sm font-medium">9:05 AM</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Hours today</span>
+                          <span className="text-sm font-bold">4.2h</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Attendance</span>
+                          <Badge variant="outline" className="border-green-300 text-green-700 dark:text-green-300">PRESENT</Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">My Devices</CardTitle>
+                        <Monitor className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {[
+                          { hostname: "LAPTOP-SCHEN", platform: "win32", os: "Windows 11 Home", status: "ONLINE", grade: "B" },
+                          { hostname: "IPHONE-SCHEN", platform: "ios", os: "iOS 18.3", status: "ONLINE", grade: "A" },
+                        ].map((d) => (
+                          <div key={d.hostname} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              {d.status === "ONLINE" ? <Wifi className="h-4 w-4 text-green-500" /> : <WifiOff className="h-4 w-4 text-muted-foreground" />}
+                              <div>
+                                <span className="font-medium">{d.hostname}</span>
+                                <span className="text-muted-foreground ml-2 text-xs">{d.os}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="border-green-300 text-green-700 dark:text-green-300">{d.grade}</Badge>
+                              <Badge>Online</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Row 2: Tickets + Leave + Tasks */}
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">My Open Tickets</CardTitle>
+                        <LifeBuoy className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">1</div>
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                          Latest: Monitor flickering <Badge variant="outline" className="ml-1 text-[10px] px-1 py-0">IN PROGRESS</Badge>
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">Leave Requests</CardTitle>
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-baseline gap-3">
+                          <div className="text-2xl font-bold">1</div>
+                          <span className="text-sm text-muted-foreground">pending</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">3 approved this year</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">Open Tasks</CardTitle>
+                        <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">4</div>
+                        <p className="text-xs text-muted-foreground">Assigned to you</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Row 3: Weekly Productivity Chart */}
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-sm font-medium">My Productivity This Week</CardTitle>
+                      <Timer className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-end gap-2 h-32">
+                        {[
+                          { label: "Sun", hours: 0 }, { label: "Mon", hours: 7.8 }, { label: "Tue", hours: 8.2 },
+                          { label: "Wed", hours: 7.5 }, { label: "Thu", hours: 6.9 }, { label: "Fri", hours: 4.2 }, { label: "Sat", hours: 0 },
+                        ].map((day) => (
+                          <div key={day.label} className="flex-1 flex flex-col items-center gap-1">
+                            <span className="text-xs text-muted-foreground">{day.hours > 0 ? `${day.hours}h` : ""}</span>
+                            <div className="w-full rounded-t bg-primary/80 transition-all min-h-[2px]" style={{ height: `${Math.max((day.hours / 8.2) * 100, 2)}%` }} />
+                            <span className="text-xs text-muted-foreground font-medium">{day.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Row 4: Navigation Cards */}
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {[
+                      { label: "Time Tracking", desc: "Clock in/out and view timesheets", icon: Clock, color: "text-primary" },
+                      { label: "My Projects", desc: "View tasks and assignments", icon: FolderKanban, color: "text-primary" },
+                      { label: "My Account", desc: "Profile & security settings", icon: ShieldCheck, color: "text-green-600" },
+                    ].map((nav) => (
+                      <Card key={nav.label} className="hover:border-primary/50 transition-colors cursor-pointer">
+                        <CardContent className="flex items-center gap-4 py-6">
+                          <div className="p-3 rounded-lg bg-primary/10">
+                            <nav.icon className={`h-6 w-6 ${nav.color}`} />
+                          </div>
+                          <div>
+                            <div className="font-medium">{nav.label}</div>
+                            <div className="text-sm text-muted-foreground">{nav.desc}</div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* ─── ADMIN DASHBOARD VIEW ─── */}
+              {dashboardView === "admin" && (
+                <>
               {/* PWA Install Banner */}
               <div className="flex items-center gap-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 px-4 py-3">
                 <Smartphone className="h-5 w-5 text-blue-600 flex-shrink-0" />
@@ -1111,6 +1285,8 @@ function DemoPage() {
                   </div>
                 </CardContent>
               </Card>
+                </>
+              )}
             </div>
           )}
 
@@ -3629,6 +3805,116 @@ function DemoPage() {
                     <p className="text-xs text-blue-800 dark:text-blue-200">
                       <strong>Tip:</strong> For production environments, use certificate-based credentials instead of client secrets for enhanced security.
                     </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* ═══ SCIM PROVISIONING ═══ */}
+          {activeSection === "scim-provisioning" && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2"><Users className="h-6 w-6" /> SCIM Provisioning</h1>
+                <p className="text-muted-foreground text-sm">Automate user provisioning and deprovisioning from your identity provider</p>
+              </div>
+
+              {/* How it works */}
+              <Card>
+                <CardHeader><CardTitle className="text-base">How SCIM Provisioning Works</CardTitle></CardHeader>
+                <CardContent className="text-sm text-muted-foreground space-y-2">
+                  <p>SCIM lets your identity provider automatically create, update, and deactivate user accounts in MyDex.</p>
+                  <div className="grid gap-3 md:grid-cols-3 mt-3">
+                    <div className="rounded-lg border p-3"><div className="font-medium text-foreground mb-1">1. Generate Token</div><p>Create a SCIM bearer token below for your IdP.</p></div>
+                    <div className="rounded-lg border p-3"><div className="font-medium text-foreground mb-1">2. Configure IdP</div><p>Enter the SCIM endpoint URL and token in your IdP.</p></div>
+                    <div className="rounded-lg border p-3"><div className="font-medium text-foreground mb-1">3. Auto-Sync</div><p>Users are automatically provisioned and deprovisioned.</p></div>
+                  </div>
+                  <div className="mt-3 p-3 rounded-lg bg-muted/50">
+                    <p className="text-xs font-medium text-foreground mb-1">SCIM Endpoint URL</p>
+                    <code className="text-xs bg-muted px-2 py-1 rounded">https://mydexnow.com/api/v1/scim</code>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Active tokens */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div><CardTitle className="text-base">SCIM Tokens</CardTitle><CardDescription>Bearer tokens for identity provider integrations</CardDescription></div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline"><RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh</Button>
+                    <Button size="sm"><Plus className="h-3.5 w-3.5 mr-1.5" /> Generate Token</Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {[
+                    { provider: "Okta", color: "bg-indigo-500", token: "scim_...a7f3b2c1", desc: "Production SCIM token", lastUsed: "2h ago", active: true },
+                    { provider: "Microsoft Entra ID", color: "bg-blue-500", token: "scim_...e4d9f801", desc: "Entra provisioning", lastUsed: "15m ago", active: true },
+                  ].map((t) => (
+                    <div key={t.provider} className="flex items-center justify-between rounded-lg border p-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`h-8 w-8 rounded-lg ${t.color} flex items-center justify-center text-white text-xs font-bold`}>{t.provider[0]}</div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">{t.provider}</span>
+                            <Badge variant={t.active ? "default" : "secondary"}>{t.active ? "Active" : "Inactive"}</Badge>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                            <span>Token: {t.token}</span>
+                            <span>{t.desc}</span>
+                            <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> Last used {t.lastUsed}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Provisioning events */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Provisioning Activity</CardTitle>
+                  <CardDescription>Recent SCIM operations from your identity provider</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {[
+                    { action: "Created", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200", email: "newuser@acmecorp.com", provider: "okta", time: "15m ago", success: true },
+                    { action: "Updated", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200", email: "sarah@acmecorp.com", provider: "entra", time: "1h ago", success: true },
+                    { action: "Deactivated", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200", email: "former@acmecorp.com", provider: "okta", time: "3h ago", success: true },
+                    { action: "Created", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200", email: "contractor@acmecorp.com", provider: "entra", time: "5h ago", success: true },
+                    { action: "Updated", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200", email: "jordan@acmecorp.com", provider: "okta", time: "1d ago", success: true },
+                    { action: "Created", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200", email: "intern@acmecorp.com", provider: "okta", time: "2d ago", success: false, error: "Duplicate email" },
+                  ].map((e, i) => (
+                    <div key={i} className="flex items-center justify-between rounded-lg border p-3 text-sm">
+                      <div className="flex items-center gap-3">
+                        <Badge className={e.color}>{e.action}</Badge>
+                        <div>
+                          <span className="font-medium">{e.email}</span>
+                          {!e.success && e.error && <span className="text-red-600 ml-2 text-xs">Error: {e.error}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{e.provider}</span>
+                        <span>{e.time}</span>
+                        {e.success ? <Check className="h-3.5 w-3.5 text-green-500" /> : <AlertTriangle className="h-3.5 w-3.5 text-red-500" />}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Setup guides */}
+              <Card>
+                <CardHeader><CardTitle className="text-base">Setup Guides</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {["Okta", "Microsoft Entra ID", "OneLogin", "JumpCloud"].map((p) => (
+                      <div key={p} className="flex items-center gap-2 rounded-lg border p-3 hover:bg-muted/50 transition-colors text-sm cursor-pointer">
+                        <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+                        <span>{p} SCIM Setup Guide</span>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
