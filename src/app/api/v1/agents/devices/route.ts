@@ -152,8 +152,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ devices: enrichedDevices });
   } catch (error) {
     console.error("Error fetching devices:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: "Failed to fetch devices", detail: message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch devices" }, { status: 500 });
   }
 }
 
@@ -249,8 +248,47 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
+
+    // Validate input with Zod to prevent injection and type coercion attacks
+    const diagnosticsSchema = z.object({
+      deviceId: z.string().optional(),
+      cpuName: z.string().max(256).optional(),
+      cpuCores: z.number().int().positive().max(1024).optional(),
+      ramTotalGb: z.number().positive().max(100000).optional(),
+      ramAvailGb: z.number().min(0).max(100000).optional(),
+      gpuName: z.string().max(256).optional(),
+      diskDrives: z.array(z.record(z.string(), z.unknown())).optional(),
+      uptimeSeconds: z.number().int().min(0).optional(),
+      antivirusName: z.string().max(256).optional(),
+      firewallStatus: z.record(z.string(), z.unknown()).optional(),
+      defenderStatus: z.string().max(64).optional(),
+      lastUpdateDate: z.string().optional(),
+      pendingUpdates: z.array(z.record(z.string(), z.unknown())).optional(),
+      updateServiceStatus: z.string().max(64).optional(),
+      rebootPending: z.boolean().optional(),
+      bsodEvents: z.array(z.record(z.string(), z.unknown())).optional(),
+      bsodCount: z.number().int().min(0).optional(),
+      dnsServers: z.string().max(512).optional(),
+      networkAdapters: z.array(z.record(z.string(), z.unknown())).optional(),
+      wifiSignal: z.number().int().min(-200).max(0).optional(),
+      installedSoftware: z.array(z.record(z.string(), z.unknown())).optional(),
+      runningSoftware: z.array(z.record(z.string(), z.unknown())).optional(),
+      performanceIssues: z.array(z.record(z.string(), z.unknown())).optional(),
+    });
+
+    const parsed = diagnosticsSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid request format" }, { status: 400 });
+    }
+
+    const data = parsed.data;
     const orgId = session ? session.user.organizationId : agentAuth!.organizationId;
-    const deviceId = body.deviceId || agentAuth?.deviceId;
+    const deviceId = data.deviceId || agentAuth?.deviceId;
+
+    // Verify agent can only update its own device
+    if (agentAuth && deviceId && deviceId !== agentAuth.deviceId) {
+      return NextResponse.json({ error: "Cannot update other devices" }, { status: 403 });
+    }
 
     // Find the device
     let device;
@@ -269,68 +307,60 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Device not found" }, { status: 404 });
     }
 
-    // Update device with diagnostics data using raw SQL
-    // (Prisma client may be cached by dev server and not know new columns)
-    const sets: string[] = [];
-    const values: unknown[] = [];
-    let idx = 1;
+    // Update device using safe Prisma update (no raw SQL)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: Record<string, any> = {
+      lastSeenAt: new Date(),
+      status: "ONLINE",
+    };
 
-    function addField(col: string, val: unknown, cast?: string) {
-      if (val === undefined || val === null) return;
-      sets.push(`"${col}" = $${idx}${cast ? `::${cast}` : ""}`);
-      values.push(val);
-      idx++;
-    }
+    if (data.cpuName !== undefined) updateData.cpuName = data.cpuName;
+    if (data.cpuCores !== undefined) updateData.cpuCores = data.cpuCores;
+    if (data.ramTotalGb !== undefined) updateData.ramTotalGb = data.ramTotalGb;
+    if (data.ramAvailGb !== undefined) updateData.ramAvailGb = data.ramAvailGb;
+    if (data.gpuName !== undefined) updateData.gpuName = data.gpuName;
+    if (data.diskDrives !== undefined) updateData.diskDrives = data.diskDrives;
+    if (data.uptimeSeconds !== undefined) updateData.uptimeSeconds = data.uptimeSeconds;
+    if (data.antivirusName !== undefined) updateData.antivirusName = data.antivirusName;
+    if (data.firewallStatus !== undefined) updateData.firewallStatus = data.firewallStatus;
+    if (data.defenderStatus !== undefined) updateData.defenderStatus = data.defenderStatus;
+    if (data.lastUpdateDate !== undefined) updateData.lastUpdateDate = new Date(data.lastUpdateDate);
+    if (data.pendingUpdates !== undefined) updateData.pendingUpdates = data.pendingUpdates;
+    if (data.updateServiceStatus !== undefined) updateData.updateServiceStatus = data.updateServiceStatus;
+    if (data.rebootPending !== undefined) updateData.rebootPending = data.rebootPending;
+    if (data.bsodEvents !== undefined) updateData.bsodEvents = data.bsodEvents;
+    if (data.bsodCount !== undefined) updateData.bsodCount = data.bsodCount;
+    if (data.dnsServers !== undefined) updateData.dnsServers = data.dnsServers;
+    if (data.networkAdapters !== undefined) updateData.networkAdapters = data.networkAdapters;
+    if (data.wifiSignal !== undefined) updateData.wifiSignal = data.wifiSignal;
+    if (data.installedSoftware !== undefined) updateData.installedSoftware = data.installedSoftware;
+    if (data.runningSoftware !== undefined) updateData.runningSoftware = data.runningSoftware;
+    if (data.performanceIssues !== undefined) updateData.performanceIssues = data.performanceIssues;
 
-    // Always update these
-    sets.push(`"lastSeenAt" = NOW()`);
-    sets.push(`"status" = 'ONLINE'`);
-    sets.push(`"updatedAt" = NOW()`);
+    const updated = await prisma.agentDevice.update({
+      where: { id: device.id },
+      data: updateData,
+    });
 
-    addField("cpuName", body.cpuName);
-    addField("cpuCores", body.cpuCores, "int");
-    addField("ramTotalGb", body.ramTotalGb, "double precision");
-    addField("ramAvailGb", body.ramAvailGb, "double precision");
-    addField("gpuName", body.gpuName);
-    addField("diskDrives", body.diskDrives ? JSON.stringify(body.diskDrives) : undefined, "jsonb");
-    addField("uptimeSeconds", body.uptimeSeconds, "int");
-    addField("antivirusName", body.antivirusName);
-    addField("firewallStatus", body.firewallStatus ? JSON.stringify(body.firewallStatus) : undefined, "jsonb");
-    addField("defenderStatus", body.defenderStatus);
-    addField("lastUpdateDate", body.lastUpdateDate ? new Date(body.lastUpdateDate).toISOString() : undefined, "timestamp");
-    addField("pendingUpdates", body.pendingUpdates ? JSON.stringify(body.pendingUpdates) : undefined, "jsonb");
-    addField("updateServiceStatus", body.updateServiceStatus);
-    addField("rebootPending", body.rebootPending !== undefined ? body.rebootPending : undefined, "boolean");
-    addField("bsodEvents", body.bsodEvents ? JSON.stringify(body.bsodEvents) : undefined, "jsonb");
-    addField("bsodCount", body.bsodCount !== undefined ? body.bsodCount : undefined, "int");
-    addField("dnsServers", body.dnsServers);
-    addField("networkAdapters", body.networkAdapters ? JSON.stringify(body.networkAdapters) : undefined, "jsonb");
-    addField("wifiSignal", body.wifiSignal !== undefined ? body.wifiSignal : undefined, "int");
-    addField("installedSoftware", body.installedSoftware ? JSON.stringify(body.installedSoftware) : undefined, "jsonb");
-    addField("runningSoftware", body.runningSoftware ? JSON.stringify(body.runningSoftware) : undefined, "jsonb");
-    addField("performanceIssues", body.performanceIssues ? JSON.stringify(body.performanceIssues) : undefined, "jsonb");
+    // Save a diagnostic snapshot
+    const issuesFound = (data.performanceIssues?.length || 0) + (data.pendingUpdates?.length || 0) + (data.bsodCount || 0);
+    await prisma.deviceDiagnostic.create({
+      data: {
+        deviceId: device.id,
+        scanType: "full",
+        timestamp: new Date(),
+        results: data as object,
+        issuesFound,
+        criticalCount: data.bsodCount || 0,
+        highCount: data.pendingUpdates?.length || 0,
+        mediumCount: data.performanceIssues?.length || 0,
+        lowCount: 0,
+      },
+    });
 
-    const sql = `UPDATE "AgentDevice" SET ${sets.join(", ")} WHERE "id" = $${idx}`;
-    values.push(device.id);
-
-    await prisma.$executeRawUnsafe(sql, ...values);
-
-    // Save a diagnostic snapshot using raw SQL too
-    const snapId = `diag_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const issuesFound = (body.performanceIssues?.length || 0) + (body.pendingUpdates?.length || 0) + (body.bsodCount || 0);
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO "DeviceDiagnostic" ("id", "deviceId", "scanType", "timestamp", "results", "issuesFound", "criticalCount", "highCount", "mediumCount", "lowCount")
-       VALUES ($1, $2, $3, NOW(), $4::jsonb, $5, $6, $7, $8, $9)`,
-      snapId, device.id, "full", JSON.stringify(body),
-      issuesFound, body.bsodCount || 0, body.pendingUpdates?.length || 0, body.performanceIssues?.length || 0, 0
-    );
-
-    // Return the updated device
-    const updated = await prisma.agentDevice.findUnique({ where: { id: device.id } });
     return NextResponse.json({ device: updated });
   } catch (error) {
     console.error("Error updating device diagnostics:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: "Failed to update diagnostics", detail: message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update diagnostics" }, { status: 500 });
   }
 }

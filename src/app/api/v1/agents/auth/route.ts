@@ -105,9 +105,8 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error authenticating agent:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to authenticate agent", detail: message },
+      { error: "Failed to authenticate agent" },
       { status: 500 }
     );
   }
