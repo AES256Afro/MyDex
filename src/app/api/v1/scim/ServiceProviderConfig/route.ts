@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
-// SCIM 2.0 ServiceProviderConfig — discovery endpoint
-// Required by Slack and Teams for SCIM provisioning setup
+// GET /scim/ServiceProviderConfig — SCIM 2.0 service provider metadata
 export async function GET() {
   return NextResponse.json({
     schemas: ["urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"],
@@ -16,14 +15,8 @@ export async function GET() {
       {
         type: "oauthbearertoken",
         name: "OAuth Bearer Token",
-        description: "Authentication using a Bearer token from MyDex settings",
-        specUri: "https://www.rfc-editor.org/info/rfc6750",
-        primary: true,
+        description: "Authentication using a bearer token issued via MyDex SCIM settings.",
       },
     ],
-    meta: {
-      resourceType: "ServiceProviderConfig",
-      location: "/api/v1/scim/ServiceProviderConfig",
-    },
   });
 }
