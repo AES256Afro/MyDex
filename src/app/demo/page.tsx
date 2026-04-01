@@ -3,6 +3,7 @@
 import { useState, useEffect, Fragment, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
+import { NotificationCenter } from "@/components/notifications/notification-center";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -788,6 +789,7 @@ function DemoPage() {
           </div>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-3">
+            <NotificationCenter />
             <span className="text-sm text-muted-foreground">Acme Corp</span>
             <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold">A</div>
           </div>
@@ -839,9 +841,9 @@ function DemoPage() {
                     <CardHeader className="pb-3"><CardTitle className="text-sm font-medium">Quick Actions</CardTitle></CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <Button variant="default" className="w-full justify-start gap-2"><Clock className="h-4 w-4" /> View Timesheet</Button>
-                        <Button variant="outline" className="w-full justify-start gap-2"><LifeBuoy className="h-4 w-4" /> Submit Ticket</Button>
-                        <Button variant="outline" className="w-full justify-start gap-2"><Calendar className="h-4 w-4" /> Request Leave</Button>
+                        <Button variant="default" className="w-full justify-start gap-2" onClick={() => setActiveSection("time-tracking")}><Clock className="h-4 w-4" /> View Timesheet</Button>
+                        <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setActiveSection("support")}><LifeBuoy className="h-4 w-4" /> Submit Ticket</Button>
+                        <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setActiveSection("attendance")}><Calendar className="h-4 w-4" /> Request Leave</Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -964,11 +966,11 @@ function DemoPage() {
                   {/* Row 4: Navigation Cards */}
                   <div className="grid gap-4 md:grid-cols-3">
                     {[
-                      { label: "Time Tracking", desc: "Clock in/out and view timesheets", icon: Clock, color: "text-primary" },
-                      { label: "My Projects", desc: "View tasks and assignments", icon: FolderKanban, color: "text-primary" },
-                      { label: "My Account", desc: "Profile & security settings", icon: ShieldCheck, color: "text-green-600" },
+                      { label: "Time Tracking", desc: "Clock in/out and view timesheets", icon: Clock, color: "text-primary", section: "time-tracking" },
+                      { label: "My Projects", desc: "View tasks and assignments", icon: FolderKanban, color: "text-primary", section: "projects" },
+                      { label: "My Account", desc: "Profile & security settings", icon: ShieldCheck, color: "text-green-600", section: "my-account" },
                     ].map((nav) => (
-                      <Card key={nav.label} className="hover:border-primary/50 transition-colors cursor-pointer">
+                      <Card key={nav.label} className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setActiveSection(nav.section)}>
                         <CardContent className="flex items-center gap-4 py-6">
                           <div className="p-3 rounded-lg bg-primary/10">
                             <nav.icon className={`h-6 w-6 ${nav.color}`} />
@@ -1003,7 +1005,7 @@ function DemoPage() {
               {/* Row 1: KPI Cards (matches live 5-column layout) */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                 {/* DEX Score */}
-                <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setActiveSection("fleet-health")}>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-sm font-medium">DEX Score</CardTitle>
                     <ShieldCheck className="h-4 w-4 text-muted-foreground" />
@@ -1014,7 +1016,7 @@ function DemoPage() {
                   </CardContent>
                 </Card>
                 {/* Total Employees */}
-                <Card>
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setActiveSection("employees")}>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
                     <Users className="h-4 w-4 text-muted-foreground" />
@@ -1025,7 +1027,7 @@ function DemoPage() {
                   </CardContent>
                 </Card>
                 {/* Currently Working */}
-                <Card>
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setActiveSection("time-tracking")}>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-sm font-medium">Currently Working</CardTitle>
                     <Clock className="h-4 w-4 text-muted-foreground" />
@@ -1036,7 +1038,7 @@ function DemoPage() {
                   </CardContent>
                 </Card>
                 {/* Devices Online */}
-                <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setActiveSection("devices")}>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-sm font-medium">Devices Online</CardTitle>
                     <Shield className="h-4 w-4 text-muted-foreground" />
@@ -1047,7 +1049,7 @@ function DemoPage() {
                   </CardContent>
                 </Card>
                 {/* Open Alerts */}
-                <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setActiveSection("security")}>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-sm font-medium">Open Alerts</CardTitle>
                     <Shield className="h-4 w-4 text-muted-foreground" />
@@ -1061,7 +1063,7 @@ function DemoPage() {
 
               {/* Row 1b: Secondary KPI row (matches live 3-column layout) */}
               <div className="grid gap-4 md:grid-cols-3">
-                <Card>
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setActiveSection("attendance")}>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-sm font-medium">Attendance Today</CardTitle>
                     <CalendarCheck className="h-4 w-4 text-muted-foreground" />
@@ -1074,7 +1076,7 @@ function DemoPage() {
                     <p className="text-xs text-muted-foreground mt-1">28 of 32 employees</p>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setActiveSection("support")}>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-sm font-medium">Support Tickets</CardTitle>
                     <LifeBuoy className="h-4 w-4 text-muted-foreground" />
@@ -1087,7 +1089,7 @@ function DemoPage() {
                     <p className="text-xs text-muted-foreground mt-1">47 resolved total</p>
                   </CardContent>
                 </Card>
-                <Card>
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setActiveSection("activity")}>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-sm font-medium">Activity Today</CardTitle>
                     <Activity className="h-4 w-4 text-muted-foreground" />
@@ -1151,11 +1153,12 @@ function DemoPage() {
               <Card>
                 <CardHeader><CardTitle className="text-lg">Today&apos;s Activity Heatmap</CardTitle></CardHeader>
                 <CardContent>
-                  <div className="flex items-end gap-1" style={{ height: 100 }}>
+                  <div className="flex items-end gap-1" style={{ height: 120 }}>
                     {hourlyData.map((v, h) => {
-                      const pct = (v / maxHour) * 100;
-                      const clr = v === 0 ? "bg-muted" : pct > 75 ? "bg-blue-600" : pct > 50 ? "bg-blue-500" : pct > 25 ? "bg-blue-400" : "bg-blue-300";
-                      return <div key={h} className="flex-1" title={`${h}:00 — ${v}%`}><div className={`w-full rounded-t ${clr}`} style={{ height: `${Math.max(pct, 3)}%` }} /></div>;
+                      const pct = maxHour > 0 ? (v / maxHour) : 0;
+                      const barHeight = Math.max(pct * 120, v > 0 ? 4 : 2);
+                      const clr = v === 0 ? "bg-muted" : pct > 0.75 ? "bg-blue-600" : pct > 0.5 ? "bg-blue-500" : pct > 0.25 ? "bg-blue-400" : "bg-blue-300";
+                      return <div key={h} className="flex-1" title={`${h}:00 — ${v} active`}><div className={`w-full rounded-t ${clr}`} style={{ height: `${barHeight}px` }} /></div>;
                     })}
                   </div>
                   <div className="flex gap-1 mt-1">{hourlyData.map((_, h) => <div key={h} className="flex-1 text-center text-[9px] text-muted-foreground">{h % 3 === 0 ? h : ""}</div>)}</div>
@@ -1216,14 +1219,14 @@ function DemoPage() {
                   <CardContent>
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        { label: "View Reports", icon: BarChart3 },
-                        { label: "Manage Team", icon: Users },
-                        { label: "Security Center", icon: Shield },
-                        { label: "View Devices", icon: Monitor },
-                        { label: "Run Export", icon: Download },
-                        { label: "AI Insights", icon: Sparkles },
+                        { label: "View Reports", icon: BarChart3, section: "reports" },
+                        { label: "Manage Team", icon: Users, section: "employees" },
+                        { label: "Security Center", icon: Shield, section: "security" },
+                        { label: "View Devices", icon: Monitor, section: "devices" },
+                        { label: "Run Export", icon: Download, section: "reports" },
+                        { label: "AI Insights", icon: Sparkles, section: "insights" },
                       ].map((action) => (
-                        <button key={action.label} className="flex items-center gap-2 rounded-lg border p-2.5 text-sm hover:bg-muted/50 transition-colors text-left">
+                        <button key={action.label} onClick={() => setActiveSection(action.section)} className="flex items-center gap-2 rounded-lg border p-2.5 text-sm hover:bg-muted/50 transition-colors text-left">
                           <action.icon className="h-4 w-4 text-muted-foreground" />
                           <span>{action.label}</span>
                         </button>
@@ -1240,9 +1243,9 @@ function DemoPage() {
                     <Sparkles className="h-4 w-4 text-primary" />
                     Quick Insights
                   </CardTitle>
-                  <span className="text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer">
+                  <button onClick={() => setActiveSection("insights")} className="text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer">
                     View All <ArrowUpRight className="h-3 w-3" />
-                  </span>
+                  </button>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
