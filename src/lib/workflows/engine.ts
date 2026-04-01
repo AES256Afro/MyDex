@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { sendIntegrationMessage } from "@/lib/integrations";
 import { createNotification, notifyAdmins } from "@/lib/notifications";
-import { notificationEmailTemplate } from "@/lib/email-templates";
+import { sendNotificationEmail } from "@/lib/email";
 import type { Prisma } from "@/generated/prisma";
 
 // ── Condition types ──
@@ -130,27 +130,20 @@ export async function executeAction(
       case "send_email": {
         const cfg = action.config;
         const to = cfg.to as string;
-        const subject = (cfg.subject as string) || "Workflow Notification";
-        const body = (cfg.body as string) || JSON.stringify(triggerData);
+        const subject = (cfg.subject as string) || undefined;
+        const title = (cfg.title as string) || undefined;
+        const message = (cfg.message as string) || (cfg.body as string) || undefined;
+        const ctaUrl = cfg.ctaUrl as string | undefined;
         if (!to) return { success: false, error: "Missing email recipient" };
 
-        const appUrl = process.env.NEXTAUTH_URL || "https://mydexnow.com";
-
-        // Lazy-init Resend
-        const { Resend } = await import("resend");
-        const resend = new Resend(process.env.RESEND_API_KEY);
-        await resend.emails.send({
-          from: process.env.RESEND_FROM_EMAIL || "MyDex <noreply@antifascist.work>",
+        const result = await sendNotificationEmail({
           to,
-          subject,
-          html: notificationEmailTemplate({
-            title: subject,
-            message: body,
-            ctaText: "View in MyDex",
-            ctaUrl: appUrl,
-          }),
+          subject: subject || title || "MyDex Notification",
+          title: title || subject || "Notification",
+          message: message || "An automated workflow was triggered.",
+          ctaUrl,
         });
-        return { success: true };
+        return result;
       }
 
       default:

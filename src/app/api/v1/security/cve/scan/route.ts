@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendIntegrationMessage } from "@/lib/integrations";
 import { notifyAdmins } from "@/lib/notifications";
+import { sendSecurityAlertEmail } from "@/lib/email";
 import { evaluateWorkflows } from "@/lib/workflows/engine";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -101,6 +102,23 @@ export async function POST(request: NextRequest) {
         message: `Vulnerable software detected on ${hostname}: ${criticalMatches.map(m => m.cveId).join(", ")}`,
         link: "/security",
       }).catch(() => {});
+
+      // Email admins for HIGH/CRITICAL alerts
+      const admins = await prisma.user.findMany({
+        where: { organizationId: orgId, role: { in: ["ADMIN", "SUPER_ADMIN"] }, status: "ACTIVE" },
+        select: { email: true },
+      });
+      const adminEmails = admins.map(a => a.email).filter(Boolean);
+      if (adminEmails.length > 0) {
+        const dashboardUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/security`;
+        sendSecurityAlertEmail({
+          to: adminEmails,
+          alertType: `${criticalMatches.length} Critical CVE${criticalMatches.length > 1 ? "s" : ""} Detected`,
+          severity: criticalMatches.some(m => m.severity === "CRITICAL") ? "CRITICAL" : "HIGH",
+          message: `Vulnerable software detected on ${hostname}: ${criticalMatches.map(m => `${m.cveId} (${m.software} v${m.version})`).join(", ")}`,
+          dashboardUrl,
+        }).catch(err => console.error("[security] Alert email failed:", err));
+      }
 
       // Evaluate automated workflows
       for (const match of criticalMatches) {

@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendIntegrationMessage } from "@/lib/integrations";
 import { notifyAdmins } from "@/lib/notifications";
+import { sendSecurityAlertEmail } from "@/lib/email";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -99,6 +100,23 @@ export async function POST(request: NextRequest) {
           message: `${criticalMatches.length} known threat${criticalMatches.length > 1 ? "s" : ""} found${hostname ? ` on ${hostname}` : ""}`,
           link: "/security",
         }).catch(() => {});
+
+        // Email admins for HIGH/CRITICAL alerts
+        const admins = await prisma.user.findMany({
+          where: { organizationId: orgId, role: { in: ["ADMIN", "SUPER_ADMIN"] }, status: "ACTIVE" },
+          select: { email: true },
+        });
+        const adminEmails = admins.map(a => a.email).filter(Boolean);
+        if (adminEmails.length > 0) {
+          const dashboardUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/security`;
+          sendSecurityAlertEmail({
+            to: adminEmails,
+            alertType: `Malicious IOC${criticalMatches.length > 1 ? "s" : ""} Detected`,
+            severity: criticalMatches.some(m => m.severity === "CRITICAL") ? "CRITICAL" : "HIGH",
+            message: `${criticalMatches.length} known threat${criticalMatches.length > 1 ? "s" : ""} found${hostname ? ` on ${hostname}` : ""}. Hashes: ${criticalMatches.map(m => m.hashValue.slice(0, 16) + "...").join(", ")}`,
+            dashboardUrl,
+          }).catch(err => console.error("[security] Alert email failed:", err));
+        }
       }
     }
 

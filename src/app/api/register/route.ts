@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { registerSchema } from "@/lib/validators/auth";
 import { isEmailAllowed, needsApproval } from "@/lib/allowlist";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   // Rate limit registration
@@ -84,6 +85,16 @@ export async function POST(req: NextRequest) {
         { status: 201 }
       );
     }
+
+    // Send welcome email (fire and forget - don't block registration)
+    const user = org.users[0];
+    const loginUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/login`;
+    sendWelcomeEmail({
+      to: user.email,
+      name: user.name || user.email,
+      organizationName: org.name,
+      loginUrl,
+    }).catch((err) => console.error("[register] Welcome email failed:", err));
 
     return NextResponse.json(
       { message: "Organization created", organizationId: org.id },

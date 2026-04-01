@@ -10,9 +10,63 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "MyDex - Employee Monitoring & Productivity",
+  metadataBase: new URL("https://mydexnow.com"),
+  title: {
+    default: "MyDex - Digital Employee Experience Platform",
+    template: "%s | MyDex",
+  },
   description:
-    "Open-source employee monitoring and productivity management for small business",
+    "Real-time monitoring, proactive issue resolution, OS compliance, and DEX scoring — unified in one platform. Open-source employee experience management for modern teams.",
+  keywords: [
+    "digital employee experience",
+    "DEX platform",
+    "employee monitoring",
+    "device management",
+    "IT operations",
+    "endpoint management",
+    "productivity tracking",
+    "SOC 2 compliance",
+    "fleet health",
+    "MDM integration",
+  ],
+  authors: [{ name: "MyDex" }],
+  creator: "MyDex",
+  publisher: "MyDex",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://mydexnow.com",
+    siteName: "MyDex",
+    title: "MyDex - Digital Employee Experience Platform",
+    description:
+      "Real-time monitoring, proactive issue resolution, OS compliance, and DEX scoring — unified in one open-source platform.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "MyDex - Digital Employee Experience Platform",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MyDex - Digital Employee Experience Platform",
+    description:
+      "Real-time monitoring, proactive issue resolution, OS compliance, and DEX scoring — unified in one open-source platform.",
+    images: ["/og-image.png"],
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },

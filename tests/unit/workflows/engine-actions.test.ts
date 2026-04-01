@@ -17,6 +17,8 @@ const ORG_ID = "org-test-123";
 describe("executeAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Ensure email service is "configured" for tests
+    process.env.RESEND_API_KEY = "re_test_fake_key";
   });
 
   // ── send_notification ──
