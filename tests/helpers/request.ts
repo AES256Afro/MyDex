@@ -16,5 +16,5 @@ export function createRequest(
   if (options?.body && method !== "GET") {
     init.body = JSON.stringify(options.body);
   }
-  return new NextRequest(fullUrl, init as Parameters<typeof NextRequest>[1]);
+  return new NextRequest(new URL(fullUrl), init as never);
 }
