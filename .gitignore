@@ -46,3 +46,5 @@ prisma/migrations/
 /src/generated/prisma
 mydex-agent/mydex-agent.exe
 mydex-agent/dist/
+
+.vercel

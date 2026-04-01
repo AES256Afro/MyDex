@@ -1,0 +1,7 @@
+node_modules
+agent/dist
+.git
+.claude
+scripts
+tests
+*.test.ts
