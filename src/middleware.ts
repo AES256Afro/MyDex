@@ -10,6 +10,7 @@ const publicPaths = [
   "/api/v1/auth/mfa", // MFA endpoints
   "/api/v1/auth/sso", // SSO callbacks
   "/api/v1/account", // Account APIs (accessible to all authenticated)
+  "/api/v1/integrations/webhook", // Slack/Teams incoming webhooks
   "/mfa-verify", // MFA verification page
 ];
 

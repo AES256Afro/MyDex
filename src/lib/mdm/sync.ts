@@ -13,6 +13,11 @@ export async function syncMdmProvider(providerId: string): Promise<SyncResult> {
   const provider = await prisma.mdmProvider.findUnique({ where: { id: providerId } });
   if (!provider) throw new Error("Provider not found");
 
+  if (provider.lastSyncStatus === "SYNCING") {
+    // Prevent concurrent syncs — another sync is already in progress
+    return { synced: 0, matched: 0, autoAssigned: 0, errors: ["Sync already in progress"] };
+  }
+
   // Mark as syncing
   await prisma.mdmProvider.update({
     where: { id: providerId },
