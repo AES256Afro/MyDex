@@ -1,5 +1,15 @@
 /* eslint-disable @next/next/no-img-element */
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "MyDex - The Complete Digital Employee Experience Platform",
+  description:
+    "Real-time monitoring, proactive issue resolution, OS compliance, and DEX scoring — unified in one platform that identifies and resolves IT issues before they impact employees.",
+  alternates: {
+    canonical: "https://mydexnow.com",
+  },
+};
 
 const features = [
   {
@@ -68,6 +78,35 @@ const stats = [
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            name: "MyDex",
+            applicationCategory: "BusinessApplication",
+            operatingSystem: "Web",
+            description:
+              "Open-source digital employee experience platform with real-time monitoring, device management, and productivity analytics.",
+            offers: {
+              "@type": "Offer",
+              price: "0",
+              priceCurrency: "USD",
+              description: "Open source - free to self-host",
+            },
+            featureList: [
+              "Real-time device monitoring",
+              "DEX scoring",
+              "MDM integration",
+              "SOC 2 compliance",
+              "Productivity analytics",
+              "Time tracking",
+              "Fleet health management",
+            ],
+          }),
+        }}
+      />
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">

@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
+import { sendLeaveStatusEmail } from "@/lib/email";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -254,6 +255,25 @@ export async function PATCH(request: NextRequest) {
           },
         });
       }
+    }
+
+    // Send email notification to the employee about leave status
+    const employee = await prisma.user.findUnique({
+      where: { id: existing.userId },
+      select: { email: true, name: true },
+    });
+    if (employee?.email) {
+      const dashboardUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/attendance`;
+      sendLeaveStatusEmail({
+        to: employee.email,
+        employeeName: employee.name || employee.email,
+        status: action,
+        leaveType: existing.leaveType,
+        startDate: existing.startDate.toISOString().split("T")[0],
+        endDate: existing.endDate.toISOString().split("T")[0],
+        reviewerName: session.user.name || "your manager",
+        dashboardUrl,
+      }).catch(err => console.error("[leave] Status email failed:", err));
     }
 
     return NextResponse.json({ leaveRequest: updated });
