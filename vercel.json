@@ -6,15 +6,15 @@
     },
     {
       "path": "/api/v1/mdm/sync/cron",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/v1/activity/aggregate",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 7 * * *"
     },
     {
       "path": "/api/v1/events/cleanup",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 3 * * *"
     },
     {
       "path": "/api/v1/attendance/auto-absent",
