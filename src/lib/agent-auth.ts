@@ -3,9 +3,12 @@ import { NextRequest } from "next/server";
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 
-const AGENT_JWT_SECRET = process.env.AGENT_JWT_SECRET || process.env.NEXTAUTH_SECRET;
-if (!AGENT_JWT_SECRET) {
-  throw new Error("AGENT_JWT_SECRET or NEXTAUTH_SECRET environment variable must be set");
+function getAgentJwtSecret(): string {
+  const secret = process.env.AGENT_JWT_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error("AGENT_JWT_SECRET or NEXTAUTH_SECRET environment variable must be set");
+  }
+  return secret;
 }
 
 interface AgentAuthResult {
@@ -43,7 +46,7 @@ export async function authenticateAgent(
  */
 async function verifyAgentJwt(token: string): Promise<AgentAuthResult | null> {
   try {
-    const secret = new TextEncoder().encode(AGENT_JWT_SECRET);
+    const secret = new TextEncoder().encode(getAgentJwtSecret());
     const { payload } = await jwtVerify(token, secret, {
       algorithms: ["HS256"],
     });
@@ -124,7 +127,7 @@ export async function generateAgentJwt(
   orgId: string,
   permissions: string[]
 ): Promise<string> {
-  const secret = new TextEncoder().encode(AGENT_JWT_SECRET);
+  const secret = new TextEncoder().encode(getAgentJwtSecret());
 
   const token = await new SignJWT({
     deviceId,
