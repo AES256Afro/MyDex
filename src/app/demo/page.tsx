@@ -568,7 +568,6 @@ const sectionGroups = [
     items: [
       { id: "activity", label: "Activity", icon: Activity },
       { id: "productivity", label: "Productivity", icon: Brain },
-      { id: "fleet-health", label: "Fleet Health & DEX", icon: Activity },
     ],
   },
   {
@@ -578,17 +577,16 @@ const sectionGroups = [
       { id: "user-management", label: "User Management", icon: UserCog },
       { id: "departments", label: "Departments", icon: Building2 },
       { id: "reports", label: "Reports", icon: BarChart3 },
-      { id: "employee-view", label: "Employee Self-Service", icon: Eye },
     ],
   },
   {
     category: "SECURITY",
     items: [
+      { id: "fleet-health", label: "Fleet Health", icon: Activity },
       { id: "devices", label: "Devices", icon: Monitor },
       { id: "software-inventory", label: "Software Inventory", icon: Package },
       { id: "host-groups", label: "Host Groups", icon: Server },
       { id: "security", label: "Security", icon: Shield },
-      { id: "dlp", label: "DLP Policies", icon: ShieldCheck },
     ],
   },
   {
@@ -771,7 +769,7 @@ function DemoPage() {
           ))}
         </nav>
         <div className="p-4 border-t">
-          <Link href="/register"><Button className="w-full">Get Started Free</Button></Link>
+          <Link href="/contact"><Button className="w-full">Contact Us</Button></Link>
         </div>
       </aside>
 
@@ -828,27 +826,154 @@ function DemoPage() {
                 <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground"><X className="h-4 w-4" /></Button>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {[
-                  { title: "Employees", value: 32, icon: Users, desc: "Active team members" },
-                  { title: "Devices Online", value: `${onlineCount}/${mockDevices.length}`, icon: Monitor, desc: "Connected agents" },
-                  { title: "Open Alerts", value: 3, icon: Shield, desc: "Security alerts pending" },
-                  { title: "Blocked Domains", value: totalBlockedDomains.toLocaleString(), icon: Globe, desc: `+ ${totalBlockedIPs} IPs` },
-                ].map((s) => (
-                  <Card key={s.title}>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-sm font-medium">{s.title}</CardTitle>
-                      <s.icon className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{s.value}</div>
-                      <p className="text-xs text-muted-foreground">{s.desc}</p>
-                    </CardContent>
-                  </Card>
-                ))}
+              {/* Row 1: KPI Cards (matches live 5-column layout) */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                {/* DEX Score */}
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">DEX Score</CardTitle>
+                    <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">82/100</div>
+                    <p className="text-xs text-muted-foreground">Digital Employee Experience</p>
+                  </CardContent>
+                </Card>
+                {/* Total Employees */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">32</div>
+                    <p className="text-xs text-muted-foreground">87% present today</p>
+                  </CardContent>
+                </Card>
+                {/* Currently Working */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Currently Working</CardTitle>
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">12</div>
+                    <p className="text-xs text-muted-foreground">Clocked in right now</p>
+                  </CardContent>
+                </Card>
+                {/* Devices Online */}
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Devices Online</CardTitle>
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">{onlineCount}/{mockDevices.length}</div>
+                    <p className="text-xs text-muted-foreground">Connected agents</p>
+                  </CardContent>
+                </Card>
+                {/* Open Alerts */}
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Open Alerts</CardTitle>
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">3</div>
+                    <p className="text-xs text-muted-foreground">Security alerts pending</p>
+                  </CardContent>
+                </Card>
               </div>
 
-              {/* Hourly Activity Heatmap */}
+              {/* Row 1b: Secondary KPI row (matches live 3-column layout) */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Attendance Today</CardTitle>
+                    <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">87%</div>
+                    <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full bg-green-500 transition-all" style={{ width: "87%" }} />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">28 of 32 employees</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Support Tickets</CardTitle>
+                    <LifeBuoy className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-baseline gap-3">
+                      <div className="text-2xl font-bold">5</div>
+                      <span className="text-sm text-muted-foreground">open</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">47 resolved total</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Activity Today</CardTitle>
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">24.3h</div>
+                    <p className="text-xs text-muted-foreground mt-1">Total active hours across org</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Row 2: Charts — 7-Day Activity Trend + Device Fleet Donut */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                  <CardHeader><CardTitle className="text-lg">7-Day Activity Trend</CardTitle></CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <RechartsBarChart data={[
+                        { label: "Mon", hours: 6.2 }, { label: "Tue", hours: 7.1 }, { label: "Wed", hours: 6.8 },
+                        { label: "Thu", hours: 7.5 }, { label: "Fri", hours: 5.9 }, { label: "Sat", hours: 1.2 },
+                        { label: "Sun", hours: 0.4 },
+                      ]}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} />
+                        <RechartsTooltip formatter={(value) => [`${value}h`, "Active Hours"]} />
+                        <Bar dataKey="hours" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                      </RechartsBarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader><CardTitle className="text-lg">Device Fleet Status</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height={200}>
+                        <RechartsPieChart>
+                          <Pie data={[
+                            { name: "Online", value: onlineCount },
+                            { name: "Offline", value: mockDevices.filter(d => d.status === "OFFLINE").length },
+                            { name: "Stale", value: 0 },
+                          ]} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value">
+                            <Cell fill="#22c55e" />
+                            <Cell fill="#ef4444" />
+                            <Cell fill="#eab308" />
+                          </Pie>
+                          <RechartsTooltip />
+                        </RechartsPieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex justify-center gap-4 text-sm mt-2">
+                      <div className="flex items-center gap-1.5"><div className="h-3 w-3 rounded-full bg-green-500" /> Online ({onlineCount})</div>
+                      <div className="flex items-center gap-1.5"><div className="h-3 w-3 rounded-full bg-red-500" /> Offline ({mockDevices.filter(d => d.status === "OFFLINE").length})</div>
+                      <div className="flex items-center gap-1.5"><div className="h-3 w-3 rounded-full bg-yellow-500" /> Stale (0)</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Row 2b: Hourly Activity Heatmap */}
               <Card>
                 <CardHeader><CardTitle className="text-lg">Today&apos;s Activity Heatmap</CardTitle></CardHeader>
                 <CardContent>
@@ -863,70 +988,127 @@ function DemoPage() {
                 </CardContent>
               </Card>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              {/* Row 3: Activity Feed + Live Activity + Quick Actions */}
+              <div className="grid gap-4 md:grid-cols-3">
                 <Card>
-                  <CardHeader><CardTitle>Recent Activity</CardTitle></CardHeader>
+                  <CardHeader><CardTitle className="text-sm font-medium">Activity Feed</CardTitle></CardHeader>
+                  <CardContent className="space-y-3">
+                    {[
+                      { type: "clock_in", desc: "Jordan Miller clocked in", time: "9:02 AM", icon: LogIn, color: "text-green-600" },
+                      { type: "clock_in", desc: "Sarah Chen clocked in", time: "9:05 AM", icon: LogIn, color: "text-green-600" },
+                      { type: "alert", desc: "HIGH alert: Suspicious login attempt", time: "8:45 AM", icon: AlertTriangle, color: "text-red-600" },
+                      { type: "clock_out", desc: "Tom Garcia clocked out", time: "5:32 PM", icon: LogOut, color: "text-orange-600" },
+                      { type: "clock_in", desc: "Anita Patel clocked in", time: "8:58 AM", icon: LogIn, color: "text-green-600" },
+                      { type: "alert", desc: "MEDIUM alert: Firewall rule triggered", time: "8:30 AM", icon: AlertTriangle, color: "text-yellow-600" },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-start gap-2 text-sm">
+                        <item.icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${item.color}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate">{item.desc}</p>
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">{item.time}</span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Live Activity</CardTitle>
+                  </CardHeader>
                   <CardContent className="space-y-3">
                     {[
                       { user: "Jordan Miller", action: "pushed to api-gateway", time: "3m ago" },
                       { user: "Sarah Chen", action: "exported hero-banner-v3.psd", time: "8m ago" },
                       { user: "Anita Patel", action: "opened PR #89 on acme-mobile", time: "15m ago" },
-                      { user: "Tom Garcia", action: "updated Q1 Revenue Forecast", time: "3h ago" },
+                      { user: "Marcus Johnson", action: "deployed staging env", time: "22m ago" },
                     ].map((a, i) => (
-                      <div key={i} className="flex items-center gap-3 text-sm">
-                        <div className="h-7 w-7 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xs font-bold text-blue-700 dark:text-blue-300">
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        <div className="h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[10px] font-bold text-blue-700 dark:text-blue-300">
                           {a.user.split(" ").map((n) => n[0]).join("")}
                         </div>
-                        <div className="flex-1"><span className="font-medium">{a.user}</span> <span className="text-muted-foreground">{a.action}</span></div>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium">{a.user.split(" ")[0]}</span>{" "}
+                          <span className="text-muted-foreground truncate">{a.action}</span>
+                        </div>
                         <span className="text-xs text-muted-foreground">{a.time}</span>
                       </div>
                     ))}
                   </CardContent>
                 </Card>
                 <Card>
-                  <CardHeader><CardTitle>Security Overview</CardTitle></CardHeader>
-                  <CardContent className="space-y-3">
-                    {[
-                      { label: "Devices Online", value: `${onlineCount}/${mockDevices.length}`, color: "green" },
-                      { label: "Open CVEs", value: totalCves, color: "orange" },
-                      { label: "Blocked IOCs", value: totalIocs, color: "red" },
-                      { label: "Active Blocklists", value: mockBlocklists.filter((b) => b.active).length, color: "blue" },
-                      { label: "Host Groups", value: mockHostGroups.length, color: "purple" },
-                      { label: "Departments", value: mockDepartments.length, color: "indigo" },
-                    ].map((s) => (
-                      <div key={s.label} className="flex justify-between text-sm">
-                        <span>{s.label}</span>
-                        <Badge className={`bg-${s.color}-100 text-${s.color}-800`}>{s.value}</Badge>
-                      </div>
-                    ))}
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: "View Reports", icon: BarChart3 },
+                        { label: "Manage Team", icon: Users },
+                        { label: "Security Center", icon: Shield },
+                        { label: "View Devices", icon: Monitor },
+                        { label: "Run Export", icon: Download },
+                        { label: "AI Insights", icon: Sparkles },
+                      ].map((action) => (
+                        <button key={action.label} className="flex items-center gap-2 rounded-lg border p-2.5 text-sm hover:bg-muted/50 transition-colors text-left">
+                          <action.icon className="h-4 w-4 text-muted-foreground" />
+                          <span>{action.label}</span>
+                        </button>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
               </div>
 
-              {/* 14-Day Productivity Trend */}
+              {/* Quick Insights Widget */}
               <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">14-Day Productivity Trend</CardTitle>
-                    <Badge variant="outline" className="text-xs">Team Average</Badge>
-                  </div>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    Quick Insights
+                  </CardTitle>
+                  <span className="text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer">
+                    View All <ArrowUpRight className="h-3 w-3" />
+                  </span>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <LineChart data={[
-                      { day: "Mar 17", score: 74 }, { day: "Mar 18", score: 78 }, { day: "Mar 19", score: 76 },
-                      { day: "Mar 20", score: 81 }, { day: "Mar 21", score: 83 }, { day: "Mar 22", score: 42 },
-                      { day: "Mar 23", score: 38 }, { day: "Mar 24", score: 80 }, { day: "Mar 25", score: 84 },
-                      { day: "Mar 26", score: 82 }, { day: "Mar 27", score: 86 }, { day: "Mar 28", score: 45 },
-                      { day: "Mar 29", score: 40 }, { day: "Mar 30", score: 85 },
-                    ]}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
-                      <XAxis dataKey="day" tick={{ fontSize: 10 }} />
-                      <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
-                      <RechartsTooltip formatter={(value) => [`${value}%`, "Productivity"]} />
-                      <Line type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3, fill: "#3b82f6" }} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="h-2 w-2 rounded-full bg-blue-500" />
+                      <span>Productivity averaging <span className="font-medium">78%</span> this week</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="h-2 w-2 rounded-full bg-green-500" />
+                      <span>No anomalies detected — all clear</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                      <span>Engineering team engagement: <span className="font-medium">88%</span></span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Top Apps Chart */}
+              <Card>
+                <CardHeader><CardTitle className="text-lg">Top Apps Today</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {[
+                      { app: "VS Code", count: 142, pct: 100 },
+                      { app: "Chrome", count: 98, pct: 69 },
+                      { app: "Slack", count: 76, pct: 54 },
+                      { app: "Figma", count: 45, pct: 32 },
+                      { app: "Excel", count: 31, pct: 22 },
+                    ].map((a) => (
+                      <div key={a.app} className="flex items-center gap-3">
+                        <span className="text-sm font-medium w-20">{a.app}</span>
+                        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                          <div className="h-full rounded-full bg-blue-500" style={{ width: `${a.pct}%` }} />
+                        </div>
+                        <span className="text-xs text-muted-foreground w-12 text-right">{a.count}</span>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             </div>
