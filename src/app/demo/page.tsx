@@ -779,7 +779,7 @@ function DemoPage() {
       <main className="flex-1 lg:pl-64">
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3 text-center text-sm">
           Live demo with simulated data.{" "}
-          <Link href="/register" className="underline font-semibold">Sign up free</Link> to monitor your own devices.
+          <Link href="/contact" className="underline font-semibold">Contact us</Link> to monitor your own devices.
         </div>
         <div className="h-16 border-b flex items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3 lg:hidden">
