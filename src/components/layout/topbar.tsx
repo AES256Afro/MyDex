@@ -73,6 +73,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   settings: Settings,
   "mfa-security": ShieldCheck,
   "sso-providers": KeyRound,
+  "scim-provisioning": Users,
   "module-access": Blocks,
   "software-inventory": Package,
   "compliance": ShieldCheck,

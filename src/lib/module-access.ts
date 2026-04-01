@@ -233,6 +233,15 @@ export const MODULE_REGISTRY: ModuleConfig[] = [
     category: "admin",
   },
   {
+    id: "scim-provisioning",
+    label: "SCIM Provisioning",
+    href: "/settings/scim",
+    description: "Automate user provisioning and deprovisioning from your identity provider",
+    minRole: "ADMIN",
+    configurable: false,
+    category: "admin",
+  },
+  {
     id: "module-access",
     label: "Module Access",
     href: "/settings/modules",
