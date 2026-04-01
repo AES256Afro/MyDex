@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
 import crypto from "crypto";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY || "");
@@ -9,6 +10,16 @@ function getResend() {
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit by IP — 3 requests per hour
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rl = checkRateLimit(`forgot-password:${ip}`, RATE_LIMITS.passwordReset);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
+      );
+    }
+
     const { email } = await req.json();
 
     if (!email || typeof email !== "string") {

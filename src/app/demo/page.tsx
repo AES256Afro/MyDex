@@ -27,7 +27,7 @@ import {
   Thermometer, WifiOff, PrinterIcon, FolderCog, FileCheck,
   LifeBuoy, Sparkles, BatteryCharging, Volume2, Bluetooth, MousePointer,
   Keyboard as KeyboardIcon, Info, ArrowUpRight, ArrowDownRight,
-  AlertCircle, Loader2, Megaphone, User, GitBranch, Plug,
+  AlertCircle, Loader2, Megaphone, User, GitBranch, Plug, Menu,
 } from "lucide-react";
 import {
   PieChart as RechartsPieChart, Pie, Cell, Tooltip as RechartsTooltip,
@@ -684,6 +684,7 @@ function DemoPage() {
   const [expandedPolicy, setExpandedPolicy] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
   const [complianceFramework, setComplianceFramework] = useState<"soc2" | "cis" | "iso27001" | "gdpr">("soc2");
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const { theme, setTheme } = useTheme();
 
   const onlineCount = mockDevices.filter((d) => d.status === "ONLINE").length;
@@ -776,6 +777,47 @@ function DemoPage() {
         </div>
       </aside>
 
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setMobileSidebarOpen(false)} />
+          <aside className="fixed inset-y-0 left-0 w-72 bg-sidebar border-r shadow-xl flex flex-col overflow-y-auto">
+            <div className="flex h-16 items-center justify-between border-b px-6">
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold text-primary">MyDex</span>
+                <Badge className="bg-blue-100 text-blue-800 text-[10px]">DEMO</Badge>
+              </div>
+              <button onClick={() => setMobileSidebarOpen(false)} className="p-1.5 rounded-md hover:bg-muted transition-colors" aria-label="Close menu">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+              {sectionGroups.map((group) => (
+                <Fragment key={`mobile-${group.category || "core"}`}>
+                  {group.category && (
+                    <div className="px-3 pt-4 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+                      {group.category}
+                    </div>
+                  )}
+                  {group.items.map((s) => (
+                    <button key={s.id} onClick={() => { setActiveSection(s.id); setMobileSidebarOpen(false); }}
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors w-full text-left touch-manipulation ${
+                        activeSection === s.id ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                      }`}
+                    >
+                      <s.icon className="h-4 w-4" /> {s.label}
+                    </button>
+                  ))}
+                </Fragment>
+              ))}
+            </nav>
+            <div className="p-4 border-t">
+              <Link href="/contact"><Button className="w-full">Contact Us</Button></Link>
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* Main */}
       <main className="flex-1 lg:pl-64">
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3 text-center text-sm">
@@ -784,6 +826,9 @@ function DemoPage() {
         </div>
         <div className="h-16 border-b flex items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3 lg:hidden">
+            <button onClick={() => setMobileSidebarOpen(true)} className="p-1.5 rounded-md hover:bg-muted transition-colors" aria-label="Open menu">
+              <Menu className="h-5 w-5" />
+            </button>
             <span className="text-lg font-bold text-primary">MyDex</span>
             <Badge className="bg-blue-100 text-blue-800 text-[10px]">DEMO</Badge>
           </div>
@@ -1657,7 +1702,7 @@ function DemoPage() {
                 </div>
 
                 {/* Kanban columns */}
-                <div className="grid grid-cols-5 gap-3" style={{ minHeight: 500 }}>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 overflow-x-auto" style={{ minHeight: 500 }}>
                   {columns.map((col) => (
                     <div key={col.key} className={`rounded-xl border-t-4 ${col.color} bg-muted/30 p-2 space-y-2`}>
                       <div className="flex items-center justify-between px-1 py-1">
