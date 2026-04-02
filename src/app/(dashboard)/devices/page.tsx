@@ -159,7 +159,7 @@ export default function DevicesPage() {
       const res = await fetch("/api/v1/agents/commands", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deviceId, type: "RUN_SCRIPT", payload: { script, name: label } }),
+        body: JSON.stringify({ deviceId, commandType: "RUN_SCRIPT", command: script, description: label }),
       });
       if (res.ok) {
         const cmd = await res.json();
@@ -1164,8 +1164,18 @@ export default function DevicesPage() {
                                         <Badge variant="outline" className="text-[9px] font-mono">{r.check.control}</Badge>
                                         <span className="text-sm font-medium">{r.title}</span>
                                       </div>
-                                      <Button size="sm" variant="outline" className="text-[11px] h-7">
-                                        <Play className="h-3 w-3 mr-1" />Run
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-[11px] h-7"
+                                        disabled={!!runningFix}
+                                        onClick={(e) => { e.stopPropagation(); executeRemediation(device.id, r.title, r.script); }}
+                                      >
+                                        {runningFix?.startsWith(device.id) ? (
+                                          <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Running...</>
+                                        ) : (
+                                          <><Play className="h-3 w-3 mr-1" />Run</>
+                                        )}
                                       </Button>
                                     </div>
                                     <div className="bg-gray-950 text-green-400 p-2 font-mono text-[10px] overflow-x-auto">

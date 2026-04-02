@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         user: { select: { id: true, name: true, email: true } },
-        _count: { select: { commands: true } },
+        _count: { select: { commands: true, diagnostics: true } },
         mdmDevices: {
           select: {
             id: true,
