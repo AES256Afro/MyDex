@@ -32,7 +32,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://api.github.com https://login.microsoftonline.com https://*.okta.com https://challenges.cloudflare.com",
+              "connect-src 'self' https://api.github.com https://login.microsoftonline.com https://*.okta.com https://challenges.cloudflare.com https://*.turnstile.com",
               "frame-src 'self' https://challenges.cloudflare.com",
               "frame-ancestors 'none'",
               "base-uri 'self'",
