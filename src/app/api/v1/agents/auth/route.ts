@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       token,
-      expiresIn: 3600,
+      expiresIn: 604800,
       deviceId,
       organizationId,
       policyVersion: latestPolicy?.version ?? null,
