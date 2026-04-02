@@ -17,6 +17,45 @@ const scanSchema = z.object({
   })).min(1).max(1000),
 });
 
+/** Compare two version strings. Returns -1 if a < b, 0 if equal, 1 if a > b. */
+function compareVersions(a: string, b: string): number {
+  const pa = a.replace(/[^0-9.]/g, "").split(".").map(Number);
+  const pb = b.replace(/[^0-9.]/g, "").split(".").map(Number);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const na = pa[i] || 0;
+    const nb = pb[i] || 0;
+    if (na < nb) return -1;
+    if (na > nb) return 1;
+  }
+  return 0;
+}
+
+/** Check if an installed version is vulnerable given the CVE's fixedVersion and affectedVersions. */
+function isVersionVulnerable(installedVersion: string, fixedVersion: string | null, affectedVersions: string | null): boolean {
+  // If there's a fixed version and the installed version is >= it, not vulnerable
+  if (fixedVersion) {
+    const cleaned = fixedVersion.replace(/^[<>=\s]+/, "").trim();
+    if (cleaned && compareVersions(installedVersion, cleaned) >= 0) return false;
+  }
+  // If there's an affected version range, try to parse it
+  if (affectedVersions) {
+    const lower = affectedVersions.toLowerCase();
+    // "< X.Y.Z" or "<= X.Y.Z" — vulnerable if installed is below that
+    const ltMatch = lower.match(/^[<]=?\s*([\d.]+)/);
+    if (ltMatch) {
+      const isLte = lower.startsWith("<=");
+      const cmp = compareVersions(installedVersion, ltMatch[1]);
+      return isLte ? cmp <= 0 : cmp < 0;
+    }
+    // "all versions before X.Y.Z" pattern
+    const beforeMatch = lower.match(/before\s+([\d.]+)/);
+    if (beforeMatch) return compareVersions(installedVersion, beforeMatch[1]) < 0;
+  }
+  // No version info to compare — assume vulnerable (name matched)
+  return true;
+}
+
 export async function POST(request: NextRequest) {
   // Accept both user sessions and agent auth
   const session = await auth();
@@ -41,21 +80,35 @@ export async function POST(request: NextRequest) {
       where: { organizationId: orgId, status: "OPEN" },
     });
 
-    // Match installed software against known CVEs
+    // Match installed software against known CVEs (name + version comparison)
     const matchedCves: Array<{ software: string; version: string; cveId: string; cveEntryId: string; severity: string }> = [];
+    const patchedCveIds: string[] = [];
 
     for (const sw of software) {
       for (const cve of knownCves) {
         if (cve.affectedSoftware.toLowerCase() === sw.name.toLowerCase()) {
-          matchedCves.push({
-            software: sw.name,
-            version: sw.version,
-            cveId: cve.cveId,
-            cveEntryId: cve.id,
-            severity: cve.severity,
-          });
+          if (isVersionVulnerable(sw.version, cve.fixedVersion, cve.affectedVersions)) {
+            matchedCves.push({
+              software: sw.name,
+              version: sw.version,
+              cveId: cve.cveId,
+              cveEntryId: cve.id,
+              severity: cve.severity,
+            });
+          } else {
+            // Software is installed but version is patched — auto-resolve
+            patchedCveIds.push(cve.id);
+          }
         }
       }
+    }
+
+    // Auto-mark CVEs as PATCHED when the installed version is >= fixedVersion
+    if (patchedCveIds.length > 0) {
+      await prisma.cveEntry.updateMany({
+        where: { id: { in: patchedCveIds }, status: "OPEN" },
+        data: { status: "PATCHED", applicability: "NOT_APPLICABLE", resolvedAt: new Date() },
+      });
     }
 
     // Record scan results
