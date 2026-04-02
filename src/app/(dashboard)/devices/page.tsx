@@ -141,7 +141,6 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function DevicesPage() {
   const { authorized } = useRequireRole("ADMIN");
-  if (!authorized) return null;
 
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);

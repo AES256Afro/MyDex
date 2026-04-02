@@ -142,7 +142,6 @@ const defaultRemediationGroups = [
 
 export default function ITSupportPage() {
   const { authorized } = useRequireRole("ADMIN");
-  if (!authorized) return null;
 
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<"queue" | "tickets" | "submit" | "selfservice" | "metrics" | "config">("tickets");

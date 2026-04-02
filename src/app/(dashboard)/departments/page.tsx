@@ -28,7 +28,6 @@ const COLORS = [
 
 export default function DepartmentsPage() {
   const { authorized } = useRequireRole("MANAGER");
-  if (!authorized) return null;
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);

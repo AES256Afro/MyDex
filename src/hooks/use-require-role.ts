@@ -16,9 +16,9 @@ const ROLE_LEVEL: Record<string, number> = {
  * Client-side role guard hook. Redirects to /dashboard if the user's role
  * is below the required minimum. Returns { session, authorized, loading }.
  *
- * Usage:
- *   const { authorized } = useRequireRole("ADMIN");
- *   if (!authorized) return null;
+ * The hook handles redirection via useEffect. If you want to hide UI while
+ * the redirect is pending, place `if (!authorized) return null;` AFTER all
+ * other hooks — never before useState/useEffect calls.
  */
 export function useRequireRole(minRole: Role) {
   const { data: session, status } = useSession();

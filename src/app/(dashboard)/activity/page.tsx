@@ -236,7 +236,6 @@ const FILE_ACTION_STYLES: Record<string, { bg: string; text: string; label: stri
 
 export default function ActivityPage() {
   const { authorized } = useRequireRole("MANAGER");
-  if (!authorized) return null;
 
   // State
   const [employees, setEmployees] = useState<Employee[]>([]);

@@ -158,7 +158,6 @@ function saveCustomRemediations(items: Soc2Remedy[]) {
 
 export default function CompliancePage() {
   const { authorized } = useRequireRole("MANAGER");
-  if (!authorized) return null;
 
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [loading, setLoading] = useState(true);

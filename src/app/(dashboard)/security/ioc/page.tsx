@@ -60,7 +60,6 @@ function truncateHash(hash: string, maxLen = 16) {
 
 export default function IocPage() {
   const { authorized } = useRequireRole("ADMIN");
-  if (!authorized) return null;
 
   const [entries, setEntries] = useState<IocEntry[]>([]);
   const [loading, setLoading] = useState(true);

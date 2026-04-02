@@ -92,7 +92,6 @@ const reportTypeConfig: Record<ReportType, { label: string; icon: typeof BarChar
 
 export default function ReportsPage() {
   const { authorized } = useRequireRole("MANAGER");
-  if (!authorized) return null;
 
   const { data: session } = useSession();
 

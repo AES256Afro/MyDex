@@ -171,7 +171,6 @@ const CVE_PATTERN = /^CVE-\d{4}-\d{4,}$/;
 
 export default function CvePage() {
   const { authorized } = useRequireRole("ADMIN");
-  if (!authorized) return null;
 
   const [entries, setEntries] = useState<CveEntry[]>([]);
   const [loading, setLoading] = useState(true);

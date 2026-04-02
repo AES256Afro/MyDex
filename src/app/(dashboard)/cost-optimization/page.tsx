@@ -39,7 +39,6 @@ const LICENSE_CATEGORIES = ["productivity", "security", "development", "communic
 
 export default function CostOptimizationPage() {
   const { authorized } = useRequireRole("ADMIN");
-  if (!authorized) return null;
 
   const [licenses, setLicenses] = useState<License[]>([]);
   const [budgetEntries, setBudgetEntries] = useState<BudgetEntry[]>([]);
