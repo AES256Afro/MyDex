@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { useRequireRole } from "@/hooks/use-require-role";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,7 @@ const PRESET_COLORS = [
 ];
 
 export default function BrandingPage() {
+  const { authorized } = useRequireRole("ADMIN");
   const { data: session } = useSession();
   const [companyName, setCompanyName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
@@ -166,6 +168,8 @@ export default function BrandingPage() {
       setSaving(false);
     }
   };
+
+  if (!authorized) return null;
 
   const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
 

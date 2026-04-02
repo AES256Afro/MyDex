@@ -1,5 +1,6 @@
 "use client";
 
+import { useRequireRole } from "@/hooks/use-require-role";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -156,6 +157,9 @@ function saveCustomRemediations(items: Soc2Remedy[]) {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function CompliancePage() {
+  const { authorized } = useRequireRole("MANAGER");
+  if (!authorized) return null;
+
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [soc2DeviceFilter, setSoc2DeviceFilter] = useState<string | null>(null);

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useRequireRole } from "@/hooks/use-require-role";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,6 +98,7 @@ const SYNC_INTERVALS = [
 ];
 
 export default function MdmSettingsPage() {
+  const { authorized } = useRequireRole("ADMIN");
   const { data: session } = useSession();
   const [providers, setProviders] = useState<MdmProvider[]>([]);
   const [loading, setLoading] = useState(true);
@@ -263,6 +265,8 @@ export default function MdmSettingsPage() {
       setSyncing(null);
     }
   }
+
+  if (!authorized) return null;
 
   const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
 

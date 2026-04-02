@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRequireRole } from "@/hooks/use-require-role";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import {
@@ -81,6 +82,7 @@ interface ModuleOverride {
 }
 
 export default function ModuleAccessPage() {
+  const { authorized } = useRequireRole("ADMIN");
   const [overrides, setOverrides] = useState<Record<string, ModuleOverride>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -172,6 +174,8 @@ export default function ModuleAccessPage() {
     label: CATEGORY_LABELS[cat],
     modules: MODULE_REGISTRY.filter((m) => m.category === cat),
   }));
+
+  if (!authorized) return null;
 
   if (loading) {
     return (

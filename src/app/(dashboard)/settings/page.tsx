@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useRequireRole } from "@/hooks/use-require-role";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -50,8 +51,8 @@ interface OrgSettings {
 }
 
 export default function SettingsPage() {
+  const { authorized } = useRequireRole("ADMIN");
   const { data: session } = useSession();
-
   const [orgName, setOrgName] = useState("");
   const [timezone, setTimezone] = useState("UTC");
   const [workHoursStart, setWorkHoursStart] = useState("09:00");
@@ -223,6 +224,7 @@ export default function SettingsPage() {
     e.target.value = "";
   }
 
+  if (!authorized) return null;
   if (!session) return null;
 
   if (loading) {

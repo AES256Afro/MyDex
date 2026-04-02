@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRequireRole } from "@/hooks/use-require-role";
 import {
   Card,
   CardContent,
@@ -213,6 +214,7 @@ const TEMPLATES: WorkflowTemplate[] = [
 // ── Component ──
 
 export default function WorkflowsPage() {
+  const { authorized } = useRequireRole("ADMIN");
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -390,6 +392,8 @@ export default function WorkflowsPage() {
 
   const triggerLabel = (t: string) => TRIGGER_OPTIONS.find((o) => o.value === t)?.label || t;
   const actionLabel = (t: string) => ACTION_OPTIONS.find((o) => o.value === t)?.label || t;
+
+  if (!authorized) return null;
 
   if (loading) {
     return (

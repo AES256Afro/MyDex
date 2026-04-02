@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRequireRole } from "@/hooks/use-require-role";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +56,7 @@ function getCategoryBadge(category: string) {
 }
 
 export default function DomainCategoriesPage() {
+  const { authorized } = useRequireRole("ADMIN");
   const [categories, setCategories] = useState<DomainCategoryItem[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -217,6 +219,8 @@ export default function DomainCategoriesPage() {
         (c.label && c.label.toLowerCase().includes(q))
     );
   }, [categories, search]);
+
+  if (!authorized) return null;
 
   if (loading) {
     return (

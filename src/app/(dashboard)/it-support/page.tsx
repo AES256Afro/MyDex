@@ -1,5 +1,6 @@
 "use client";
 
+import { useRequireRole } from "@/hooks/use-require-role";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -140,6 +141,9 @@ const defaultRemediationGroups = [
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function ITSupportPage() {
+  const { authorized } = useRequireRole("ADMIN");
+  if (!authorized) return null;
+
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<"queue" | "tickets" | "submit" | "selfservice" | "metrics" | "config">("tickets");
   const [selfServiceFilter, setSelfServiceFilter] = useState<"all" | "performance" | "network" | "display" | "apps" | "security" | "peripherals">("all");
