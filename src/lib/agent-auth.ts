@@ -136,7 +136,7 @@ export async function generateAgentJwt(
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("1h")
+    .setExpirationTime("7d")
     .setSubject(deviceId)
     .sign(secret);
 

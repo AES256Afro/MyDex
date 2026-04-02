@@ -245,6 +245,7 @@ async function connect() {
   }
 
   apiClient = new ApiClient(serverUrl, sessionToken);
+  apiClient._store = store; // Enable proactive session refresh
 
   // Wire up event listeners
   let hasShownConnected = false;

@@ -53,6 +53,10 @@ class ApiClient extends EventEmitter {
     this.maxDelay = 300000; // 5 minutes cap
     this.reconnectTimer = null;
     this.deviceId = null; // Set after registration
+    this.lastAuthTime = Date.now(); // Track when session was last validated
+    this.sessionRefreshInterval = 12 * 60 * 60 * 1000; // Refresh session every 12 hours
+    this._refreshing = false; // Prevent concurrent refresh attempts
+    this._store = null; // Set by startAutoReconnect or refreshSession
   }
 
   getRetryDelay() {
@@ -63,7 +67,41 @@ class ApiClient extends EventEmitter {
     return Math.round(delay + jitter);
   }
 
+  /**
+   * Proactively refresh the session if it's getting stale.
+   * Prevents "Session expired" by re-logging in before the token dies.
+   */
+  async refreshSessionIfNeeded(store) {
+    if (this._refreshing) return;
+    const storeRef = store || this._store;
+    if (!storeRef) return;
+
+    const elapsed = Date.now() - this.lastAuthTime;
+    if (elapsed < this.sessionRefreshInterval) return;
+
+    this._refreshing = true;
+    try {
+      const email = storeRef.get("email");
+      const password = storeRef.get("encryptedPassword");
+      if (email && password) {
+        const result = await this.login(email, password);
+        if (result.token) {
+          storeRef.set("sessionToken", result.token);
+          this.lastAuthTime = Date.now();
+          console.log("Session proactively refreshed");
+        }
+      }
+    } catch {
+      // Non-fatal — will retry on next request
+    } finally {
+      this._refreshing = false;
+    }
+  }
+
   async request(path, options = {}) {
+    // Proactively refresh session before it expires
+    await this.refreshSessionIfNeeded();
+
     const url = `${this.serverUrl}${path}`;
     const headers = {
       "Content-Type": "application/json",
@@ -79,6 +117,47 @@ class ApiClient extends EventEmitter {
       });
 
       if (res.status === 401) {
+        // Try inline re-login before giving up
+        const storeRef = this._store;
+        if (storeRef && !this._refreshing) {
+          this._refreshing = true;
+          try {
+            const email = storeRef.get("email");
+            const password = storeRef.get("encryptedPassword");
+            if (email && password) {
+              const result = await this.login(email, password);
+              if (result.token) {
+                storeRef.set("sessionToken", result.token);
+                this.lastAuthTime = Date.now();
+                console.log("Session refreshed after 401, retrying request...");
+                // Retry the original request with new token
+                const retryHeaders = {
+                  ...headers,
+                  Cookie: `authjs.session-token=${this.sessionToken}`,
+                };
+                const retryRes = await fetch(url, {
+                  ...options,
+                  headers: retryHeaders,
+                  signal: AbortSignal.timeout(30000),
+                });
+                if (retryRes.ok) {
+                  if (!this.connected) {
+                    this.connected = true;
+                    this.retryCount = 0;
+                    this.emit("connected");
+                  }
+                  this.connected = true;
+                  return retryRes.json();
+                }
+              }
+            }
+          } catch {
+            // Re-login failed
+          } finally {
+            this._refreshing = false;
+          }
+        }
+
         this.connected = false;
         this.emit("auth-expired");
         throw new Error("Session expired");
@@ -97,6 +176,7 @@ class ApiClient extends EventEmitter {
       }
       // Keep connected state fresh
       this.connected = true;
+      this.lastAuthTime = Date.now();
 
       return res.json();
     } catch (err) {
@@ -221,6 +301,7 @@ class ApiClient extends EventEmitter {
   // --- Auto-reconnect loop ---
 
   startAutoReconnect(store) {
+    this._store = store; // Store ref for proactive session refresh
     if (this.reconnecting) return;
     this.reconnecting = true;
 
