@@ -14,8 +14,9 @@
   },
   "dependencies": {
     "active-win": "^8.1.0",
+    "electron-store": "^8.2.0",
     "node-cron": "^3.0.3",
-    "electron-store": "^8.2.0"
+    "systeminformation": "^5.31.5"
   },
   "devDependencies": {
     "electron": "^33.0.0",
@@ -44,14 +45,23 @@
       "include": "installer.nsh"
     },
     "mac": {
-      "target": ["dmg", "pkg", "zip"],
+      "target": [
+        "dmg",
+        "pkg",
+        "zip"
+      ],
       "icon": "assets/icon.icns",
       "extendInfo": {
         "LSUIElement": true
       }
     },
     "linux": {
-      "target": ["AppImage", "deb", "rpm", "zip"],
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm",
+        "zip"
+      ],
       "icon": "assets/icon.png"
     }
   }
