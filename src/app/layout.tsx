@@ -102,7 +102,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="MyDex" />
-        {/* Auto-reload on stale chunks or missing CSS after new deployments */}
+        {/* Auto-reload on stale chunks after new deployments */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -112,7 +112,7 @@ export default function RootLayout({
                 function doReload() {
                   if (!reloaded) {
                     sessionStorage.setItem(key, '1');
-                    // Clear service worker caches and unregister to prevent stale HTML
+                    // Clear service worker caches to prevent stale HTML
                     if ('caches' in window) {
                       caches.keys().then(function(keys) {
                         keys.forEach(function(k) { caches.delete(k); });
@@ -123,7 +123,7 @@ export default function RootLayout({
                         regs.forEach(function(r) { r.unregister(); });
                       });
                     }
-                    // Cache-busting reload: append timestamp to force fresh HTML from server
+                    // Cache-busting reload
                     var url = window.location.href.split('?')[0].split('#')[0];
                     window.location.replace(url + '?_r=' + Date.now());
                   }
@@ -142,20 +142,8 @@ export default function RootLayout({
                 window.addEventListener('unhandledrejection', function(e) {
                   var r = e.reason;
                   if (!r) return;
-                  // Check error name, message, and toString for chunk error signatures
                   if (isChunkError(r.name) || isChunkError(r.message) || isChunkError(String(r))) doReload();
                 });
-                // Detect missing CSS: if no stylesheets loaded after 3s, page is unstyled
-                if (!reloaded) {
-                  setTimeout(function() {
-                    var styled = document.querySelectorAll('link[rel="stylesheet"]');
-                    var loaded = 0;
-                    styled.forEach(function(link) { if (link.sheet) loaded++; });
-                    if (styled.length > 0 && loaded === 0) doReload();
-                    var bg = getComputedStyle(document.body).backgroundColor;
-                    if (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') doReload();
-                  }, 3000);
-                }
                 if (reloaded) sessionStorage.removeItem(key);
               })();
             `,
