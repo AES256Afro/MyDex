@@ -112,6 +112,17 @@ export default function RootLayout({
                 function doReload() {
                   if (!reloaded) {
                     sessionStorage.setItem(key, '1');
+                    // Clear service worker caches and unregister to prevent stale HTML
+                    if ('caches' in window) {
+                      caches.keys().then(function(keys) {
+                        keys.forEach(function(k) { caches.delete(k); });
+                      });
+                    }
+                    if (navigator.serviceWorker) {
+                      navigator.serviceWorker.getRegistrations().then(function(regs) {
+                        regs.forEach(function(r) { r.unregister(); });
+                      });
+                    }
                     // Cache-busting reload: append timestamp to force fresh HTML from server
                     var url = window.location.href.split('?')[0].split('#')[0];
                     window.location.replace(url + '?_r=' + Date.now());
