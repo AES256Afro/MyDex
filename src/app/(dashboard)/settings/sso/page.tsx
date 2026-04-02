@@ -191,12 +191,14 @@ export default function SsoSettingsPage() {
   }
 
   async function toggleProvider(id: string, isActive: boolean) {
+    setError("");
     try {
-      await fetch("/api/v1/auth/sso", {
+      const res = await fetch("/api/v1/auth/sso", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, isActive: !isActive }),
       });
+      if (!res.ok) { setError("Failed to update provider"); return; }
       fetchProviders();
     } catch {
       setError("Failed to update provider");
@@ -207,8 +209,10 @@ export default function SsoSettingsPage() {
     if (!confirm("Are you sure you want to remove this SSO provider? Users who signed in via this provider will need to use password authentication.")) {
       return;
     }
+    setError("");
     try {
-      await fetch(`/api/v1/auth/sso?id=${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/v1/auth/sso?id=${id}`, { method: "DELETE" });
+      if (!res.ok) { setError("Failed to delete provider"); return; }
       fetchProviders();
     } catch {
       setError("Failed to delete provider");

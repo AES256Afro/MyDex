@@ -186,7 +186,10 @@ function ScimProvisioningSection() {
   const [showEvents, setShowEvents] = useState(false);
 
   useEffect(() => {
-    fetch("/api/v1/scim/tokens").then(r => r.json()).then(d => setTokens(d.tokens || [])).catch(() => {});
+    fetch("/api/v1/scim/tokens")
+      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+      .then(d => setTokens(d.tokens || []))
+      .catch(() => { toast.error("Failed to load SCIM tokens"); });
   }, []);
 
   async function generateToken(provider: "slack" | "teams") {
@@ -230,9 +233,14 @@ function ScimProvisioningSection() {
   async function loadEvents() {
     setShowEvents(!showEvents);
     if (!showEvents) {
-      const res = await fetch("/api/v1/scim/events");
-      const data = await res.json();
-      setEvents(data.events || []);
+      try {
+        const res = await fetch("/api/v1/scim/events");
+        if (!res.ok) { toast.error("Failed to load SCIM events"); return; }
+        const data = await res.json();
+        setEvents(data.events || []);
+      } catch {
+        toast.error("Failed to load SCIM events");
+      }
     }
   }
 
@@ -452,7 +460,10 @@ export default function IntegrationsPage() {
 
   useEffect(() => {
     fetch("/api/v1/integrations")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load integrations");
+        return r.json();
+      })
       .then((data) => {
         for (const i of data.integrations || []) {
           const d: IntegrationData = {
@@ -466,7 +477,9 @@ export default function IntegrationsPage() {
           if (i.provider === "teams") setTeams(d);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        toast.error("Failed to load integrations");
+      });
   }, []);
 
   async function save(provider: string, data: IntegrationData) {

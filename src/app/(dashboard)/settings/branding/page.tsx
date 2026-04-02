@@ -54,6 +54,7 @@ export default function BrandingPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
   const [fetchingFavicon, setFetchingFavicon] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -72,7 +73,7 @@ export default function BrandingPage() {
           setBrandingMode(settings.brandingMode || "replace");
           setFavicon(settings.favicon || "");
         }
-      } catch { /* ignore */ } finally {
+      } catch { setError("Failed to load branding settings"); } finally {
         setLoading(false);
       }
     }
@@ -141,6 +142,7 @@ export default function BrandingPage() {
   const handleSave = async () => {
     setSaving(true);
     setSaved(false);
+    setError(null);
     try {
       // Only include image URLs in the payload if they are external URLs (not base64 data).
       // Base64 data URLs are already saved by the upload API — re-sending them
@@ -163,8 +165,12 @@ export default function BrandingPage() {
       if (res.ok) {
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
+      } else {
+        setError("Failed to save branding settings");
       }
-    } catch { /* ignore */ } finally {
+    } catch {
+      setError("Failed to save branding settings");
+    } finally {
       setSaving(false);
     }
   };
@@ -201,6 +207,10 @@ export default function BrandingPage() {
         </h1>
         <p className="text-sm text-muted-foreground mt-1">Customize how MyDex appears to your organization.</p>
       </div>
+
+      {error && (
+        <p className="text-sm text-destructive">{error}</p>
+      )}
 
       {/* Live Preview */}
       <Card>

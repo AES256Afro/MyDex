@@ -117,6 +117,7 @@ export default function TeamManagementPage() {
 
   async function handleRoleChange(employeeId: string, newRole: string) {
     setUpdatingId(employeeId);
+    setError(null);
     try {
       const res = await fetch(`/api/v1/employees/${employeeId}`, {
         method: "PATCH",
@@ -129,7 +130,11 @@ export default function TeamManagementPage() {
             e.id === employeeId ? { ...e, role: newRole } : e
           )
         );
+      } else {
+        setError("Failed to update role");
       }
+    } catch {
+      setError("Failed to update role");
     } finally {
       setUpdatingId(null);
     }
@@ -139,6 +144,7 @@ export default function TeamManagementPage() {
     const newStatus =
       employee.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
     setUpdatingId(employee.id);
+    setError(null);
     try {
       const res = await fetch(`/api/v1/employees/${employee.id}`, {
         method: "PATCH",
@@ -151,7 +157,11 @@ export default function TeamManagementPage() {
             e.id === employee.id ? { ...e, status: newStatus } : e
           )
         );
+      } else {
+        setError("Failed to update member status");
       }
+    } catch {
+      setError("Failed to update member status");
     } finally {
       setUpdatingId(null);
     }

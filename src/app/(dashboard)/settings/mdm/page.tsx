@@ -110,6 +110,7 @@ export default function MdmSettingsPage() {
   const [syncResult, setSyncResult] = useState<{ devicesFound?: number; usersMatched?: number; devicesMatched?: number; autoAssigned?: number; error?: string } | null>(null);
   const [actionHistory, setActionHistory] = useState<MdmActionRecord[]>([]);
   const [actionsLoading, setActionsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Form fields
   const [name, setName] = useState("");
@@ -208,6 +209,7 @@ export default function MdmSettingsPage() {
   async function saveProvider() {
     if (!selectedType) return;
     setSaving(true);
+    setError(null);
     try {
       const res = await fetch("/api/v1/mdm/providers", {
         method: "POST",
@@ -228,25 +230,41 @@ export default function MdmSettingsPage() {
         await fetchProviders();
         setSelectedType(null);
         resetForm();
+      } else {
+        setError("Failed to save MDM provider");
       }
-    } catch { /* ignore */ } finally {
+    } catch {
+      setError("Failed to save MDM provider");
+    } finally {
       setSaving(false);
     }
   }
 
   async function toggleProvider(id: string, isActive: boolean) {
-    await fetch("/api/v1/mdm/providers", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ providerId: id, isActive }),
-    });
-    await fetchProviders();
+    setError(null);
+    try {
+      const res = await fetch("/api/v1/mdm/providers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ providerId: id, isActive }),
+      });
+      if (!res.ok) { setError("Failed to update provider status"); return; }
+      await fetchProviders();
+    } catch {
+      setError("Failed to update provider status");
+    }
   }
 
   async function deleteProvider(id: string) {
     if (!confirm("Remove this MDM provider? All synced device data will be deleted.")) return;
-    await fetch(`/api/v1/mdm/providers?providerId=${id}`, { method: "DELETE" });
-    await fetchProviders();
+    setError(null);
+    try {
+      const res = await fetch(`/api/v1/mdm/providers?providerId=${id}`, { method: "DELETE" });
+      if (!res.ok) { setError("Failed to delete MDM provider"); return; }
+      await fetchProviders();
+    } catch {
+      setError("Failed to delete MDM provider");
+    }
   }
 
   async function syncProvider(id: string) {
@@ -292,6 +310,10 @@ export default function MdmSettingsPage() {
           Connect your MDM provider to sync devices, auto-assign users, and manage endpoints from MyDex.
         </p>
       </div>
+
+      {error && (
+        <p className="text-sm text-destructive">{error}</p>
+      )}
 
       {/* Configured Providers */}
       {providers.length > 0 && (
