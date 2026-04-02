@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRequireRole } from "@/hooks/use-require-role";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -81,6 +82,7 @@ const PROVIDER_INFO: Record<string, { label: string; color: string }> = {
 // ── Page Component ─────────────────────────────────────────────────────
 
 export default function ScimSettingsPage() {
+  const { authorized } = useRequireRole("ADMIN");
   const [tokens, setTokens] = useState<ScimToken[]>([]);
   const [events, setEvents] = useState<ScimEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -162,6 +164,8 @@ export default function ScimSettingsPage() {
       setTimeout(() => setCopied(false), 2000);
     }
   }
+
+  if (!authorized) return null;
 
   return (
     <div className="space-y-6">

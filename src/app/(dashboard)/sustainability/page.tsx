@@ -1,5 +1,6 @@
 "use client";
 
+import { useRequireRole } from "@/hooks/use-require-role";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,9 @@ const METRIC_LABELS: Record<string, string> = {
 };
 
 export default function SustainabilityPage() {
+  const { authorized } = useRequireRole("ADMIN");
+  if (!authorized) return null;
+
   const [readings, setReadings] = useState<EnergyReading[]>([]);
   const [goals, setGoals] = useState<SustainabilityGoal[]>([]);
   const [loading, setLoading] = useState(true);

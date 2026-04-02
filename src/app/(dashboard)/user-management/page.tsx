@@ -1,5 +1,6 @@
 "use client";
 
+import { useRequireRole } from "@/hooks/use-require-role";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import {
@@ -113,6 +114,9 @@ function getInitials(name: string) {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function UserManagementPage() {
+  const { authorized } = useRequireRole("ADMIN");
+  if (!authorized) return null;
+
   const { data: session } = useSession();
 
   // Data

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRequireRole } from "@/hooks/use-require-role";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -104,6 +105,7 @@ const PROVIDER_INFO: Record<string, {
 };
 
 export default function SsoSettingsPage() {
+  const { authorized } = useRequireRole("ADMIN");
   const [providers, setProviders] = useState<SsoProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -216,6 +218,8 @@ export default function SsoSettingsPage() {
   const callbackUrl = typeof window !== "undefined"
     ? `${window.location.origin}/api/auth/callback`
     : "https://your-domain.com/api/auth/callback";
+
+  if (!authorized) return null;
 
   if (loading) {
     return (

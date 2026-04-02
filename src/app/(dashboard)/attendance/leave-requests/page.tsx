@@ -1,5 +1,6 @@
 "use client";
 
+import { useRequireRole } from "@/hooks/use-require-role";
 import { useEffect, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,9 @@ function statusBadgeVariant(status: string) {
 }
 
 export default function LeaveRequestsPage() {
+  const { authorized } = useRequireRole("MANAGER");
+  if (!authorized) return null;
+
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [loading, setLoading] = useState(true);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRequireRole } from "@/hooks/use-require-role";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -187,6 +188,7 @@ function categoryIcon(category: string) {
 }
 
 export default function AlertThresholdsPage() {
+  const { authorized } = useRequireRole("ADMIN");
   const [thresholds, setThresholds] = useState<AlertThreshold[]>(DEFAULT_THRESHOLDS);
   const [saved, setSaved] = useState(false);
 
@@ -207,6 +209,8 @@ export default function AlertThresholdsPage() {
   }
 
   const categories = ["security", "performance", "compliance", "availability"] as const;
+
+  if (!authorized) return null;
 
   return (
     <div className="space-y-6">

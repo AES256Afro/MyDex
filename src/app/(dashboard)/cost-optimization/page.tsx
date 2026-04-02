@@ -1,5 +1,6 @@
 "use client";
 
+import { useRequireRole } from "@/hooks/use-require-role";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,9 @@ const BUDGET_CATEGORIES = ["software", "hardware", "services", "personnel", "inf
 const LICENSE_CATEGORIES = ["productivity", "security", "development", "communication", "design", "analytics", "other"];
 
 export default function CostOptimizationPage() {
+  const { authorized } = useRequireRole("ADMIN");
+  if (!authorized) return null;
+
   const [licenses, setLicenses] = useState<License[]>([]);
   const [budgetEntries, setBudgetEntries] = useState<BudgetEntry[]>([]);
   const [loading, setLoading] = useState(true);

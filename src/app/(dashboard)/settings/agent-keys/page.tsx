@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useRequireRole } from "@/hooks/use-require-role";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -79,6 +80,7 @@ function formatDate(dateStr: string | null): string {
 }
 
 export default function AgentKeysPage() {
+  const { authorized } = useRequireRole("ADMIN");
   const { data: session } = useSession();
 
   const [keys, setKeys] = useState<AgentKey[]>([]);
@@ -207,6 +209,7 @@ export default function AgentKeysPage() {
   ).size;
   const expiringSoon = keys.filter((k) => isExpiringSoon(k)).length;
 
+  if (!authorized) return null;
   if (!session) return null;
 
   if (loading) {

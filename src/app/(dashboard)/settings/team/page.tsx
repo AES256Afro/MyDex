@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useRequireRole } from "@/hooks/use-require-role";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -42,6 +43,7 @@ function statusVariant(
 }
 
 export default function TeamManagementPage() {
+  const { authorized } = useRequireRole("ADMIN");
   const { data: session } = useSession();
 
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -155,6 +157,7 @@ export default function TeamManagementPage() {
     }
   }
 
+  if (!authorized) return null;
   if (!session) return null;
 
   return (

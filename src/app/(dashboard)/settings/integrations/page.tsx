@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRequireRole } from "@/hooks/use-require-role";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -435,6 +436,7 @@ function ScimProvisioningSection() {
 }
 
 export default function IntegrationsPage() {
+  const { authorized } = useRequireRole("ADMIN");
   const [slack, setSlack] = useState<IntegrationData>({
     provider: "slack", enabled: false, webhookUrl: "", channelName: "",
     settings: { security_alerts: true, device_offline: true, clock_summary: false, ticket_created: true, compliance_change: true },
@@ -499,6 +501,8 @@ export default function IntegrationsPage() {
     } catch { toast.error("Network error"); }
     finally { setTesting(false); }
   }
+
+  if (!authorized) return null;
 
   return (
     <div className="space-y-6">

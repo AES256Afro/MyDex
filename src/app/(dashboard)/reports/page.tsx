@@ -1,5 +1,6 @@
 "use client";
 
+import { useRequireRole } from "@/hooks/use-require-role";
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -90,6 +91,9 @@ const reportTypeConfig: Record<ReportType, { label: string; icon: typeof BarChar
 };
 
 export default function ReportsPage() {
+  const { authorized } = useRequireRole("MANAGER");
+  if (!authorized) return null;
+
   const { data: session } = useSession();
 
   const [reportType, setReportType] = useState<ReportType>("productivity");

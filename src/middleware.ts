@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { applySecurityHeaders } from "@/lib/security-headers";
+
+/**
+ * Auth-only middleware. Security headers are handled by next.config.ts headers()
+ * at the CDN level, avoiding per-request overhead in middleware.
+ */
 
 const publicPaths = [
   "/", "/login", "/register", "/forgot-password", "/reset-password", "/demo", "/licensing", "/contact",
@@ -13,19 +17,20 @@ const publicPaths = [
   "/api/v1/integrations/webhook", // Slack/Teams incoming webhooks
   "/api/v1/security/cve/scan", // Agent CVE scanning (uses agent JWT)
   "/api/v1/security/ioc/lookup", // Agent IOC lookups (uses agent JWT)
+  "/api/v1/agents/update-check", // Agent auto-update check
   "/mfa-verify", // MFA verification page
 ];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Public paths don't require session auth
   const isPublic = publicPaths.some(
     (path) => pathname === path || pathname.startsWith(path + "/")
   );
 
   if (isPublic) {
-    const response = NextResponse.next();
-    return applySecurityHeaders(response);
+    return NextResponse.next();
   }
 
   // Check for session token (set by next-auth)
@@ -39,8 +44,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const response = NextResponse.next();
-  return applySecurityHeaders(response);
+  return NextResponse.next();
 }
 
 export const config = {

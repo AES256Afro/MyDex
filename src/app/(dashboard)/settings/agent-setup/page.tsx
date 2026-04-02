@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useRequireRole } from "@/hooks/use-require-role";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -373,6 +374,7 @@ function qualityBg(score: number): string {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function AgentSetupPage() {
+  const { authorized } = useRequireRole("ADMIN");
   const { data: session } = useSession();
   const [devices, setDevices] = useState<AgentDevice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -645,6 +647,8 @@ services:
     privileged: true`;
 
   // ─── Render ─────────────────────────────────────────────────────────────
+
+  if (!authorized) return null;
 
   return (
     <div className="space-y-6">

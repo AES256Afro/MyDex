@@ -1,5 +1,6 @@
 "use client";
 
+import { useRequireRole } from "@/hooks/use-require-role";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -234,6 +235,9 @@ const FILE_ACTION_STYLES: Record<string, { bg: string; text: string; label: stri
 // ─── Main Page Component ─────────────────────────────────────────────────────
 
 export default function ActivityPage() {
+  const { authorized } = useRequireRole("MANAGER");
+  if (!authorized) return null;
+
   // State
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRequireRole } from "@/hooks/use-require-role";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -243,6 +244,7 @@ function slugify(text: string): string {
 }
 
 export default function ApiDocsPage() {
+  const { authorized } = useRequireRole("ADMIN");
   const [search, setSearch] = useState("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -266,6 +268,8 @@ export default function ApiDocsPage() {
   function toggleCategory(category: string) {
     setCollapsed((prev) => ({ ...prev, [category]: !prev[category] }));
   }
+
+  if (!authorized) return null;
 
   return (
     <div className="flex gap-6">

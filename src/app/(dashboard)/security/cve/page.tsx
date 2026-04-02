@@ -1,5 +1,6 @@
 "use client";
 
+import { useRequireRole } from "@/hooks/use-require-role";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -169,6 +170,9 @@ function applicabilityBadgeClass(a: CveApplicability): string {
 const CVE_PATTERN = /^CVE-\d{4}-\d{4,}$/;
 
 export default function CvePage() {
+  const { authorized } = useRequireRole("ADMIN");
+  if (!authorized) return null;
+
   const [entries, setEntries] = useState<CveEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

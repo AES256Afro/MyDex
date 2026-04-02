@@ -1,5 +1,6 @@
 "use client";
 
+import { useRequireRole } from "@/hooks/use-require-role";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -162,6 +163,9 @@ const PRESET_BLOCKLISTS: { name: string; category: string; domains: string[] }[]
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function HostGroupsPage() {
+  const { authorized } = useRequireRole("ADMIN");
+  if (!authorized) return null;
+
   const [hostGroups, setHostGroups] = useState<HostGroup[]>([]);
   const [blocklists, setBlocklists] = useState<Blocklist[]>([]);
   const [allDevices, setAllDevices] = useState<Device[]>([]);

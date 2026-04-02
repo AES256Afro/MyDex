@@ -1,5 +1,6 @@
 "use client";
 
+import { useRequireRole } from "@/hooks/use-require-role";
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -100,6 +101,9 @@ function getPlatformLabel(platform: string): string {
 // ─── Component ─────────────────────────────────────────────────────────────
 
 export default function SoftwareInventoryPage() {
+  const { authorized } = useRequireRole("ADMIN");
+  if (!authorized) return null;
+
   const [software, setSoftware] = useState<SoftwareEntry[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
