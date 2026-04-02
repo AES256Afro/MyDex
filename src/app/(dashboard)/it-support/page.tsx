@@ -1,8 +1,9 @@
 "use client";
 
 import { useRequireRole } from "@/hooks/use-require-role";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -178,6 +179,19 @@ export default function ITSupportPage() {
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Config tab: editing remediation group
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [editingGroupName, setEditingGroupName] = useState("");
+  const [editingGroupOs, setEditingGroupOs] = useState<"all" | "windows" | "macos">("all");
+
+  // Config tab: custom remediation builder state
+  const [customRemName, setCustomRemName] = useState("");
+  const [customRemOs, setCustomRemOs] = useState<"all" | "windows" | "macos">("all");
+  const [customRemRisk, setCustomRemRisk] = useState<"Low" | "Medium" | "High">("Low");
+  const [customRemHostGroups, setCustomRemHostGroups] = useState<Set<string>>(new Set());
+  const [customRemScript, setCustomRemScript] = useState("");
+  const [configSaving, setConfigSaving] = useState(false);
 
   // Fetch real devices from API
   useEffect(() => {
@@ -512,6 +526,208 @@ export default function ITSupportPage() {
     if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
   }, [ticketMessages]);
 
+  // Bug 1 fix: Compute real KPI values
+  const complianceScore = useMemo(() => {
+    if (orgMetrics) {
+      // Use org metrics if available: resolved / total as a compliance proxy
+      const total = orgMetrics.totalTickets;
+      if (total > 0) {
+        const rate = Math.round(((orgMetrics.resolvedTickets) / total) * 100);
+        return `${rate}%`;
+      }
+    }
+    // Fallback: device online rate as compliance proxy
+    if (devices.length > 0) {
+      const online = devices.filter(d => d.status === "ONLINE").length;
+      return `${Math.round((online / devices.length) * 100)}%`;
+    }
+    return "--";
+  }, [orgMetrics, devices]);
+
+  const avgResolution = useMemo(() => {
+    // Compute from resolved tickets that have resolvedAt
+    const resolved = tickets.filter(t => t.resolvedAt && t.createdAt);
+    if (resolved.length > 0) {
+      const totalMinutes = resolved.reduce((sum, t) => {
+        const created = new Date(t.createdAt).getTime();
+        const resolvedAt = new Date(t.resolvedAt!).getTime();
+        return sum + (resolvedAt - created) / 60000;
+      }, 0);
+      const avg = Math.round(totalMinutes / resolved.length);
+      return formatMinutes(avg);
+    }
+    // Fallback: use agent metrics avg
+    if (agentMetrics.length > 0) {
+      const withRes = agentMetrics.filter(a => a.avgResolutionMinutes !== null);
+      if (withRes.length > 0) {
+        const avg = Math.round(withRes.reduce((s, a) => s + (a.avgResolutionMinutes || 0), 0) / withRes.length);
+        return formatMinutes(avg);
+      }
+    }
+    return "--";
+  }, [tickets, agentMetrics]);
+
+  // Bug 5 fix: Persist config changes to localStorage (should be moved to API when settings schema is extended)
+  const persistConfig = useCallback(async (key: string, data: unknown) => {
+    try {
+      // Store in localStorage as interim persistence
+      localStorage.setItem(`it-support-config:${key}`, JSON.stringify(data));
+      toast.success("Configuration saved");
+    } catch {
+      toast.error("Failed to save configuration");
+    }
+  }, []);
+
+  // Load persisted config on mount
+  useEffect(() => {
+    try {
+      const savedReasons = localStorage.getItem("it-support-config:stockReasons");
+      if (savedReasons) setStockReasons(JSON.parse(savedReasons));
+      const savedGroups = localStorage.getItem("it-support-config:remediationGroups");
+      if (savedGroups) setRemediationGroups(JSON.parse(savedGroups));
+    } catch { /* ignore corrupted localStorage */ }
+  }, []);
+
+  // Bug 5 fix: wrapper to update stock reasons with persistence
+  const updateStockReasons = useCallback((updater: (prev: typeof defaultStockReasons) => typeof defaultStockReasons) => {
+    setStockReasons(prev => {
+      const next = updater(prev);
+      persistConfig("stockReasons", next);
+      return next;
+    });
+  }, [persistConfig]);
+
+  // Bug 5 fix: wrapper to update remediation groups with persistence
+  const updateRemediationGroups = useCallback((updater: (prev: typeof defaultRemediationGroups) => typeof defaultRemediationGroups) => {
+    setRemediationGroups(prev => {
+      const next = updater(prev);
+      persistConfig("remediationGroups", next);
+      return next;
+    });
+  }, [persistConfig]);
+
+  // Bug 2 fix: Create Group handler
+  const handleCreateGroup = useCallback(() => {
+    const name = prompt("Enter new remediation group name:");
+    if (!name?.trim()) return;
+    const newGroup = {
+      id: `rg${Date.now()}`,
+      name: name.trim(),
+      os: "all" as const,
+      enabled: true,
+      remediations: [] as string[],
+      hostGroups: ["All Devices"],
+    };
+    updateRemediationGroups(prev => [...prev, newGroup]);
+    toast.success(`Group "${name.trim()}" created`);
+  }, [updateRemediationGroups]);
+
+  // Bug 3 fix: Edit Group handler
+  const handleEditGroup = useCallback((groupId: string) => {
+    const group = remediationGroups.find(g => g.id === groupId);
+    if (!group) return;
+    setEditingGroupId(groupId);
+    setEditingGroupName(group.name);
+    setEditingGroupOs(group.os as "all" | "windows" | "macos");
+  }, [remediationGroups]);
+
+  const handleSaveGroupEdit = useCallback(() => {
+    if (!editingGroupId || !editingGroupName.trim()) return;
+    updateRemediationGroups(prev => prev.map(g =>
+      g.id === editingGroupId ? { ...g, name: editingGroupName.trim(), os: editingGroupOs } : g
+    ));
+    setEditingGroupId(null);
+    toast.success("Group updated");
+  }, [editingGroupId, editingGroupName, editingGroupOs, updateRemediationGroups]);
+
+  // Bug 4 fix: Save custom remediation handler
+  const handleSaveRemediation = useCallback(async () => {
+    if (!customRemName.trim()) {
+      toast.error("Please enter a remediation name");
+      return;
+    }
+    if (!customRemScript.trim()) {
+      toast.error("Please enter a remediation script");
+      return;
+    }
+    setConfigSaving(true);
+    try {
+      // Try POST to API first
+      const res = await fetch("/api/v1/remediation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: customRemName.trim(),
+          os: customRemOs,
+          riskLevel: customRemRisk,
+          hostGroups: Array.from(customRemHostGroups),
+          script: customRemScript.trim(),
+        }),
+      });
+      if (res.ok) {
+        toast.success("Remediation saved to server");
+      } else {
+        // Fallback: save to localStorage
+        const existing = JSON.parse(localStorage.getItem("it-support-config:customRemediations") || "[]");
+        existing.push({
+          id: `cr${Date.now()}`,
+          name: customRemName.trim(),
+          os: customRemOs,
+          riskLevel: customRemRisk,
+          hostGroups: Array.from(customRemHostGroups),
+          script: customRemScript.trim(),
+          createdAt: new Date().toISOString(),
+        });
+        localStorage.setItem("it-support-config:customRemediations", JSON.stringify(existing));
+        toast.success("Remediation saved locally");
+      }
+      // Reset form
+      setCustomRemName("");
+      setCustomRemOs("all");
+      setCustomRemRisk("Low");
+      setCustomRemHostGroups(new Set());
+      setCustomRemScript("");
+    } catch {
+      // Fallback: save to localStorage
+      const existing = JSON.parse(localStorage.getItem("it-support-config:customRemediations") || "[]");
+      existing.push({
+        id: `cr${Date.now()}`,
+        name: customRemName.trim(),
+        os: customRemOs,
+        riskLevel: customRemRisk,
+        hostGroups: Array.from(customRemHostGroups),
+        script: customRemScript.trim(),
+        createdAt: new Date().toISOString(),
+      });
+      localStorage.setItem("it-support-config:customRemediations", JSON.stringify(existing));
+      toast.success("Remediation saved locally (API unavailable)");
+      setCustomRemName("");
+      setCustomRemOs("all");
+      setCustomRemRisk("Low");
+      setCustomRemHostGroups(new Set());
+      setCustomRemScript("");
+    } finally {
+      setConfigSaving(false);
+    }
+  }, [customRemName, customRemOs, customRemRisk, customRemHostGroups, customRemScript]);
+
+  // Bug 4 fix: Test on device handler
+  const handleTestRemediation = useCallback(() => {
+    if (!customRemScript.trim()) {
+      toast.error("Please enter a script to test");
+      return;
+    }
+    if (!device) {
+      toast.error("Please select a device from the Remediation Queue tab first");
+      return;
+    }
+    executeRemediation(
+      `Test: ${customRemName || "Custom Script"}`,
+      customRemScript.trim(),
+      device
+    );
+  }, [customRemScript, customRemName, device, executeRemediation]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -530,8 +746,8 @@ export default function ITSupportPage() {
           { label: "Enrolled Devices", value: String(devices.length), icon: Monitor, color: "text-blue-600" },
           { label: "Online Now", value: String(devices.filter(d => d.status === "ONLINE").length), icon: Zap, color: "text-green-600" },
           { label: "Open Tickets", value: String(tickets.filter(t => ["OPEN", "IN_PROGRESS", "WAITING_ON_USER", "WAITING_ON_IT"].includes(t.status)).length), icon: ClipboardList, color: "text-amber-600" },
-          { label: "Compliance Score", value: "--", icon: ShieldCheck, color: "text-indigo-600" },
-          { label: "Avg Resolution", value: "--", icon: Timer, color: "text-purple-600" },
+          { label: "Compliance Score", value: complianceScore, icon: ShieldCheck, color: "text-indigo-600" },
+          { label: "Avg Resolution", value: avgResolution, icon: Timer, color: "text-purple-600" },
         ].map((stat) => (
           <Card key={stat.label}>
             <CardContent className="pt-4 pb-3 text-center">
@@ -1498,7 +1714,7 @@ export default function ITSupportPage() {
                 <div className="flex items-center gap-2 p-3 rounded-lg border border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-950/30">
                   <span className="text-lg">💬</span>
                   <Input value={newReasonLabel} onChange={(e) => setNewReasonLabel(e.target.value)} placeholder="Enter new reason label..." className="flex-1 h-8 text-sm" />
-                  <Button size="sm" onClick={() => { if (newReasonLabel.trim()) { setStockReasons([...stockReasons, { id: `sr${stockReasons.length + 1}`, label: newReasonLabel.trim(), category: "other", icon: "💬", enabled: true, common: false }]); setNewReasonLabel(""); setEditingNewReason(false); } }}>Save</Button>
+                  <Button size="sm" onClick={() => { if (newReasonLabel.trim()) { updateStockReasons(prev => [...prev, { id: `sr${Date.now()}`, label: newReasonLabel.trim(), category: "other", icon: "💬", enabled: true, common: false }]); setNewReasonLabel(""); setEditingNewReason(false); } }}>Save</Button>
                   <Button size="sm" variant="outline" onClick={() => { setEditingNewReason(false); setNewReasonLabel(""); }}>Cancel</Button>
                 </div>
               )}
@@ -1511,7 +1727,7 @@ export default function ITSupportPage() {
                       <div className="text-xs text-muted-foreground">Category: {reason.category}{reason.common ? " \u2022 Common" : ""}</div>
                     </div>
                   </div>
-                  <button onClick={() => setStockReasons(stockReasons.map(r => r.id === reason.id ? { ...r, enabled: !r.enabled } : r))}
+                  <button onClick={() => updateStockReasons(prev => prev.map(r => r.id === reason.id ? { ...r, enabled: !r.enabled } : r))}
                     className={`relative w-10 h-5 rounded-full transition-colors ${reason.enabled ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`}>
                     <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${reason.enabled ? "translate-x-5" : ""}`} />
                   </button>
@@ -1525,7 +1741,7 @@ export default function ITSupportPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2"><Server className="h-5 w-5 text-purple-500" /> Remediation Groups &amp; Host Group Assignment</CardTitle>
-                <Button size="sm" variant="outline"><UserPlus className="h-3.5 w-3.5 mr-1" />Create Group</Button>
+                <Button size="sm" variant="outline" onClick={handleCreateGroup}><UserPlus className="h-3.5 w-3.5 mr-1" />Create Group</Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -1534,7 +1750,7 @@ export default function ITSupportPage() {
                 <div key={group.id} className={`rounded-lg border overflow-hidden ${!group.enabled ? "opacity-60" : ""}`}>
                   <div className="flex items-center justify-between p-3 bg-muted/30">
                     <div className="flex items-center gap-3">
-                      <button onClick={() => setRemediationGroups(remediationGroups.map(g => g.id === group.id ? { ...g, enabled: !g.enabled } : g))}
+                      <button onClick={() => updateRemediationGroups(prev => prev.map(g => g.id === group.id ? { ...g, enabled: !g.enabled } : g))}
                         className={`relative w-10 h-5 rounded-full transition-colors ${group.enabled ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`}>
                         <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${group.enabled ? "translate-x-5" : ""}`} />
                       </button>
@@ -1548,12 +1764,32 @@ export default function ITSupportPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">{group.remediations.length} remediations</span>
-                      <Button size="sm" variant="outline" className="text-xs">Edit</Button>
+                      <Button size="sm" variant="outline" className="text-xs" onClick={() => handleEditGroup(group.id)}>Edit</Button>
                     </div>
                   </div>
+                  {editingGroupId === group.id ? (
+                    <div className="px-3 py-3 space-y-2 border-t bg-muted/20">
+                      <div className="flex items-center gap-2">
+                        <Input value={editingGroupName} onChange={(e) => setEditingGroupName(e.target.value)} placeholder="Group name" className="h-8 text-sm flex-1" />
+                        <div className="flex gap-1">
+                          {(["all", "windows", "macos"] as const).map(os => (
+                            <button key={os} onClick={() => setEditingGroupOs(os)}
+                              className={`px-2 py-1 rounded border text-xs transition-colors ${editingGroupOs === os ? "bg-primary text-primary-foreground" : "hover:bg-muted/30"}`}>
+                              {os === "all" ? "All" : os === "windows" ? "Win" : "Mac"}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setEditingGroupId(null)}>Cancel</Button>
+                        <Button size="sm" onClick={handleSaveGroupEdit}>Save</Button>
+                      </div>
+                    </div>
+                  ) : (
                   <div className="px-3 py-2 flex flex-wrap gap-1.5">
                     {group.remediations.map((r) => <Badge key={r} variant="outline" className="text-[10px]">{r}</Badge>)}
                   </div>
+                  )}
                 </div>
               ))}
             </CardContent>
@@ -1568,21 +1804,23 @@ export default function ITSupportPage() {
                 <div className="space-y-3">
                   <div>
                     <label className="text-xs font-medium mb-1 block">Remediation Name</label>
-                    <Input placeholder="e.g., Reset Docker Service" className="h-8 text-sm" />
+                    <Input value={customRemName} onChange={(e) => setCustomRemName(e.target.value)} placeholder="e.g., Reset Docker Service" className="h-8 text-sm" />
                   </div>
                   <div>
                     <label className="text-xs font-medium mb-1 block">Target OS</label>
                     <div className="flex gap-2">
-                      {["All", "Windows", "macOS"].map(os => (
-                        <button key={os} className="px-3 py-1 rounded border text-xs hover:bg-muted/30 transition-colors">{os === "All" ? "🌐" : os === "Windows" ? "🪟" : "🍎"} {os}</button>
+                      {([{ key: "all" as const, label: "All", icon: "🌐" }, { key: "windows" as const, label: "Windows", icon: "🪟" }, { key: "macos" as const, label: "macOS", icon: "🍎" }]).map(os => (
+                        <button key={os.key} onClick={() => setCustomRemOs(os.key)}
+                          className={`px-3 py-1 rounded border text-xs transition-colors ${customRemOs === os.key ? "bg-primary text-primary-foreground" : "hover:bg-muted/30"}`}>{os.icon} {os.label}</button>
                       ))}
                     </div>
                   </div>
                   <div>
                     <label className="text-xs font-medium mb-1 block">Risk Level</label>
                     <div className="flex gap-2">
-                      {[{ l: "Low", c: "bg-green-100 text-green-800" }, { l: "Medium", c: "bg-amber-100 text-amber-800" }, { l: "High", c: "bg-red-100 text-red-800" }].map(r => (
-                        <button key={r.l} className={`px-3 py-1 rounded text-xs ${r.c}`}>{r.l}</button>
+                      {([{ l: "Low" as const, c: "bg-green-100 text-green-800", a: "ring-2 ring-green-500" }, { l: "Medium" as const, c: "bg-amber-100 text-amber-800", a: "ring-2 ring-amber-500" }, { l: "High" as const, c: "bg-red-100 text-red-800", a: "ring-2 ring-red-500" }]).map(r => (
+                        <button key={r.l} onClick={() => setCustomRemRisk(r.l)}
+                          className={`px-3 py-1 rounded text-xs ${r.c} ${customRemRisk === r.l ? r.a : ""}`}>{r.l}</button>
                       ))}
                     </div>
                   </div>
@@ -1590,7 +1828,13 @@ export default function ITSupportPage() {
                     <label className="text-xs font-medium mb-1 block">Assign to Host Groups</label>
                     <div className="flex flex-wrap gap-1.5">
                       {["All Devices", "Windows Devices", "Mac Fleet", "Engineering", "Office Desktops"].map(hg => (
-                        <Badge key={hg} variant="outline" className="text-[10px] cursor-pointer hover:bg-muted/30">{hg}</Badge>
+                        <Badge key={hg} variant={customRemHostGroups.has(hg) ? "default" : "outline"}
+                          className={`text-[10px] cursor-pointer ${customRemHostGroups.has(hg) ? "" : "hover:bg-muted/30"}`}
+                          onClick={() => setCustomRemHostGroups(prev => {
+                            const next = new Set(prev);
+                            if (next.has(hg)) next.delete(hg); else next.add(hg);
+                            return next;
+                          })}>{hg}</Badge>
                       ))}
                     </div>
                   </div>
@@ -1598,13 +1842,16 @@ export default function ITSupportPage() {
                 <div>
                   <label className="text-xs font-medium mb-1 block">Script (PowerShell / Zsh)</label>
                   <div className="bg-gray-950 rounded-lg p-3 h-48">
-                    <textarea className="w-full h-full bg-transparent text-green-400 font-mono text-xs resize-none focus:outline-none" placeholder="# Enter your remediation script here..." />
+                    <textarea value={customRemScript} onChange={(e) => setCustomRemScript(e.target.value)}
+                      className="w-full h-full bg-transparent text-green-400 font-mono text-xs resize-none focus:outline-none" placeholder="# Enter your remediation script here..." />
                   </div>
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" size="sm">Test on Device</Button>
-                <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">Save Remediation</Button>
+                <Button variant="outline" size="sm" onClick={handleTestRemediation} disabled={!customRemScript.trim()}>Test on Device</Button>
+                <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={handleSaveRemediation} disabled={configSaving}>
+                  {configSaving && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}Save Remediation
+                </Button>
               </div>
             </CardContent>
           </Card>

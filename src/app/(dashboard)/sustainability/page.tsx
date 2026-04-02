@@ -67,6 +67,7 @@ export default function SustainabilityPage() {
   const [goalDeadline, setGoalDeadline] = useState("");
   const [goalNotes, setGoalNotes] = useState("");
   const [goalSaving, setGoalSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -76,7 +77,7 @@ export default function SustainabilityPage() {
       ]);
       if (enRes.ok) { const d = await enRes.json(); setReadings(d.readings); }
       if (goRes.ok) { const d = await goRes.json(); setGoals(d.goals); }
-    } catch { /* ignore */ } finally { setLoading(false); }
+    } catch { setError("Failed to load sustainability data"); } finally { setLoading(false); }
   }, [selectedYear]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -84,6 +85,7 @@ export default function SustainabilityPage() {
   const saveEnergy = async () => {
     if (!enKwh) return;
     setEnSaving(true);
+    setError(null);
     try {
       const res = await fetch("/api/v1/sustainability/energy", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -95,15 +97,18 @@ export default function SustainabilityPage() {
         }),
       });
       if (res.ok) { setEnKwh(""); setEnCost(""); setShowEnergyForm(false); fetchData(); }
-    } catch { /* ignore */ } finally { setEnSaving(false); }
+      else { setError("Failed to save energy reading"); }
+    } catch { setError("Failed to save energy reading"); } finally { setEnSaving(false); }
   };
 
   const deleteEnergy = async (id: string) => {
     if (!confirm("Delete this reading?")) return;
+    setError(null);
     try {
       const res = await fetch(`/api/v1/sustainability/energy?id=${id}`, { method: "DELETE" });
       if (res.ok) fetchData();
-    } catch { /* ignore */ }
+      else setError("Failed to delete energy reading");
+    } catch { setError("Failed to delete energy reading"); }
   };
 
   const resetGoalForm = () => {
@@ -122,6 +127,7 @@ export default function SustainabilityPage() {
   const saveGoal = async () => {
     if (!goalTarget) return;
     setGoalSaving(true);
+    setError(null);
     try {
       const payload = {
         metric: goalMetric, targetValue: parseFloat(goalTarget),
@@ -139,15 +145,18 @@ export default function SustainabilityPage() {
             body: JSON.stringify(payload),
           });
       if (res.ok) { resetGoalForm(); fetchData(); }
-    } catch { /* ignore */ } finally { setGoalSaving(false); }
+      else { setError("Failed to save goal"); }
+    } catch { setError("Failed to save goal"); } finally { setGoalSaving(false); }
   };
 
   const deleteGoal = async (id: string) => {
     if (!confirm("Delete this goal?")) return;
+    setError(null);
     try {
       const res = await fetch(`/api/v1/sustainability/goals?id=${id}`, { method: "DELETE" });
       if (res.ok) fetchData();
-    } catch { /* ignore */ }
+      else setError("Failed to delete goal");
+    } catch { setError("Failed to delete goal"); }
   };
 
   // Calculations
@@ -189,6 +198,10 @@ export default function SustainabilityPage() {
           {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
         </select>
       </div>
+
+      {error && (
+        <p className="text-sm text-destructive">{error}</p>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 border-b">

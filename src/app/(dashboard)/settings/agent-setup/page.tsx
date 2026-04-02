@@ -467,15 +467,20 @@ export default function AgentSetupPage() {
   const sendCommand = async (deviceId: string, commandType: string, description: string) => {
     setCommandLoading(deviceId + commandType);
     try {
-      await fetch("/api/v1/agents/commands", {
+      const res = await fetch("/api/v1/agents/commands", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ deviceId, commandType, description }),
       });
+      if (!res.ok) {
+        addLog(`Failed to send ${commandType} command: server returned ${res.status}`, "error");
+      } else {
+        addLog(`Command ${commandType} sent successfully`, "success");
+      }
       // Refresh devices after command
       setTimeout(fetchDevices, 2000);
     } catch (err) {
-      console.error("Failed to send command:", err);
+      addLog(`Failed to send ${commandType} command: ${err}`, "error");
     } finally {
       setCommandLoading(null);
     }
