@@ -8,11 +8,17 @@ const globalForPrisma = globalThis as unknown as {
 
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL || process.env.DIRECT_URL;
-  const pool = new pg.Pool({ connectionString });
+  const pool = new pg.Pool({
+    connectionString,
+    max: 3, // Low pool size for serverless — prevents "too many clients" on Supabase
+    idleTimeoutMillis: 20000, // Close idle connections after 20s
+    connectionTimeoutMillis: 10000, // Fail fast if can't connect in 10s
+  });
   const adapter = new PrismaPg(pool as any);
   return new PrismaClient({ adapter });
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Cache the singleton globally in ALL environments to prevent duplicate pools
+globalForPrisma.prisma = prisma;
