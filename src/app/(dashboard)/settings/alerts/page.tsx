@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRequireRole } from "@/hooks/use-require-role";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -190,17 +190,59 @@ function categoryIcon(category: string) {
 export default function AlertThresholdsPage() {
   const { authorized } = useRequireRole("ADMIN");
   const [thresholds, setThresholds] = useState<AlertThreshold[]>(DEFAULT_THRESHOLDS);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  async function fetchSettings() {
+    try {
+      const res = await fetch("/api/v1/settings");
+      if (res.ok) {
+        const data = await res.json();
+        const savedThresholds = data.organization?.settings?.alertThresholds;
+        if (savedThresholds && Array.isArray(savedThresholds) && savedThresholds.length > 0) {
+          setThresholds(savedThresholds);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load alert settings:", e);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   function updateThreshold(id: string, updates: Partial<AlertThreshold>) {
     setThresholds((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
     setSaved(false);
   }
 
-  function handleSave() {
-    // In production, this would POST to /api/v1/settings/alerts
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  async function handleSave() {
+    setSaving(true);
+    setError("");
+    setSaved(false);
+    try {
+      const res = await fetch("/api/v1/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: { alertThresholds: thresholds } }),
+      });
+      if (res.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      } else {
+        const data = await res.json();
+        setError(data.error || "Failed to save alert thresholds");
+      }
+    } catch {
+      setError("Failed to save alert thresholds");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleReset() {
@@ -225,11 +267,23 @@ export default function AlertThresholdsPage() {
           <Button variant="outline" size="sm" onClick={handleReset}>
             <RotateCcw className="h-4 w-4 mr-1" /> Reset Defaults
           </Button>
-          <Button size="sm" onClick={handleSave}>
-            <Save className="h-4 w-4 mr-1" /> {saved ? "Saved!" : "Save Changes"}
+          <Button size="sm" onClick={handleSave} disabled={saving}>
+            <Save className="h-4 w-4 mr-1" /> {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}
           </Button>
         </div>
       </div>
+
+      {error && (
+        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4" /> {error}
+        </div>
+      )}
+
+      {loading && (
+        <div className="flex items-center justify-center h-32">
+          <Clock className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-4">
