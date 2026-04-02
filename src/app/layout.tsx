@@ -102,21 +102,37 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="MyDex" />
-        {/* Auto-reload on chunk load failures after new deployments */}
+        {/* Auto-reload on stale chunks or missing CSS after new deployments */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                var reloaded = sessionStorage.getItem('chunk-reload');
-                function tryReload(msg) {
-                  if (msg && (msg.indexOf('ChunkLoadError') !== -1 || msg.indexOf('Loading chunk') !== -1) && !reloaded) {
-                    sessionStorage.setItem('chunk-reload', '1');
+                var key = 'chunk-reload';
+                var reloaded = sessionStorage.getItem(key);
+                function doReload() {
+                  if (!reloaded) {
+                    sessionStorage.setItem(key, '1');
                     window.location.reload();
                   }
                 }
+                function tryReload(msg) {
+                  if (msg && (msg.indexOf('ChunkLoadError') !== -1 || msg.indexOf('Loading chunk') !== -1)) doReload();
+                }
                 window.addEventListener('error', function(e) { tryReload(e.message); });
                 window.addEventListener('unhandledrejection', function(e) { tryReload(e.reason && e.reason.message); });
-                if (reloaded) sessionStorage.removeItem('chunk-reload');
+                // Detect missing CSS: if no stylesheets loaded after 3s, page is unstyled
+                if (!reloaded) {
+                  setTimeout(function() {
+                    var styled = document.querySelectorAll('link[rel="stylesheet"]');
+                    var loaded = 0;
+                    styled.forEach(function(link) { if (link.sheet) loaded++; });
+                    if (styled.length > 0 && loaded === 0) doReload();
+                    // Fallback: check if body has default unstyled background
+                    var bg = getComputedStyle(document.body).backgroundColor;
+                    if (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') doReload();
+                  }, 3000);
+                }
+                if (reloaded) sessionStorage.removeItem(key);
               })();
             `,
           }}
