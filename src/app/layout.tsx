@@ -102,6 +102,25 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="MyDex" />
+        {/* Auto-reload on chunk load failures after new deployments */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var reloaded = sessionStorage.getItem('chunk-reload');
+                function tryReload(msg) {
+                  if (msg && (msg.indexOf('ChunkLoadError') !== -1 || msg.indexOf('Loading chunk') !== -1) && !reloaded) {
+                    sessionStorage.setItem('chunk-reload', '1');
+                    window.location.reload();
+                  }
+                }
+                window.addEventListener('error', function(e) { tryReload(e.message); });
+                window.addEventListener('unhandledrejection', function(e) { tryReload(e.reason && e.reason.message); });
+                if (reloaded) sessionStorage.removeItem('chunk-reload');
+              })();
+            `,
+          }}
+        />
       </head>
       <body className={`${inter.variable} antialiased`}>
         <Providers>{children}</Providers>
