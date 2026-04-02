@@ -480,7 +480,7 @@ export default function BrandingPage() {
           {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</> : "Save Branding"}
         </Button>
         {saved && (
-          <Badge className="bg-green-100 text-green-700 gap-1">
+          <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 gap-1">
             <CheckCircle className="h-3.5 w-3.5" /> Saved! Refresh to see changes.
           </Badge>
         )}

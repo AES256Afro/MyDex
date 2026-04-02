@@ -932,7 +932,7 @@ export default function HostGroupsPage() {
                           <div className="font-semibold flex items-center gap-2">
                             {bl.name}
                             <Badge variant="outline" className="text-[10px]">{bl.category}</Badge>
-                            {!bl.isActive && <Badge className="bg-gray-100 text-gray-600 text-[10px]">Disabled</Badge>}
+                            {!bl.isActive && <Badge className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-[10px]">Disabled</Badge>}
                           </div>
                           {bl.description && <p className="text-xs text-muted-foreground">{bl.description}</p>}
                           {!isExpanded && (

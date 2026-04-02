@@ -322,7 +322,7 @@ export default function ScimSettingsPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
                       onClick={() => handleRevoke(token.id)}
                       disabled={deleting === token.id}
                     >
@@ -360,7 +360,7 @@ export default function ScimSettingsPage() {
           ) : (
             <div className="space-y-2">
               {events.map((event) => {
-                const actionInfo = ACTION_LABELS[event.action] || { label: event.action, color: "bg-gray-100 text-gray-800" };
+                const actionInfo = ACTION_LABELS[event.action] || { label: event.action, color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" };
                 return (
                   <div key={event.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
                     <div className="flex items-center gap-3">

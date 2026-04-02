@@ -282,7 +282,7 @@ export default function LicensingPage() {
               <div className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${annual ? "translate-x-7" : ""}`} />
             </button>
             <span className={`text-sm font-medium ${annual ? "text-foreground" : "text-muted-foreground"}`}>
-              Annual <span className="text-green-600 font-semibold">(Save 20%)</span>
+              Annual <span className="text-green-600 dark:text-green-400 font-semibold">(Save 20%)</span>
             </span>
           </div>
         </div>
@@ -312,12 +312,12 @@ export default function LicensingPage() {
               />
               <div className="flex justify-between mt-1 px-0.5">
                 {sliderStops.map((s) => (
-                  <button key={s} onClick={() => setEmployeeCount(s)} className={`text-[10px] ${s === nearestStop ? "text-indigo-600 font-bold" : "text-muted-foreground"}`}>{s}</button>
+                  <button key={s} onClick={() => setEmployeeCount(s)} className={`text-[10px] ${s === nearestStop ? "text-indigo-600 dark:text-indigo-400 font-bold" : "text-muted-foreground"}`}>{s}</button>
                 ))}
               </div>
             </div>
             <div className="text-center min-w-[100px]">
-              <div className="text-3xl font-bold text-indigo-600">{employeeCount}</div>
+              <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{employeeCount}</div>
               <div className="text-xs text-muted-foreground">employees</div>
             </div>
           </div>
@@ -325,7 +325,7 @@ export default function LicensingPage() {
           {/* Security add-on toggle */}
           <div className="mt-4 pt-4 border-t flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Shield className="h-5 w-5 text-amber-600" />
+              <Shield className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               <div>
                 <div className="text-sm font-medium">Security Suite Add-on</div>
                 <div className="text-xs text-muted-foreground">CVE scanning, threat intel, DLP — +${SECURITY_ADDON.perUser}/user/mo</div>
@@ -383,7 +383,7 @@ export default function LicensingPage() {
                   <div className="text-sm text-muted-foreground mt-1">
                     {formatCurrency(tier.perUser * multiplier)}/user/mo
                     {securityAddon && tier.name !== "Starter" && (
-                      <span className="text-amber-600"> + {formatCurrency(SECURITY_ADDON.perUser * multiplier)} security</span>
+                      <span className="text-amber-600 dark:text-amber-400"> + {formatCurrency(SECURITY_ADDON.perUser * multiplier)} security</span>
                     )}
                   </div>
                   {tier.setup > 0 && (
@@ -423,7 +423,7 @@ export default function LicensingPage() {
                   ))}
                   {tier.notIncluded.map((f, i) => (
                     <div key={`no-${i}`} className="flex items-start gap-2.5 opacity-40">
-                      <X className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
+                      <X className="h-4 w-4 text-gray-400 dark:text-gray-600 mt-0.5 shrink-0" />
                       <span className="text-sm line-through">{f}</span>
                     </div>
                   ))}
@@ -441,7 +441,7 @@ export default function LicensingPage() {
             <div className="lg:w-1/3">
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-2.5 rounded-xl bg-amber-100 dark:bg-amber-900/50">
-                  <Shield className="h-6 w-6 text-amber-600" />
+                  <Shield className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold">Security Suite</h2>
@@ -453,7 +453,7 @@ export default function LicensingPage() {
                 threat detection, and data protection. Available on Business and Enterprise plans.
               </p>
               <div className="flex items-baseline gap-1 mb-2">
-                <span className="text-3xl font-bold text-amber-600">+${SECURITY_ADDON.perUser}</span>
+                <span className="text-3xl font-bold text-amber-600 dark:text-amber-400">+${SECURITY_ADDON.perUser}</span>
                 <span className="text-muted-foreground">/user/mo</span>
               </div>
               <div className="text-xs text-muted-foreground">
@@ -463,7 +463,7 @@ export default function LicensingPage() {
             <div className="lg:w-2/3 grid sm:grid-cols-2 gap-3">
               {SECURITY_ADDON.features.map((f, i) => (
                 <div key={i} className="flex items-start gap-2.5 bg-white/60 dark:bg-gray-900/40 rounded-lg px-3 py-2.5">
-                  <Shield className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                  <Shield className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                   <span className="text-sm">{f}</span>
                 </div>
               ))}
@@ -483,10 +483,10 @@ export default function LicensingPage() {
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-900">
                 <th className="text-left px-6 py-4 text-sm font-semibold">Team Size</th>
-                <th className="text-center px-6 py-4 text-sm font-semibold text-blue-600">Starter</th>
-                <th className="text-center px-6 py-4 text-sm font-semibold text-indigo-600">Business</th>
-                <th className="text-center px-6 py-4 text-sm font-semibold text-amber-600">Enterprise</th>
-                <th className="text-center px-6 py-4 text-sm font-semibold text-red-600">Enterprise + Security</th>
+                <th className="text-center px-6 py-4 text-sm font-semibold text-blue-600 dark:text-blue-400">Starter</th>
+                <th className="text-center px-6 py-4 text-sm font-semibold text-indigo-600 dark:text-indigo-400">Business</th>
+                <th className="text-center px-6 py-4 text-sm font-semibold text-amber-600 dark:text-amber-400">Enterprise</th>
+                <th className="text-center px-6 py-4 text-sm font-semibold text-red-600 dark:text-red-400">Enterprise + Security</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -532,7 +532,7 @@ export default function LicensingPage() {
                     </td>
                     <td className="text-center px-6 py-3.5">
                       <div>
-                        <div className="font-semibold text-red-600">{formatCurrency(es)}/mo</div>
+                        <div className="font-semibold text-red-600 dark:text-red-400">{formatCurrency(es)}/mo</div>
                         <div className="text-[11px] text-muted-foreground">{formatCurrency(es * 12)}/yr</div>
                       </div>
                     </td>
@@ -598,9 +598,9 @@ export default function LicensingPage() {
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-900">
                 <th className="text-left px-5 py-3 font-semibold">Feature</th>
-                <th className="text-center px-5 py-3 font-semibold text-blue-600 w-28">Starter</th>
-                <th className="text-center px-5 py-3 font-semibold text-indigo-600 w-28">Business</th>
-                <th className="text-center px-5 py-3 font-semibold text-amber-600 w-28">Enterprise</th>
+                <th className="text-center px-5 py-3 font-semibold text-blue-600 dark:text-blue-400 w-28">Starter</th>
+                <th className="text-center px-5 py-3 font-semibold text-indigo-600 dark:text-indigo-400 w-28">Business</th>
+                <th className="text-center px-5 py-3 font-semibold text-amber-600 dark:text-amber-400 w-28">Enterprise</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -662,7 +662,7 @@ export default function LicensingPage() {
                           {val === true ? (
                             <Check className="h-4 w-4 text-green-500 mx-auto" />
                           ) : val === false ? (
-                            <X className="h-4 w-4 text-gray-300 mx-auto" />
+                            <X className="h-4 w-4 text-gray-300 dark:text-gray-600 mx-auto" />
                           ) : (
                             <span className="text-xs font-medium">{val}</span>
                           )}
@@ -729,7 +729,7 @@ export default function LicensingPage() {
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/contact">
-              <button className="px-8 py-3 bg-white text-indigo-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow-lg">
+              <button className="px-8 py-3 bg-white dark:bg-gray-100 text-indigo-600 rounded-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-200 transition-colors shadow-lg">
                 Get Started
               </button>
             </Link>

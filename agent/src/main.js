@@ -12,6 +12,12 @@ const {
   disableScheduledTask,
   isScheduledTaskEnabled,
 } = require("./autostart");
+const {
+  CURRENT_VERSION,
+  startUpdateChecker,
+  stopUpdateChecker,
+  downloadAndInstall,
+} = require("./auto-updater");
 
 const store = new Store({
   defaults: {
@@ -31,6 +37,7 @@ let configWindow = null;
 let apiClient = null;
 let collectors = null;
 let isQuitting = false;
+let pendingUpdate = null; // { latestVersion, downloadUrl, releaseNotes }
 
 // Check if launched with --hidden flag (from scheduled task or startup)
 const launchedHidden = process.argv.includes("--hidden");
@@ -71,12 +78,29 @@ function updateTrayMenu() {
   else if (hasToken && apiClient?.reconnecting) statusLabel = "Reconnecting...";
   else if (hasToken) statusLabel = "Connecting...";
 
-  const contextMenu = Menu.buildFromTemplate([
+  const menuItems = [
     {
-      label: `MyDex Agent — ${statusLabel}`,
+      label: `MyDex Agent v${CURRENT_VERSION} — ${statusLabel}`,
       enabled: false,
     },
     { type: "separator" },
+  ];
+
+  // Show update option if available
+  if (pendingUpdate) {
+    menuItems.push({
+      label: `Update Available: v${pendingUpdate.latestVersion}`,
+      click: () => {
+        if (pendingUpdate?.downloadUrl) {
+          const serverUrl = store.get("serverUrl");
+          downloadAndInstall(serverUrl, pendingUpdate.downloadUrl);
+        }
+      },
+    });
+    menuItems.push({ type: "separator" });
+  }
+
+  menuItems.push(
     {
       label: "Settings",
       click: () => showConfigWindow(),
@@ -123,7 +147,9 @@ function updateTrayMenu() {
         app.quit();
       },
     },
-  ]);
+  );
+
+  const contextMenu = Menu.buildFromTemplate(menuItems);
   tray.setContextMenu(contextMenu);
 }
 
@@ -174,7 +200,7 @@ async function runForceSync() {
     await apiClient.sendActivityEvents([{
       eventType: "HEARTBEAT",
       timestamp: new Date().toISOString(),
-      metadata: { hostname: os.hostname(), platform: process.platform, agent: "mydex-desktop", version: "0.2.0", forceSync: true },
+      metadata: { hostname: os.hostname(), platform: process.platform, agent: "mydex-desktop", version: CURRENT_VERSION, forceSync: true },
     }]);
     showNotification("MyDex Agent", "Sync complete");
   } catch (err) {
@@ -288,6 +314,19 @@ async function initialize() {
   }
 
   await connect();
+
+  // Start periodic update checker
+  const serverUrl = store.get("serverUrl");
+  if (serverUrl) {
+    startUpdateChecker(serverUrl, (updateInfo) => {
+      pendingUpdate = updateInfo;
+      updateTrayMenu();
+      showNotification(
+        "MyDex Agent",
+        `Update available: v${updateInfo.latestVersion}`
+      );
+    });
+  }
 }
 
 app.whenReady().then(() => {
@@ -317,6 +356,7 @@ app.on("before-quit", () => {
   isQuitting = true;
   if (collectors) collectors.stop();
   if (apiClient) apiClient.stopAutoReconnect();
+  stopUpdateChecker();
 });
 
 // --- IPC Handlers ---
@@ -384,4 +424,8 @@ ipcMain.handle("get-status", () => ({
   reconnecting: apiClient?.reconnecting || false,
   retryCount: apiClient?.retryCount || 0,
   deviceId: apiClient?.deviceId || null,
+  version: CURRENT_VERSION,
+  pendingUpdate: pendingUpdate
+    ? { latestVersion: pendingUpdate.latestVersion, releaseNotes: pendingUpdate.releaseNotes }
+    : null,
 }));

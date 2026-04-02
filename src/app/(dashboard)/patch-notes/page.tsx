@@ -416,7 +416,7 @@ export default function PatchNotesPage() {
                                 <span
                                   key={tag}
                                   className={`px-2 py-0.5 rounded-full text-[10px] font-medium flex items-center gap-1 ${
-                                    TAG_COLORS[tag] || "bg-gray-100 text-gray-700"
+                                    TAG_COLORS[tag] || "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
                                   }`}
                                 >
                                   <Tag className="h-2.5 w-2.5" />

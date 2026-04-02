@@ -350,10 +350,10 @@ function assessAgentQuality(device: AgentDevice): AgentQuality {
 }
 
 function qualityColor(score: number): string {
-  if (score >= 90) return "text-green-600";
-  if (score >= 70) return "text-yellow-600";
-  if (score >= 50) return "text-orange-500";
-  return "text-red-600";
+  if (score >= 90) return "text-green-600 dark:text-green-400";
+  if (score >= 70) return "text-yellow-600 dark:text-yellow-400";
+  if (score >= 50) return "text-orange-500 dark:text-orange-400";
+  return "text-red-600 dark:text-red-400";
 }
 
 function qualityLabel(score: number): string {
@@ -364,10 +364,10 @@ function qualityLabel(score: number): string {
 }
 
 function qualityBg(score: number): string {
-  if (score >= 90) return "bg-green-50 border-green-200";
-  if (score >= 70) return "bg-yellow-50 border-yellow-200";
-  if (score >= 50) return "bg-orange-50 border-orange-200";
-  return "bg-red-50 border-red-200";
+  if (score >= 90) return "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800";
+  if (score >= 70) return "bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800";
+  if (score >= 50) return "bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-800";
+  return "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800";
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -670,7 +670,7 @@ services:
         <Card>
           <CardContent className="pt-4 pb-4">
             <div className="text-sm text-muted-foreground">Online Now</div>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
               {devices.filter(d => d.status === "ONLINE").length}
             </div>
           </CardContent>
@@ -1065,10 +1065,10 @@ services:
                     <Badge
                       className={
                         device.status === "ONLINE"
-                          ? "bg-green-100 text-green-800"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
                           : device.status === "OFFLINE"
-                          ? "bg-red-100 text-red-800"
-                          : "bg-yellow-100 text-yellow-800"
+                          ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
                       }
                     >
                       {device.status === "ONLINE" ? (
@@ -1151,7 +1151,7 @@ services:
 
                     {/* Issues List */}
                     {issues.length === 0 ? (
-                      <div className="flex items-center gap-2 text-green-700 bg-green-50 rounded-lg p-3">
+                      <div className="flex items-center gap-2 text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/20 rounded-lg p-3">
                         <CheckCircle className="h-5 w-5" />
                         <span className="font-medium">All checks passed. No issues detected.</span>
                       </div>
@@ -1165,10 +1165,10 @@ services:
                             key={issue.id}
                             className={`rounded-lg border p-3 ${
                               issue.severity === "critical"
-                                ? "border-red-200 bg-red-50"
+                                ? "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20"
                                 : issue.severity === "warning"
-                                ? "border-yellow-200 bg-yellow-50"
-                                : "border-blue-200 bg-blue-50"
+                                ? "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/20"
+                                : "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20"
                             }`}
                           >
                             <div className="flex items-start justify-between">

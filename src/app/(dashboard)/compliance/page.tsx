@@ -941,11 +941,11 @@ export default function CompliancePage() {
       {/* Quick Stats */}
       <div className="grid gap-3 md:grid-cols-5">
         {[
-          { label: "Total Controls", value: String(totalControls), icon: Shield, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
-          { label: "Passing", value: String(passingControls), icon: CheckCircle, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
-          { label: "Failing", value: String(failingControls), icon: XCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
-          { label: "Critical Fixes", value: String(criticalCount), icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
-          { label: "Auto-Fixable", value: String(allRemediations.filter(r => r.autoFix).length), icon: Zap, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30" },
+          { label: "Total Controls", value: String(totalControls), icon: Shield, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30" },
+          { label: "Passing", value: String(passingControls), icon: CheckCircle, color: "text-green-600 dark:text-green-400", bg: "bg-green-50 dark:bg-green-950/30" },
+          { label: "Failing", value: String(failingControls), icon: XCircle, color: "text-red-600 dark:text-red-400", bg: "bg-red-50 dark:bg-red-950/30" },
+          { label: "Critical Fixes", value: String(criticalCount), icon: AlertTriangle, color: "text-red-600 dark:text-red-400", bg: "bg-red-50 dark:bg-red-950/30" },
+          { label: "Auto-Fixable", value: String(allRemediations.filter(r => r.autoFix).length), icon: Zap, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/30" },
         ].map(s => (
           <Card key={s.label} className={s.bg}>
             <CardContent className="pt-4 pb-3 text-center">
@@ -1302,13 +1302,13 @@ export default function CompliancePage() {
                       <td className="pl-2 py-2 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button size="sm" variant={hasRun ? "ghost" : "default"}
-                            className={`text-[10px] h-6 px-2 ${hasRun ? "text-green-600" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
+                            className={`text-[10px] h-6 px-2 ${hasRun ? "text-green-600 dark:text-green-400" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
                             disabled={!soc2Device || isRunning}
                             onClick={() => executeRemediation(`[${FRAMEWORK_META[selectedFramework].label} ${remedy.control}] ${remedy.title}`, remedy.script, soc2Device || undefined)}>
                             {isRunning ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Running</> : hasRun ? <><CheckCircle className="h-3 w-3 mr-1" />Sent</> : <><Play className="h-3 w-3 mr-1" />Run</>}
                           </Button>
                           {remedy.custom && (
-                            <Button size="sm" variant="ghost" className="text-[10px] h-6 px-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                            <Button size="sm" variant="ghost" className="text-[10px] h-6 px-1.5 text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30"
                               onClick={() => handleDeleteCustomRemediation(remedy.id)}>
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -1352,9 +1352,9 @@ export default function CompliancePage() {
                   }`}>{rec.priority.toUpperCase()}</Badge>
                   <span className="text-sm font-medium flex-1">{rec.title}</span>
                   {rec.trend === "up" ? (
-                    <span className="flex items-center gap-0.5 text-green-600 text-[10px] shrink-0"><ArrowUpRight className="h-3 w-3" />Improving</span>
+                    <span className="flex items-center gap-0.5 text-green-600 dark:text-green-400 text-[10px] shrink-0"><ArrowUpRight className="h-3 w-3" />Improving</span>
                   ) : (
-                    <span className="flex items-center gap-0.5 text-red-600 text-[10px] shrink-0"><ArrowDownRight className="h-3 w-3" />Needs Work</span>
+                    <span className="flex items-center gap-0.5 text-red-600 dark:text-red-400 text-[10px] shrink-0"><ArrowDownRight className="h-3 w-3" />Needs Work</span>
                   )}
                   {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
                 </button>

@@ -242,28 +242,28 @@ export default function DevicesPage() {
         <Card>
           <CardContent className="pt-4 pb-3">
             <div className="text-sm text-muted-foreground">Online</div>
-            <div className="text-2xl font-bold text-green-600">{onlineCount}</div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{onlineCount}</div>
             <div className="text-xs text-muted-foreground">{devices.length} total</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 pb-3">
             <div className="text-sm text-muted-foreground">Applicable CVEs</div>
-            <div className="text-2xl font-bold text-orange-600">{totalCves}</div>
+            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{totalCves}</div>
             <div className="text-xs text-muted-foreground">confirmed or potential</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 pb-3">
             <div className="text-sm text-muted-foreground">Blocked IOCs</div>
-            <div className="text-2xl font-bold text-red-600">{totalIocs}</div>
+            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{totalIocs}</div>
             <div className="text-xs text-muted-foreground">active threats</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 pb-3">
             <div className="text-sm text-muted-foreground">Reboot Pending</div>
-            <div className="text-2xl font-bold text-yellow-600">{rebootNeeded}</div>
+            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{rebootNeeded}</div>
             <div className="text-xs text-muted-foreground">needs restart</div>
           </CardContent>
         </Card>
@@ -330,12 +330,12 @@ export default function DevicesPage() {
                         </span>
                       )}
                       {device.openCves > 0 && (
-                        <Badge variant="outline" className="text-orange-600 border-orange-300">
+                        <Badge variant="outline" className="text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700">
                           <Bug className="h-3 w-3 mr-1" /> {device.openCves} CVE
                         </Badge>
                       )}
                       {device.rebootPending && (
-                        <Badge variant="outline" className="text-yellow-600 border-yellow-300">
+                        <Badge variant="outline" className="text-yellow-600 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700">
                           <RefreshCw className="h-3 w-3 mr-1" /> Reboot
                         </Badge>
                       )}
@@ -432,23 +432,23 @@ export default function DevicesPage() {
                             <div>
                               <span className="text-muted-foreground">Service:</span>{" "}
                               {device.updateServiceStatus === "running" ? (
-                                <span className="text-green-600">Running</span>
+                                <span className="text-green-600 dark:text-green-400">Running</span>
                               ) : (
-                                <span className="text-red-600">{device.updateServiceStatus || "N/A"}</span>
+                                <span className="text-red-600 dark:text-red-400">{device.updateServiceStatus || "N/A"}</span>
                               )}
                             </div>
                             <div>
                               <span className="text-muted-foreground">Reboot Pending:</span>{" "}
                               {device.rebootPending ? (
-                                <span className="text-yellow-600">Yes</span>
+                                <span className="text-yellow-600 dark:text-yellow-400">Yes</span>
                               ) : (
-                                <span className="text-green-600">No</span>
+                                <span className="text-green-600 dark:text-green-400">No</span>
                               )}
                             </div>
                           </div>
                           {device.pendingUpdates && device.pendingUpdates.length > 0 && (
                             <div className="mt-2">
-                              <div className="text-xs font-medium text-yellow-600 mb-1">
+                              <div className="text-xs font-medium text-yellow-600 dark:text-yellow-400 mb-1">
                                 {device.pendingUpdates.length} Pending Updates
                               </div>
                               <div className="max-h-32 overflow-y-auto space-y-1">
@@ -482,7 +482,7 @@ export default function DevicesPage() {
 
                           {device.bsodCount > 0 && (
                             <div className="mt-3">
-                              <h3 className="font-semibold text-sm flex items-center gap-1 text-red-600">
+                              <h3 className="font-semibold text-sm flex items-center gap-1 text-red-600 dark:text-red-400">
                                 <AlertTriangle className="h-4 w-4" /> {device.bsodCount} BSOD Events
                               </h3>
                               <div className="max-h-24 overflow-y-auto mt-1 space-y-1">
@@ -497,7 +497,7 @@ export default function DevicesPage() {
 
                           {device.performanceIssues && device.performanceIssues.length > 0 && (
                             <div className="mt-3">
-                              <h3 className="font-semibold text-sm flex items-center gap-1 text-yellow-600">
+                              <h3 className="font-semibold text-sm flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
                                 <AlertTriangle className="h-4 w-4" /> Performance Issues
                               </h3>
                               {device.performanceIssues.map((issue, i) => (
@@ -558,9 +558,9 @@ export default function DevicesPage() {
                               <Bug className="h-4 w-4" /> Applicable CVEs ({device.openCves})
                             </h3>
                             {device.openCves > 0 ? (
-                              <p className="text-sm text-orange-600">{device.openCves} vulnerabilities may affect this device</p>
+                              <p className="text-sm text-orange-600 dark:text-orange-400">{device.openCves} vulnerabilities may affect this device</p>
                             ) : (
-                              <p className="text-sm text-green-600">No open CVEs</p>
+                              <p className="text-sm text-green-600 dark:text-green-400">No open CVEs</p>
                             )}
                           </div>
                           <div>
@@ -568,9 +568,9 @@ export default function DevicesPage() {
                               <Shield className="h-4 w-4" /> Blocked IOCs ({device.activeIocs})
                             </h3>
                             {device.activeIocs > 0 ? (
-                              <p className="text-sm text-red-600">{device.activeIocs} active threat indicators in the blocklist</p>
+                              <p className="text-sm text-red-600 dark:text-red-400">{device.activeIocs} active threat indicators in the blocklist</p>
                             ) : (
-                              <p className="text-sm text-green-600">No active IOC threats</p>
+                              <p className="text-sm text-green-600 dark:text-green-400">No active IOC threats</p>
                             )}
                           </div>
                         </div>
@@ -704,10 +704,10 @@ export default function DevicesPage() {
                                 };
                                 const Icon = iconMap[evt.eventType] || FileText;
                                 const colorMap: Record<string, string> = {
-                                  FILE_CREATE: "text-green-600",
-                                  FILE_DELETE: "text-red-600",
-                                  FILE_MOVE: "text-blue-600",
-                                  FILE_COPY: "text-purple-600",
+                                  FILE_CREATE: "text-green-600 dark:text-green-400",
+                                  FILE_DELETE: "text-red-600 dark:text-red-400",
+                                  FILE_MOVE: "text-blue-600 dark:text-blue-400",
+                                  FILE_COPY: "text-purple-600 dark:text-purple-400",
                                 };
                                 return (
                                   <tr key={i} className="border-t">
@@ -1086,10 +1086,10 @@ export default function DevicesPage() {
                               </p>
                             </div>
                             <div className="flex items-center gap-3">
-                              <div className={`text-3xl font-bold ${score >= 90 ? "text-green-600" : score >= 70 ? "text-amber-600" : "text-red-600"}`}>
+                              <div className={`text-3xl font-bold ${score >= 90 ? "text-green-600 dark:text-green-400" : score >= 70 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
                                 {score}%
                               </div>
-                              <Badge className={`text-xs ${score >= 90 ? "bg-green-100 text-green-800" : score >= 70 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}`}>
+                              <Badge className={`text-xs ${score >= 90 ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300" : score >= 70 ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" : "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"}`}>
                                 {score >= 90 ? "Compliant" : score >= 70 ? "Needs Attention" : "At Risk"}
                               </Badge>
                             </div>
@@ -1197,17 +1197,17 @@ export default function DevicesPage() {
                               <div className="text-sm space-y-1">
                                 <div className="flex justify-between"><span className="text-muted-foreground">Provider</span><span>{mdm.mdmProvider.name}</span></div>
                                 <div className="flex justify-between"><span className="text-muted-foreground">Enrollment</span>
-                                  <Badge className={mdm.enrollmentStatus === "enrolled" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>{mdm.enrollmentStatus || "Unknown"}</Badge>
+                                  <Badge className={mdm.enrollmentStatus === "enrolled" ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300" : "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300"}>{mdm.enrollmentStatus || "Unknown"}</Badge>
                                 </div>
                                 <div className="flex justify-between"><span className="text-muted-foreground">Compliance</span>
-                                  <Badge className={mdm.complianceStatus === "compliant" ? "bg-green-100 text-green-800" : mdm.complianceStatus === "noncompliant" ? "bg-red-100 text-red-800" : "bg-gray-100 text-gray-800"}>{mdm.complianceStatus || "Unknown"}</Badge>
+                                  <Badge className={mdm.complianceStatus === "compliant" ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300" : mdm.complianceStatus === "noncompliant" ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300" : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"}>{mdm.complianceStatus || "Unknown"}</Badge>
                                 </div>
                                 <div className="flex justify-between"><span className="text-muted-foreground">Management</span><span>{mdm.managementState || "N/A"}</span></div>
                                 <div className="flex justify-between"><span className="text-muted-foreground">Encrypted</span>
                                   <span>{mdm.isEncrypted === true ? "Yes" : mdm.isEncrypted === false ? "No" : "N/A"}</span>
                                 </div>
                                 <div className="flex justify-between"><span className="text-muted-foreground">Jailbroken</span>
-                                  <span className={mdm.isJailbroken ? "text-red-600 font-medium" : ""}>{mdm.isJailbroken === true ? "Yes" : mdm.isJailbroken === false ? "No" : "N/A"}</span>
+                                  <span className={mdm.isJailbroken ? "text-red-600 dark:text-red-400 font-medium" : ""}>{mdm.isJailbroken === true ? "Yes" : mdm.isJailbroken === false ? "No" : "N/A"}</span>
                                 </div>
                                 {mdm.platform && <div className="flex justify-between"><span className="text-muted-foreground">Platform</span><span>{mdm.platform}</span></div>}
                                 {mdm.osVersion && <div className="flex justify-between"><span className="text-muted-foreground">OS Version</span><span>{mdm.osVersion}</span></div>}

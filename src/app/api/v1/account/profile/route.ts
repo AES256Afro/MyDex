@@ -1,6 +1,12 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+const profileSchema = z.object({
+  name: z.string().min(1).max(200).trim().optional(),
+  monitoringPaused: z.boolean().optional(),
+});
 
 // PATCH — Update current user's profile
 export async function PATCH(request: NextRequest) {
@@ -8,20 +14,22 @@ export async function PATCH(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { name, monitoringPaused } = body;
+  const parsed = profileSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+  }
+
+  const { name, monitoringPaused } = parsed.data;
 
   // Build update data
   const data: Record<string, unknown> = {};
 
   if (name !== undefined) {
-    if (typeof name !== "string" || name.trim().length < 1) {
-      return NextResponse.json({ error: "Name is required" }, { status: 400 });
-    }
-    data.name = name.trim();
+    data.name = name;
   }
 
   if (monitoringPaused !== undefined) {
-    data.monitoringPaused = Boolean(monitoringPaused);
+    data.monitoringPaused = monitoringPaused;
     data.monitoringPausedAt = monitoringPaused ? new Date() : null;
   }
 

@@ -30,6 +30,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
     }
 
+    // Block private/internal domains
+    const PRIVATE_PATTERNS = /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|0\.|localhost|::1|\[::1\]|internal|intranet)/i;
+    if (PRIVATE_PATTERNS.test(domain) || domain.endsWith(".local") || domain.endsWith(".internal")) {
+      return NextResponse.json({ error: "Private domains not allowed" }, { status: 400 });
+    }
+
     // Try Google's favicon service (returns high quality favicons)
     const googleUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
     const response = await fetch(googleUrl, { signal: AbortSignal.timeout(10000) });

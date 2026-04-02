@@ -689,7 +689,7 @@ export default function ITSupportPage() {
                           return (
                           <div key={a.title} className="rounded-lg border overflow-hidden">
                             <div className="flex items-center justify-between p-2.5 bg-muted/30">
-                              <div className="flex items-center gap-2"><a.icon className="h-4 w-4 text-gray-500" /><span className="text-sm font-medium">{a.title}</span></div>
+                              <div className="flex items-center gap-2"><a.icon className="h-4 w-4 text-gray-500 dark:text-gray-400" /><span className="text-sm font-medium">{a.title}</span></div>
                               <Button size="sm" variant="outline" className={`text-[11px] h-7 ${hasRun ? "border-green-400 text-green-700" : ""}`}
                                 onClick={() => executeRemediation(a.title, a.code)}>
                                 {hasRun ? <><CheckCircle className="h-3 w-3 mr-1" />Sent</> : <><Play className="h-3 w-3 mr-1" />Run</>}
@@ -743,8 +743,8 @@ export default function ITSupportPage() {
           {viewingTicket ? (() => {
             const ticket = tickets.find(t => t.id === viewingTicket);
             if (!ticket) return null;
-            const statusColors: Record<string, string> = { OPEN: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200", IN_PROGRESS: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200", WAITING_ON_USER: "bg-orange-100 text-orange-800", WAITING_ON_IT: "bg-purple-100 text-purple-800", RESOLVED: "bg-green-100 text-green-800", CLOSED: "bg-gray-100 text-gray-800" };
-            const priorityColors: Record<string, string> = { LOW: "bg-gray-100 text-gray-700", MEDIUM: "bg-blue-100 text-blue-700", HIGH: "bg-orange-100 text-orange-700", URGENT: "bg-red-100 text-red-700" };
+            const statusColors: Record<string, string> = { OPEN: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200", IN_PROGRESS: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200", WAITING_ON_USER: "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200", WAITING_ON_IT: "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200", RESOLVED: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200", CLOSED: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200" };
+            const priorityColors: Record<string, string> = { LOW: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300", MEDIUM: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300", HIGH: "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300", URGENT: "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300" };
             return (
               <Card>
                 <CardHeader>
@@ -753,7 +753,7 @@ export default function ITSupportPage() {
                     <div className="flex-1">
                       <CardTitle className="text-lg">{ticket.subject}</CardTitle>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <Badge className={`text-[10px] ${statusColors[ticket.status] || "bg-gray-100 text-gray-800"}`}>{ticket.status.replace(/_/g, " ")}</Badge>
+                        <Badge className={`text-[10px] ${statusColors[ticket.status] || "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"}`}>{ticket.status.replace(/_/g, " ")}</Badge>
                         <Badge className={`text-[10px] ${priorityColors[ticket.priority] || ""}`}>{ticket.priority}</Badge>
                         <span className="text-xs text-muted-foreground">by {ticket.submitter.name} ({ticket.submitter.email})</span>
                         {ticket.device && <span className="text-xs text-muted-foreground">{ticket.device.hostname}</span>}
@@ -784,7 +784,7 @@ export default function ITSupportPage() {
                       {!ticket.firstResponseAt && (() => {
                         const sla = getSlaStatus(ticket.slaResponseDue, ticket.slaResponseBreached);
                         return sla ? (
-                          <div className={`flex-1 rounded-lg border p-2 ${sla.overdue ? "border-red-300 bg-red-50 dark:bg-red-950/20" : "border-green-300 bg-green-50 dark:bg-green-950/20"}`}>
+                          <div className={`flex-1 rounded-lg border p-2 ${sla.overdue ? "border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-950/20" : "border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-950/20"}`}>
                             <div className="text-[10px] text-muted-foreground">First Response SLA</div>
                             <div className={`text-sm font-bold ${sla.color}`}>{sla.text}</div>
                           </div>
@@ -793,14 +793,14 @@ export default function ITSupportPage() {
                       {(() => {
                         const sla = getSlaStatus(ticket.slaResolutionDue, ticket.slaResolutionBreached);
                         return sla ? (
-                          <div className={`flex-1 rounded-lg border p-2 ${sla.overdue ? "border-red-300 bg-red-50 dark:bg-red-950/20" : "border-blue-300 bg-blue-50 dark:bg-blue-950/20"}`}>
+                          <div className={`flex-1 rounded-lg border p-2 ${sla.overdue ? "border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-950/20" : "border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-950/20"}`}>
                             <div className="text-[10px] text-muted-foreground">Resolution SLA</div>
                             <div className={`text-sm font-bold ${sla.color}`}>{sla.text}</div>
                           </div>
                         ) : null;
                       })()}
                       {ticket.firstResponseAt && (
-                        <div className="flex-1 rounded-lg border p-2 border-green-300 bg-green-50 dark:bg-green-950/20">
+                        <div className="flex-1 rounded-lg border p-2 border-green-300 dark:border-green-600 bg-green-50 dark:bg-green-950/20">
                           <div className="text-[10px] text-muted-foreground">First Response</div>
                           <div className="text-sm font-bold text-green-600">{formatMinutes(Math.round((new Date(ticket.firstResponseAt).getTime() - new Date(ticket.createdAt).getTime()) / 60000))}</div>
                         </div>
@@ -886,7 +886,7 @@ export default function ITSupportPage() {
             );
           })() : (
             (() => {
-              const statusColors: Record<string, string> = { OPEN: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200", IN_PROGRESS: "bg-amber-100 text-amber-800", WAITING_ON_USER: "bg-orange-100 text-orange-800", WAITING_ON_IT: "bg-purple-100 text-purple-800", RESOLVED: "bg-green-100 text-green-800", CLOSED: "bg-gray-100 text-gray-800" };
+              const statusColors: Record<string, string> = { OPEN: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200", IN_PROGRESS: "bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200", WAITING_ON_USER: "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200", WAITING_ON_IT: "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200", RESOLVED: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200", CLOSED: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200" };
               const priorityColors: Record<string, string> = { LOW: "", MEDIUM: "", HIGH: "border-orange-300", URGENT: "border-red-400 bg-red-50/30 dark:bg-red-950/20" };
               const openTickets = tickets.filter(t => !["RESOLVED", "CLOSED"].includes(t.status));
               const resolvedTickets = tickets.filter(t => t.status === "RESOLVED");
@@ -1005,7 +1005,7 @@ export default function ITSupportPage() {
                             <CardTitle className="text-base flex items-center gap-2">
                               <XCircle className="h-4 w-4 text-gray-400" />
                               Closed Tickets
-                              <Badge className="text-[10px] bg-gray-100 text-gray-800">{closedTickets.length}</Badge>
+                              <Badge className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200">{closedTickets.length}</Badge>
                             </CardTitle>
                           </CardHeader>
                           <CardContent>
@@ -1382,10 +1382,10 @@ export default function ITSupportPage() {
                 <CardContent>
                   <div className="grid gap-3 md:grid-cols-4">
                     {[
-                      { priority: "URGENT", response: "15 min", resolution: "4 hours", color: "border-red-300 bg-red-50 dark:bg-red-950/20" },
-                      { priority: "HIGH", response: "1 hour", resolution: "8 hours", color: "border-orange-300 bg-orange-50 dark:bg-orange-950/20" },
-                      { priority: "MEDIUM", response: "4 hours", resolution: "24 hours", color: "border-blue-300 bg-blue-50 dark:bg-blue-950/20" },
-                      { priority: "LOW", response: "8 hours", resolution: "48 hours", color: "border-gray-300 bg-gray-50 dark:bg-gray-950/20" },
+                      { priority: "URGENT", response: "15 min", resolution: "4 hours", color: "border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-950/20" },
+                      { priority: "HIGH", response: "1 hour", resolution: "8 hours", color: "border-orange-300 dark:border-orange-600 bg-orange-50 dark:bg-orange-950/20" },
+                      { priority: "MEDIUM", response: "4 hours", resolution: "24 hours", color: "border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-950/20" },
+                      { priority: "LOW", response: "8 hours", resolution: "48 hours", color: "border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-950/20" },
                     ].map(sla => (
                       <div key={sla.priority} className={`rounded-lg border p-3 ${sla.color}`}>
                         <div className="text-sm font-bold mb-2">{sla.priority}</div>
@@ -1492,7 +1492,7 @@ export default function ITSupportPage() {
             </CardHeader>
             <CardContent className="space-y-2">
               {editingNewReason && (
-                <div className="flex items-center gap-2 p-3 rounded-lg border border-blue-300 bg-blue-50 dark:bg-blue-950/30">
+                <div className="flex items-center gap-2 p-3 rounded-lg border border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-950/30">
                   <span className="text-lg">💬</span>
                   <Input value={newReasonLabel} onChange={(e) => setNewReasonLabel(e.target.value)} placeholder="Enter new reason label..." className="flex-1 h-8 text-sm" />
                   <Button size="sm" onClick={() => { if (newReasonLabel.trim()) { setStockReasons([...stockReasons, { id: `sr${stockReasons.length + 1}`, label: newReasonLabel.trim(), category: "other", icon: "💬", enabled: true, common: false }]); setNewReasonLabel(""); setEditingNewReason(false); } }}>Save</Button>

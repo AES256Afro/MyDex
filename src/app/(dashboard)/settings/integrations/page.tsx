@@ -113,7 +113,7 @@ function IntegrationCard({
               <label key={opt.key} className="flex items-start gap-3 cursor-pointer p-2 rounded hover:bg-muted/50">
                 <input
                   type="checkbox"
-                  className="mt-0.5 h-4 w-4 rounded border-input"
+                  className="mt-0.5 h-4 w-4 rounded border-input dark:border-gray-600"
                   checked={data.settings[opt.key] ?? true}
                   onChange={(e) =>
                     onChange({ settings: { ...data.settings, [opt.key]: e.target.checked } })

@@ -42,13 +42,13 @@ function severityColor(severity: Severity) {
 function severityBgClass(severity: Severity) {
   switch (severity) {
     case "CRITICAL":
-      return "text-red-600 bg-red-50 border-red-200";
+      return "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-700";
     case "HIGH":
-      return "text-orange-600 bg-orange-50 border-orange-200";
+      return "text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-700";
     case "MEDIUM":
-      return "text-yellow-600 bg-yellow-50 border-yellow-200";
+      return "text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-700";
     case "LOW":
-      return "text-blue-600 bg-blue-50 border-blue-200";
+      return "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-700";
   }
 }
 
@@ -460,7 +460,7 @@ export default function IocPage() {
                       className={`rounded-lg border px-4 py-2 text-left text-sm transition-colors ${
                         importSource === s.key
                           ? "border-primary bg-primary/5 ring-2 ring-primary"
-                          : "border-gray-200 hover:bg-muted/50"
+                          : "border-gray-200 dark:border-gray-700 hover:bg-muted/50"
                       }`}
                     >
                       <div className="font-medium">{s.label}</div>
@@ -730,9 +730,9 @@ export default function IocPage() {
             )}
 
             {importResult && (
-              <div className="mt-4 rounded-md bg-green-50 border border-green-200 p-4 text-sm">
-                <p className="font-medium text-green-800">Import Complete</p>
-                <ul className="mt-2 space-y-1 text-green-700">
+              <div className="mt-4 rounded-md bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-700 p-4 text-sm">
+                <p className="font-medium text-green-800 dark:text-green-200">Import Complete</p>
+                <ul className="mt-2 space-y-1 text-green-700 dark:text-green-300">
                   <li>Source: {importResult.source}</li>
                   <li>Fetched {importResult.totalFetched} IOC hashes</li>
                   <li>Imported {importResult.imported} new entries</li>
@@ -826,7 +826,7 @@ export default function IocPage() {
                   type="checkbox"
                   checked={formBlocked}
                   onChange={(e) => setFormBlocked(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300"
+                  className="h-4 w-4 rounded border-gray-300 dark:border-gray-600"
                 />
                 <Label htmlFor="ioc-blocked">Blocked</Label>
               </div>
@@ -937,7 +937,7 @@ export default function IocPage() {
             </div>
           )}
           {enrichResult && (
-            <div className="mb-4 rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
+            <div className="mb-4 rounded-md bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-700 p-3 text-sm text-blue-800 dark:text-blue-200">
               VT Enrichment: Updated {enrichResult.enriched}/{enrichResult.total} entries
               {enrichResult.failed > 0 && ` (${enrichResult.failed} failed/not found)`}
               <button onClick={() => setEnrichResult(null)} className="ml-2 underline">Dismiss</button>
@@ -1148,7 +1148,7 @@ export default function IocPage() {
           )}
 
           {lookupNotFound && (
-            <div className="rounded-md bg-green-50 border border-green-200 p-4 text-sm text-green-700">
+            <div className="rounded-md bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-700 p-4 text-sm text-green-700 dark:text-green-300">
               No matching IOC found for this hash. The hash appears clean.
             </div>
           )}

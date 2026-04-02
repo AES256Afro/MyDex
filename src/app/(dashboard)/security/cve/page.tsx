@@ -120,15 +120,15 @@ function cvssColor(score: number) {
 function statusCountColor(status: CveStatus) {
   switch (status) {
     case "OPEN":
-      return "text-red-600 bg-red-50 border-red-200";
+      return "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-700";
     case "PATCHED":
-      return "text-green-600 bg-green-50 border-green-200";
+      return "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-700";
     case "MITIGATED":
-      return "text-orange-600 bg-orange-50 border-orange-200";
+      return "text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-700";
     case "ACCEPTED":
-      return "text-blue-600 bg-blue-50 border-blue-200";
+      return "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-700";
     case "FALSE_POSITIVE":
-      return "text-gray-600 bg-gray-50 border-gray-200";
+      return "text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700";
   }
 }
 
@@ -159,10 +159,10 @@ function applicabilityLabel(a: CveApplicability): string {
 
 function applicabilityBadgeClass(a: CveApplicability): string {
   switch (a) {
-    case "CONFIRMED": return "bg-red-100 text-red-700 border-red-300";
-    case "POTENTIAL": return "bg-yellow-100 text-yellow-700 border-yellow-300";
-    case "NOT_APPLICABLE": return "bg-gray-100 text-gray-500 border-gray-300";
-    case "UNASSESSED": return "bg-blue-100 text-blue-600 border-blue-300";
+    case "CONFIRMED": return "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 border-red-300 dark:border-red-600";
+    case "POTENTIAL": return "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 border-yellow-300 dark:border-yellow-600";
+    case "NOT_APPLICABLE": return "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600";
+    case "UNASSESSED": return "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-600";
   }
 }
 
@@ -721,15 +721,15 @@ export default function CvePage() {
       )}
 
       {bulkResult && (
-        <Card className="border-green-200 bg-green-50/50">
+        <Card className="border-green-200 dark:border-green-700 bg-green-50/50 dark:bg-green-950/20">
           <CardContent className="py-6">
             <div className="flex items-start gap-3">
               <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
               <div className="flex-1">
-                <p className="font-medium text-green-800">
+                <p className="font-medium text-green-800 dark:text-green-200">
                   CVE Update Complete
                 </p>
-                <div className="mt-2 grid gap-1 text-sm text-green-700">
+                <div className="mt-2 grid gap-1 text-sm text-green-700 dark:text-green-300">
                   <p>Found {bulkResult.totalFromNvd} CVEs across all categories</p>
                   <p>Imported {bulkResult.imported} new CVEs</p>
                   <p>Skipped {bulkResult.skipped} (already in database)</p>
@@ -739,13 +739,13 @@ export default function CvePage() {
                 </div>
                 {bulkResult.applicability && (
                   <div className="mt-3 flex flex-wrap gap-3 text-sm">
-                    <span className="px-2 py-1 rounded bg-red-100 text-red-700 font-medium">
+                    <span className="px-2 py-1 rounded bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 font-medium">
                       {bulkResult.applicability.confirmed} confirmed on your devices
                     </span>
-                    <span className="px-2 py-1 rounded bg-yellow-100 text-yellow-700 font-medium">
+                    <span className="px-2 py-1 rounded bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 font-medium">
                       {bulkResult.applicability.potential} may apply
                     </span>
-                    <span className="px-2 py-1 rounded bg-gray-100 text-gray-500 font-medium">
+                    <span className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 font-medium">
                       {bulkResult.applicability.notApplicable} not applicable
                     </span>
                   </div>
@@ -753,14 +753,14 @@ export default function CvePage() {
 
                 {bulkResult.categoryResults.length > 0 && (
                   <details className="mt-3">
-                    <summary className="text-sm font-medium text-green-800 cursor-pointer hover:underline">
+                    <summary className="text-sm font-medium text-green-800 dark:text-green-200 cursor-pointer hover:underline">
                       Category breakdown ({bulkResult.categoryResults.length} categories scanned)
                     </summary>
                     <div className="mt-2 grid gap-1">
                       {bulkResult.categoryResults.map((cat) => (
                         <div
                           key={cat.category}
-                          className="flex items-center justify-between text-sm px-2 py-1 rounded bg-white/60"
+                          className="flex items-center justify-between text-sm px-2 py-1 rounded bg-white/60 dark:bg-gray-900/60"
                         >
                           <span className="font-medium">{cat.category}</span>
                           <span className="text-muted-foreground">
@@ -779,7 +779,7 @@ export default function CvePage() {
                 )}
                 <button
                   onClick={() => setBulkResult(null)}
-                  className="mt-3 text-sm text-green-700 underline hover:no-underline"
+                  className="mt-3 text-sm text-green-700 dark:text-green-300 underline hover:no-underline"
                 >
                   Dismiss
                 </button>
@@ -883,7 +883,7 @@ export default function CvePage() {
                             return next;
                           });
                         }}
-                        className="rounded border-gray-300"
+                        className="rounded border-gray-300 dark:border-gray-600"
                       />
                       {os.label}
                     </label>
@@ -909,9 +909,9 @@ export default function CvePage() {
             )}
 
             {importResult && (
-              <div className="mt-4 rounded-md bg-green-50 border border-green-200 p-4 text-sm">
-                <p className="font-medium text-green-800">Import Complete</p>
-                <ul className="mt-2 space-y-1 text-green-700">
+              <div className="mt-4 rounded-md bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-700 p-4 text-sm">
+                <p className="font-medium text-green-800 dark:text-green-200">Import Complete</p>
+                <ul className="mt-2 space-y-1 text-green-700 dark:text-green-300">
                   <li>Found {importResult.totalFromNvd} CVEs from NVD</li>
                   <li>Imported {importResult.imported} new CVEs</li>
                   <li>Skipped {importResult.skipped} (already in database)</li>
@@ -929,10 +929,10 @@ export default function CvePage() {
       {entries.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {([
-            { key: "CONFIRMED" as CveApplicability, label: "Confirmed", desc: "Matches installed software", color: "border-red-300 bg-red-50", textColor: "text-red-700", countColor: "text-red-600" },
-            { key: "POTENTIAL" as CveApplicability, label: "Potential", desc: "May affect your environment", color: "border-yellow-300 bg-yellow-50", textColor: "text-yellow-700", countColor: "text-yellow-600" },
-            { key: "NOT_APPLICABLE" as CveApplicability, label: "Not Applicable", desc: "No matching devices", color: "border-gray-200 bg-gray-50", textColor: "text-gray-500", countColor: "text-gray-500" },
-            { key: "UNASSESSED" as CveApplicability, label: "Unassessed", desc: "Not yet checked", color: "border-blue-200 bg-blue-50", textColor: "text-blue-600", countColor: "text-blue-600" },
+            { key: "CONFIRMED" as CveApplicability, label: "Confirmed", desc: "Matches installed software", color: "border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-950", textColor: "text-red-700 dark:text-red-300", countColor: "text-red-600 dark:text-red-400" },
+            { key: "POTENTIAL" as CveApplicability, label: "Potential", desc: "May affect your environment", color: "border-yellow-300 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-950", textColor: "text-yellow-700 dark:text-yellow-300", countColor: "text-yellow-600 dark:text-yellow-400" },
+            { key: "NOT_APPLICABLE" as CveApplicability, label: "Not Applicable", desc: "No matching devices", color: "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900", textColor: "text-gray-500 dark:text-gray-400", countColor: "text-gray-500 dark:text-gray-400" },
+            { key: "UNASSESSED" as CveApplicability, label: "Unassessed", desc: "Not yet checked", color: "border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-950", textColor: "text-blue-600 dark:text-blue-400", countColor: "text-blue-600 dark:text-blue-400" },
           ]).map((item) => (
             <button
               key={item.key}
