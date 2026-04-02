@@ -144,7 +144,14 @@ export default function RootLayout({
                   if (!r) return;
                   if (isChunkError(r.name) || isChunkError(r.message) || isChunkError(String(r))) doReload();
                 });
-                if (reloaded) sessionStorage.removeItem(key);
+                if (reloaded) {
+                  sessionStorage.removeItem(key);
+                  // Clean up the ?_r= cache-busting param from URL
+                  if (window.location.search.indexOf('_r=') !== -1) {
+                    var cleanUrl = window.location.href.split('?')[0] + window.location.hash;
+                    window.history.replaceState(null, '', cleanUrl);
+                  }
+                }
               })();
             `,
           }}
