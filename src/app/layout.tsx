@@ -112,14 +112,28 @@ export default function RootLayout({
                 function doReload() {
                   if (!reloaded) {
                     sessionStorage.setItem(key, '1');
-                    window.location.reload();
+                    // Cache-busting reload: append timestamp to force fresh HTML from server
+                    var url = window.location.href.split('?')[0].split('#')[0];
+                    window.location.replace(url + '?_r=' + Date.now());
                   }
                 }
-                function tryReload(msg) {
-                  if (msg && (msg.indexOf('ChunkLoadError') !== -1 || msg.indexOf('Loading chunk') !== -1)) doReload();
+                function isChunkError(str) {
+                  if (!str) return false;
+                  var s = str.toLowerCase();
+                  return s.indexOf('chunkloaderror') !== -1
+                    || s.indexOf('loading chunk') !== -1
+                    || s.indexOf('failed to load chunk') !== -1
+                    || s.indexOf('failed to fetch dynamically imported module') !== -1;
                 }
-                window.addEventListener('error', function(e) { tryReload(e.message); });
-                window.addEventListener('unhandledrejection', function(e) { tryReload(e.reason && e.reason.message); });
+                window.addEventListener('error', function(e) {
+                  isChunkError(e.message) && doReload();
+                });
+                window.addEventListener('unhandledrejection', function(e) {
+                  var r = e.reason;
+                  if (!r) return;
+                  // Check error name, message, and toString for chunk error signatures
+                  if (isChunkError(r.name) || isChunkError(r.message) || isChunkError(String(r))) doReload();
+                });
                 // Detect missing CSS: if no stylesheets loaded after 3s, page is unstyled
                 if (!reloaded) {
                   setTimeout(function() {
@@ -127,7 +141,6 @@ export default function RootLayout({
                     var loaded = 0;
                     styled.forEach(function(link) { if (link.sheet) loaded++; });
                     if (styled.length > 0 && loaded === 0) doReload();
-                    // Fallback: check if body has default unstyled background
                     var bg = getComputedStyle(document.body).backgroundColor;
                     if (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') doReload();
                   }, 3000);
