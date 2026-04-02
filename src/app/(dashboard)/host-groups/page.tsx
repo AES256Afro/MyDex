@@ -164,7 +164,6 @@ const PRESET_BLOCKLISTS: { name: string; category: string; domains: string[] }[]
 
 export default function HostGroupsPage() {
   const { authorized } = useRequireRole("ADMIN");
-  if (!authorized) return null;
 
   const [hostGroups, setHostGroups] = useState<HostGroup[]>([]);
   const [blocklists, setBlocklists] = useState<Blocklist[]>([]);

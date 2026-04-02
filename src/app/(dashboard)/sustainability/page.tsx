@@ -41,7 +41,6 @@ const METRIC_LABELS: Record<string, string> = {
 
 export default function SustainabilityPage() {
   const { authorized } = useRequireRole("ADMIN");
-  if (!authorized) return null;
 
   const [readings, setReadings] = useState<EnergyReading[]>([]);
   const [goals, setGoals] = useState<SustainabilityGoal[]>([]);

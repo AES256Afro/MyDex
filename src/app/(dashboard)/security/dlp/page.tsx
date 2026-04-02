@@ -172,7 +172,6 @@ const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
 
 export default function DlpPoliciesPage() {
   const { authorized } = useRequireRole("ADMIN");
-  if (!authorized) return null;
 
   const [policies, setPolicies] = useState<DlpPolicy[]>([]);
   const [loading, setLoading] = useState(true);

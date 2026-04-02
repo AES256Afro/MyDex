@@ -115,7 +115,6 @@ function getInitials(name: string) {
 
 export default function UserManagementPage() {
   const { authorized } = useRequireRole("ADMIN");
-  if (!authorized) return null;
 
   const { data: session } = useSession();
 

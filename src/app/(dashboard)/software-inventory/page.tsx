@@ -102,7 +102,6 @@ function getPlatformLabel(platform: string): string {
 
 export default function SoftwareInventoryPage() {
   const { authorized } = useRequireRole("ADMIN");
-  if (!authorized) return null;
 
   const [software, setSoftware] = useState<SoftwareEntry[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);

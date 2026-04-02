@@ -46,7 +46,6 @@ function statusBadgeVariant(status: string) {
 
 export default function LeaveRequestsPage() {
   const { authorized } = useRequireRole("MANAGER");
-  if (!authorized) return null;
 
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>("all");
