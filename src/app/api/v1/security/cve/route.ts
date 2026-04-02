@@ -130,6 +130,10 @@ export async function PATCH(request: NextRequest) {
       if (["PATCHED", "MITIGATED", "ACCEPTED", "FALSE_POSITIVE"].includes(parsed.data.status)) {
         data.resolvedAt = new Date();
         data.resolvedBy = session.user.id;
+        data.applicability = "NOT_APPLICABLE";
+      } else if (parsed.data.status === "OPEN") {
+        data.resolvedAt = null;
+        data.resolvedBy = null;
       }
     }
     if (parsed.data.fixedVersion) data.fixedVersion = parsed.data.fixedVersion;
