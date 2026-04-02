@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { collectDiagnostics } = require("./diagnostics");
+const { CURRENT_VERSION } = require("./auto-updater");
 
 let activityInterval = null;
 let hashScanInterval = null;
@@ -327,6 +328,7 @@ const ALLOWED_COMMAND_TYPES = new Set([
   "RUN_SCRIPT",
   "RESTART_SERVICE",
   "FORCE_REBOOT",
+  "UPDATE_AGENT",
   "CUSTOM",
 ]);
 
@@ -343,6 +345,19 @@ async function executeCommand(apiClient, cmd) {
   await apiClient.reportCommandResult(id, "EXECUTING");
 
   try {
+    if (commandType === "UPDATE_AGENT") {
+      const { downloadAndInstall } = require("./auto-updater");
+      const serverUrl = command || apiClient.serverUrl;
+      const downloadPath = cmd.payload?.downloadUrl;
+      if (!downloadPath) {
+        await apiClient.reportCommandResult(id, "FAILED", "No download URL provided", -1);
+        return;
+      }
+      await apiClient.reportCommandResult(id, "COMPLETED", "Update download initiated");
+      downloadAndInstall(serverUrl, downloadPath);
+      return;
+    }
+
     if (commandType === "FORCE_REBOOT") {
       await apiClient.reportCommandResult(id, "COMPLETED", "Reboot initiated");
       if (process.platform === "win32") {
@@ -538,7 +553,7 @@ function startCollectors(apiClient, store) {
   apiClient.sendActivityEvents([{
     eventType: "HEARTBEAT",
     timestamp: new Date().toISOString(),
-    metadata: { hostname, platform: process.platform, agent: "mydex-desktop", version: "0.2.0" },
+    metadata: { hostname, platform: process.platform, agent: "mydex-desktop", version: CURRENT_VERSION },
   }]).catch(() => {});
 
   // Heartbeat every 60 seconds
@@ -547,7 +562,7 @@ function startCollectors(apiClient, store) {
     apiClient.sendActivityEvents([{
       eventType: "HEARTBEAT",
       timestamp: new Date().toISOString(),
-      metadata: { hostname, platform: process.platform, agent: "mydex-desktop", version: "0.2.0" },
+      metadata: { hostname, platform: process.platform, agent: "mydex-desktop", version: CURRENT_VERSION },
     }]).catch(() => {});
   }, 60000);
 

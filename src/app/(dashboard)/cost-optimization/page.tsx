@@ -200,10 +200,10 @@ export default function CostOptimizationPage() {
         <div className="space-y-6">
           <div className="grid gap-3 sm:grid-cols-4">
             {[
-              { label: "Total license spend", value: `$${totalLicenseSpend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/mo`, color: "text-blue-600", icon: DollarSign },
-              { label: "Unused licenses", value: String(unusedLicenses), color: "text-red-500", icon: Package },
-              { label: "Potential savings", value: `$${potentialSavings.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/mo`, color: "text-green-600", icon: TrendingUp },
-              { label: "Avg utilization", value: `${avgUtilization}%`, color: "text-orange-500", icon: BarChart3 },
+              { label: "Total license spend", value: `$${totalLicenseSpend.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/mo`, color: "text-blue-600 dark:text-blue-400", icon: DollarSign },
+              { label: "Unused licenses", value: String(unusedLicenses), color: "text-red-500 dark:text-red-400", icon: Package },
+              { label: "Potential savings", value: `$${potentialSavings.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/mo`, color: "text-green-600 dark:text-green-400", icon: TrendingUp },
+              { label: "Avg utilization", value: `${avgUtilization}%`, color: "text-orange-500 dark:text-orange-400", icon: BarChart3 },
             ].map(kpi => (
               <Card key={kpi.label}>
                 <CardContent className="pt-5 text-center">
@@ -244,8 +244,8 @@ export default function CostOptimizationPage() {
                               {l.vendor && <div className="text-xs text-muted-foreground">{l.vendor}</div>}
                             </td>
                             <td className="p-3 text-center">{l.totalSeats}</td>
-                            <td className="p-3 text-center text-green-600">{l.usedSeats}</td>
-                            <td className="p-3 text-center text-red-500">{unused}</td>
+                            <td className="p-3 text-center text-green-600 dark:text-green-400">{l.usedSeats}</td>
+                            <td className="p-3 text-center text-red-500 dark:text-red-400">{unused}</td>
                             <td className="p-3 text-center">
                               <div className="flex items-center justify-center gap-2">
                                 <div className="w-16 bg-muted rounded-full h-1.5">
@@ -255,7 +255,7 @@ export default function CostOptimizationPage() {
                               </div>
                             </td>
                             <td className="p-3 text-right">${l.costPerSeat}{l.billingCycle === "annual" ? "/yr" : "/mo"}</td>
-                            <td className="p-3 text-right font-medium text-red-500">${(unused * monthly).toFixed(0)}</td>
+                            <td className="p-3 text-right font-medium text-red-500 dark:text-red-400">${(unused * monthly).toFixed(0)}</td>
                           </tr>
                         );
                       })}
@@ -273,15 +273,15 @@ export default function CostOptimizationPage() {
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div className="rounded-xl border p-4 text-center">
                     <div className="text-[11px] text-muted-foreground mb-1">Total Actual Spend</div>
-                    <div className="text-2xl font-bold text-blue-600">${totalBudgetActual.toLocaleString()}</div>
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">${totalBudgetActual.toLocaleString()}</div>
                   </div>
                   <div className="rounded-xl border p-4 text-center">
                     <div className="text-[11px] text-muted-foreground mb-1">Total Budget</div>
-                    <div className="text-2xl font-bold text-green-600">${totalBudgetPlanned.toLocaleString()}</div>
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">${totalBudgetPlanned.toLocaleString()}</div>
                   </div>
                   <div className="rounded-xl border p-4 text-center">
                     <div className="text-[11px] text-muted-foreground mb-1">Forecast</div>
-                    <div className="text-2xl font-bold text-orange-500">${totalBudgetForecast.toLocaleString()}</div>
+                    <div className="text-2xl font-bold text-orange-500 dark:text-orange-400">${totalBudgetForecast.toLocaleString()}</div>
                   </div>
                 </div>
                 <div className="mt-4 space-y-2">
@@ -390,7 +390,7 @@ export default function CostOptimizationPage() {
                             <span className="font-semibold">{l.application}</span>
                             {l.vendor && <span className="text-xs text-muted-foreground">by {l.vendor}</span>}
                             {l.category && <Badge variant="outline" className="text-[10px]">{l.category}</Badge>}
-                            {!l.isActive && <Badge className="bg-gray-100 text-gray-600 text-[10px]">Inactive</Badge>}
+                            {!l.isActive && <Badge className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-[10px]">Inactive</Badge>}
                           </div>
                           <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                             <span>{l.usedSeats}/{l.totalSeats} seats</span>
@@ -401,7 +401,7 @@ export default function CostOptimizationPage() {
                               {util}%
                             </span>
                             <span>${l.costPerSeat}/{l.billingCycle === "annual" ? "yr" : "mo"}/seat</span>
-                            {unused > 0 && <span className="text-red-500">Wasting ${(unused * monthly).toFixed(0)}/mo</span>}
+                            {unused > 0 && <span className="text-red-500 dark:text-red-400">Wasting ${(unused * monthly).toFixed(0)}/mo</span>}
                           </div>
                         </div>
                         <div className="flex gap-1">
@@ -491,7 +491,7 @@ export default function CostOptimizationPage() {
                         </td>
                         <td className="p-3 capitalize">{e.category}</td>
                         <td className="p-3 text-center">
-                          <Badge variant="outline" className={e.type === "actual" ? "text-blue-600" : e.type === "budget" ? "text-green-600" : "text-orange-500"}>
+                          <Badge variant="outline" className={e.type === "actual" ? "text-blue-600 dark:text-blue-400" : e.type === "budget" ? "text-green-600 dark:text-green-400" : "text-orange-500 dark:text-orange-400"}>
                             {e.type}
                           </Badge>
                         </td>

@@ -83,10 +83,10 @@ interface GeneratedReport {
 }
 
 const reportTypeConfig: Record<ReportType, { label: string; icon: typeof BarChart3; color: string }> = {
-  productivity: { label: "Productivity", icon: TrendingUp, color: "text-blue-600 bg-blue-100" },
-  attendance: { label: "Attendance", icon: CalendarCheck, color: "text-green-600 bg-green-100" },
-  security: { label: "Security", icon: Shield, color: "text-red-600 bg-red-100" },
-  "time-tracking": { label: "Time Tracking", icon: Clock, color: "text-purple-600 bg-purple-100" },
+  productivity: { label: "Productivity", icon: TrendingUp, color: "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900" },
+  attendance: { label: "Attendance", icon: CalendarCheck, color: "text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900" },
+  security: { label: "Security", icon: Shield, color: "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900" },
+  "time-tracking": { label: "Time Tracking", icon: Clock, color: "text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900" },
 };
 
 export default function ReportsPage() {
@@ -282,7 +282,7 @@ export default function ReportsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${config?.color || "bg-gray-100 text-gray-600"}`}>
+              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${config?.color || "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"}`}>
                 <Icon className="h-5 w-5" />
               </div>
               <div>
@@ -322,9 +322,9 @@ export default function ReportsPage() {
             {type === "security" && (
               <>
                 <SummaryCard label="Total Alerts" value={s.totalAlerts || 0} />
-                <SummaryCard label="Critical" value={(s.bySeverity as Record<string, number>)?.CRITICAL || 0} color="text-red-600" />
-                <SummaryCard label="High" value={(s.bySeverity as Record<string, number>)?.HIGH || 0} color="text-orange-600" />
-                <SummaryCard label="Medium" value={(s.bySeverity as Record<string, number>)?.MEDIUM || 0} color="text-amber-600" />
+                <SummaryCard label="Critical" value={(s.bySeverity as Record<string, number>)?.CRITICAL || 0} color="text-red-600 dark:text-red-400" />
+                <SummaryCard label="High" value={(s.bySeverity as Record<string, number>)?.HIGH || 0} color="text-orange-600 dark:text-orange-400" />
+                <SummaryCard label="Medium" value={(s.bySeverity as Record<string, number>)?.MEDIUM || 0} color="text-amber-600 dark:text-amber-400" />
               </>
             )}
             {type === "time-tracking" && (
@@ -393,7 +393,7 @@ export default function ReportsPage() {
                           <td className="px-4 py-3 text-muted-foreground">{row.department}</td>
                           <td className="px-4 py-3 text-right">
                             {row.avgScore != null ? (
-                              <Badge className={row.avgScore >= 70 ? "bg-green-100 text-green-700" : row.avgScore >= 40 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}>
+                              <Badge className={row.avgScore >= 70 ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300" : row.avgScore >= 40 ? "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300" : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300"}>
                                 {row.avgScore}%
                               </Badge>
                             ) : "—"}
@@ -406,11 +406,11 @@ export default function ReportsPage() {
                         <>
                           <td className="px-4 py-3 font-medium">{row.name}</td>
                           <td className="px-4 py-3 text-muted-foreground">{row.department}</td>
-                          <td className="px-4 py-3 text-right text-green-600">{row.present}</td>
-                          <td className="px-4 py-3 text-right text-red-600">{row.absent}</td>
-                          <td className="px-4 py-3 text-right text-amber-600">{row.late}</td>
+                          <td className="px-4 py-3 text-right text-green-600 dark:text-green-400">{row.present}</td>
+                          <td className="px-4 py-3 text-right text-red-600 dark:text-red-400">{row.absent}</td>
+                          <td className="px-4 py-3 text-right text-amber-600 dark:text-amber-400">{row.late}</td>
                           <td className="px-4 py-3 text-right">
-                            <Badge className={row.rate >= 90 ? "bg-green-100 text-green-700" : row.rate >= 70 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}>
+                            <Badge className={row.rate >= 90 ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300" : row.rate >= 70 ? "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300" : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300"}>
                               {row.rate}%
                             </Badge>
                           </td>
@@ -420,7 +420,7 @@ export default function ReportsPage() {
                         <>
                           <td className="px-4 py-3 font-medium">{row.title}</td>
                           <td className="px-4 py-3">
-                            <Badge className={row.severity === "CRITICAL" ? "bg-red-100 text-red-700" : row.severity === "HIGH" ? "bg-orange-100 text-orange-700" : "bg-amber-100 text-amber-700"}>
+                            <Badge className={row.severity === "CRITICAL" ? "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300" : row.severity === "HIGH" ? "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300" : "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300"}>
                               {row.severity}
                             </Badge>
                           </td>
@@ -436,7 +436,7 @@ export default function ReportsPage() {
                           <td className="px-4 py-3 font-medium">{row.name}</td>
                           <td className="px-4 py-3 text-muted-foreground">{row.department}</td>
                           <td className="px-4 py-3 text-right font-medium">{row.totalFormatted}</td>
-                          <td className="px-4 py-3 text-right text-green-600">{row.activeFormatted}</td>
+                          <td className="px-4 py-3 text-right text-green-600 dark:text-green-400">{row.activeFormatted}</td>
                           <td className="px-4 py-3 text-right text-muted-foreground">{row.idleFormatted}</td>
                           <td className="px-4 py-3 text-right text-muted-foreground">{row.entries}</td>
                         </>
@@ -593,7 +593,7 @@ export default function ReportsPage() {
                 {reportHistory.map((item) => {
                   const config = reportTypeConfig[item.reportType as ReportType];
                   const Icon = config?.icon || FileText;
-                  const colorClass = config?.color || "bg-gray-100 text-gray-600";
+                  const colorClass = config?.color || "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400";
 
                   return (
                     <div key={item.id} className="relative flex gap-4 pl-1">
@@ -609,7 +609,7 @@ export default function ReportsPage() {
                             <div className="flex items-center gap-2">
                               <span className="font-medium">{config?.label || item.reportType} Report</span>
                               <Badge variant="outline" className="text-[10px]">{item.format.toUpperCase()}</Badge>
-                              <Badge className={item.status === "completed" ? "bg-green-100 text-green-700 text-[10px]" : "bg-red-100 text-red-700 text-[10px]"}>
+                              <Badge className={item.status === "completed" ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-[10px]" : "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-[10px]"}>
                                 {item.status}
                               </Badge>
                             </div>

@@ -283,7 +283,7 @@ class ApiClient extends EventEmitter {
         body: JSON.stringify({
           hostname,
           platform,
-          agentVersion: "0.2.0",
+          agentVersion: require("../package.json").version,
           osVersion,
           ipAddress,
           installedSoftware: software,

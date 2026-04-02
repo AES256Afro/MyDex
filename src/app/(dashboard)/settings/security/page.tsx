@@ -288,7 +288,7 @@ export default function SecuritySettingsPage() {
               </div>
 
               <div className="flex justify-center">
-                <div className="rounded-lg border p-4 bg-white">
+                <div className="rounded-lg border p-4 bg-white dark:bg-gray-900">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={qrCode} alt="MFA QR Code" className="h-64 w-64" />
                 </div>

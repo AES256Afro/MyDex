@@ -3,6 +3,15 @@ import { Resend } from "resend";
 import { z } from "zod";
 import { contactEmailTemplate } from "@/lib/email-templates";
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 const contactSchema = z.object({
   email: z.string().email(),
   firstName: z.string().min(1),
@@ -60,14 +69,14 @@ export async function POST(request: NextRequest) {
       const valueStyle = `${rowStyle}color:#fafafa;font-size:14px;`;
 
       const tableRows = `
-        <tr><td style="${labelStyle}">Name</td><td style="${valueStyle}">${data.firstName} ${data.lastName}</td></tr>
-        <tr><td style="${labelStyle}">Email</td><td style="${valueStyle}"><a href="mailto:${data.email}" style="color:#6d28d9;text-decoration:none;">${data.email}</a></td></tr>
-        <tr><td style="${labelStyle}">Company</td><td style="${valueStyle}">${data.companyName}</td></tr>
-        <tr><td style="${labelStyle}">Job Title</td><td style="${valueStyle}">${data.jobTitle}</td></tr>
-        <tr><td style="${labelStyle}">Country</td><td style="${valueStyle}">${data.country}</td></tr>
-        <tr><td style="${labelStyle}">Phone</td><td style="${valueStyle}">${data.phone}</td></tr>
-        <tr><td style="${labelStyle}">Company Size</td><td style="${valueStyle}">${data.companySize || "Not specified"}</td></tr>
-        ${data.message ? `<tr><td style="${labelStyle}">Message</td><td style="${valueStyle}">${data.message}</td></tr>` : ""}
+        <tr><td style="${labelStyle}">Name</td><td style="${valueStyle}">${escapeHtml(data.firstName)} ${escapeHtml(data.lastName)}</td></tr>
+        <tr><td style="${labelStyle}">Email</td><td style="${valueStyle}"><a href="mailto:${escapeHtml(data.email)}" style="color:#6d28d9;text-decoration:none;">${escapeHtml(data.email)}</a></td></tr>
+        <tr><td style="${labelStyle}">Company</td><td style="${valueStyle}">${escapeHtml(data.companyName)}</td></tr>
+        <tr><td style="${labelStyle}">Job Title</td><td style="${valueStyle}">${escapeHtml(data.jobTitle)}</td></tr>
+        <tr><td style="${labelStyle}">Country</td><td style="${valueStyle}">${escapeHtml(data.country)}</td></tr>
+        <tr><td style="${labelStyle}">Phone</td><td style="${valueStyle}">${escapeHtml(data.phone)}</td></tr>
+        <tr><td style="${labelStyle}">Company Size</td><td style="${valueStyle}">${escapeHtml(data.companySize || "Not specified")}</td></tr>
+        ${data.message ? `<tr><td style="${labelStyle}">Message</td><td style="${valueStyle}">${escapeHtml(data.message)}</td></tr>` : ""}
       `;
 
       await resend.emails.send({

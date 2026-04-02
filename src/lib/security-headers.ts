@@ -34,11 +34,12 @@ export function applySecurityHeaders(response: NextResponse): NextResponse {
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js requires these
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com", // Next.js + Turnstile
       "style-src 'self' 'unsafe-inline'", // Tailwind injects inline styles
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https://api.github.com https://login.microsoftonline.com https://*.okta.com",
+      "connect-src 'self' https://api.github.com https://login.microsoftonline.com https://*.okta.com https://challenges.cloudflare.com",
+      "frame-src 'self' https://challenges.cloudflare.com", // Turnstile widget iframe
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

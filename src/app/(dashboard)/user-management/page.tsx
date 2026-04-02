@@ -770,7 +770,7 @@ export default function UserManagementPage() {
                         type="checkbox"
                         checked={allFilteredSelected}
                         onChange={toggleSelectAll}
-                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                        className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary cursor-pointer"
                       />
                     </th>
                     <th className="pb-3 pr-4 font-medium text-muted-foreground w-6" />
@@ -819,7 +819,7 @@ export default function UserManagementPage() {
                               type="checkbox"
                               checked={selectedIds.has(emp.id)}
                               onChange={() => toggleSelect(emp.id)}
-                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                              className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary cursor-pointer"
                             />
                           </td>
                           {/* Expand */}

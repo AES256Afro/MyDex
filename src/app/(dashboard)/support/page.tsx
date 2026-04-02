@@ -1023,7 +1023,7 @@ export default function SupportPage() {
           {viewingTicket ? (() => {
             const ticket = tickets.find(t => t.id === viewingTicket);
             if (!ticket) return null;
-            const statusColors: Record<string, string> = { OPEN: "bg-blue-100 text-blue-800", IN_PROGRESS: "bg-amber-100 text-amber-800", WAITING_ON_USER: "bg-orange-100 text-orange-800", WAITING_ON_IT: "bg-purple-100 text-purple-800", RESOLVED: "bg-green-100 text-green-800", CLOSED: "bg-gray-100 text-gray-800" };
+            const statusColors: Record<string, string> = { OPEN: "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200", IN_PROGRESS: "bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200", WAITING_ON_USER: "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200", WAITING_ON_IT: "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200", RESOLVED: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200", CLOSED: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200" };
             return (
               <Card>
                 <CardHeader>
@@ -1032,7 +1032,7 @@ export default function SupportPage() {
                     <div className="flex-1">
                       <CardTitle className="text-lg">{ticket.subject}</CardTitle>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <Badge className={`text-[10px] ${statusColors[ticket.status] || "bg-gray-100 text-gray-800"}`}>{ticket.status.replace(/_/g, " ")}</Badge>
+                        <Badge className={`text-[10px] ${statusColors[ticket.status] || "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"}`}>{ticket.status.replace(/_/g, " ")}</Badge>
                         <Badge variant="outline" className="text-[10px]">{ticket.priority}</Badge>
                         <span className="text-xs text-muted-foreground">Opened {new Date(ticket.createdAt).toLocaleDateString()}</span>
                       </div>
@@ -1312,7 +1312,7 @@ export default function SupportPage() {
                   </CardContent>
                 </Card>
               ) : (() => {
-                const statusColors: Record<string, string> = { OPEN: "bg-blue-100 text-blue-800", IN_PROGRESS: "bg-amber-100 text-amber-800", WAITING_ON_USER: "bg-orange-100 text-orange-800", WAITING_ON_IT: "bg-purple-100 text-purple-800", RESOLVED: "bg-green-100 text-green-800", CLOSED: "bg-gray-100 text-gray-800" };
+                const statusColors: Record<string, string> = { OPEN: "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200", IN_PROGRESS: "bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200", WAITING_ON_USER: "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200", WAITING_ON_IT: "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200", RESOLVED: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200", CLOSED: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200" };
                 const openTickets = tickets.filter(t => !["RESOLVED", "CLOSED"].includes(t.status));
                 const resolvedTickets = tickets.filter(t => t.status === "RESOLVED");
                 const closedTickets = tickets.filter(t => t.status === "CLOSED");
@@ -1326,7 +1326,7 @@ export default function SupportPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium truncate">{ticket.subject}</span>
-                        <Badge className={`text-[10px] shrink-0 ${statusColors[ticket.status] || "bg-gray-100 text-gray-800"}`}>{ticket.status.replace(/_/g, " ")}</Badge>
+                        <Badge className={`text-[10px] shrink-0 ${statusColors[ticket.status] || "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"}`}>{ticket.status.replace(/_/g, " ")}</Badge>
                         <Badge variant="outline" className="text-[10px] shrink-0">{ticket.priority}</Badge>
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
@@ -1400,7 +1400,7 @@ export default function SupportPage() {
                           <CardTitle className="text-lg flex items-center gap-2">
                             <XCircle className="h-5 w-5 text-gray-400" />
                             Closed Tickets
-                            <Badge className="text-[10px] bg-gray-100 text-gray-800">{closedTickets.length}</Badge>
+                            <Badge className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200">{closedTickets.length}</Badge>
                           </CardTitle>
                         </CardHeader>
                         <CardContent>

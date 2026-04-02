@@ -16,16 +16,16 @@ import { LocalTime } from "@/components/local-time";
 
 function gradeColor(grade: string | null): string {
   if (!grade) return "text-muted-foreground";
-  if (grade.startsWith("A")) return "text-green-600";
-  if (grade === "B") return "text-blue-600";
-  if (grade === "C") return "text-yellow-600";
-  return "text-red-600";
+  if (grade.startsWith("A")) return "text-green-600 dark:text-green-400";
+  if (grade === "B") return "text-blue-600 dark:text-blue-400";
+  if (grade === "C") return "text-yellow-600 dark:text-yellow-400";
+  return "text-red-600 dark:text-red-400";
 }
 
 function dexScoreColor(score: number): string {
-  if (score >= 80) return "text-green-600";
-  if (score >= 60) return "text-yellow-600";
-  return "text-red-600";
+  if (score >= 80) return "text-green-600 dark:text-green-400";
+  if (score >= 60) return "text-yellow-600 dark:text-yellow-400";
+  return "text-red-600 dark:text-red-400";
 }
 
 function dexScoreBg(score: number): string {
@@ -183,11 +183,11 @@ export default async function FleetHealthPage() {
             <CardDescription>Agent Status</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">{onlineCount}/{totalDevices}</div>
+            <div className="text-3xl font-bold text-green-600 dark:text-green-400">{onlineCount}/{totalDevices}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {staleCount > 0 && <span className="text-yellow-600">{staleCount} stale</span>}
+              {staleCount > 0 && <span className="text-yellow-600 dark:text-yellow-400">{staleCount} stale</span>}
               {staleCount > 0 && offlineCount > 0 && " · "}
-              {offlineCount > 0 && <span className="text-red-600">{offlineCount} offline</span>}
+              {offlineCount > 0 && <span className="text-red-600 dark:text-red-400">{offlineCount} offline</span>}
               {staleCount === 0 && offlineCount === 0 && "All agents reporting"}
             </p>
           </CardContent>
@@ -226,7 +226,7 @@ export default async function FleetHealthPage() {
             <CardDescription>Open Alerts</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className={`text-3xl font-bold ${recentAlerts > 0 ? "text-red-600" : "text-green-600"}`}>
+            <div className={`text-3xl font-bold ${recentAlerts > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
               {recentAlerts}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Last 30 days</p>
@@ -250,7 +250,7 @@ export default async function FleetHealthPage() {
                   const pct = totalDevices > 0 ? Math.round((count / totalDevices) * 100) : 0;
                   const isWin = platform.toLowerCase().includes("win");
                   const isMac = platform.toLowerCase().includes("mac") || platform.toLowerCase().includes("darwin");
-                  const color = isWin ? "bg-blue-500" : isMac ? "bg-gray-600" : "bg-green-500";
+                  const color = isWin ? "bg-blue-500" : isMac ? "bg-gray-600 dark:bg-gray-500" : "bg-green-500";
                   return (
                     <div key={platform} className="flex items-center gap-3">
                       <span className="text-sm w-28 truncate font-medium">
@@ -345,7 +345,7 @@ export default async function FleetHealthPage() {
               )}
               {rebootNeeded === 0 && bsodDevices === 0 && offlineCount === 0 && staleCount === 0 && avProtected === totalDevices && (
                 <div className="text-center py-4">
-                  <p className="text-sm text-green-600 font-medium">All clear — no proactive issues detected</p>
+                  <p className="text-sm text-green-600 dark:text-green-400 font-medium">All clear — no proactive issues detected</p>
                 </div>
               )}
             </div>
@@ -364,7 +364,7 @@ export default async function FleetHealthPage() {
                 { label: "Running", count: devices.filter((d) => d.updateServiceStatus === "running").length, color: "bg-green-500" },
                 { label: "Stopped", count: devices.filter((d) => d.updateServiceStatus === "stopped").length, color: "bg-yellow-500" },
                 { label: "Disabled", count: devices.filter((d) => d.updateServiceStatus === "disabled").length, color: "bg-red-500" },
-                { label: "Unknown", count: devices.filter((d) => !d.updateServiceStatus).length, color: "bg-gray-300" },
+                { label: "Unknown", count: devices.filter((d) => !d.updateServiceStatus).length, color: "bg-gray-300 dark:bg-gray-600" },
               ].map((item) => {
                 const pct = totalDevices > 0 ? Math.round((item.count / totalDevices) * 100) : 0;
                 return (

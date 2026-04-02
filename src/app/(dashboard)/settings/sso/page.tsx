@@ -381,7 +381,7 @@ export default function SsoSettingsPage() {
                   id="autoProvision"
                   checked={autoProvision}
                   onChange={(e) => setAutoProvision(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300"
+                  className="h-4 w-4 rounded border-gray-300 dark:border-gray-600"
                 />
                 <Label htmlFor="autoProvision" className="text-sm font-normal">
                   Auto-provision new users (JIT) — automatically create accounts when users sign in for the first time

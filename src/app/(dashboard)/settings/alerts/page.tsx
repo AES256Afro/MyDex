@@ -313,7 +313,7 @@ export default function AlertThresholdsPage() {
                           onChange={(e) => updateThreshold(rule.id, { enabled: e.target.checked })}
                           className="sr-only peer"
                         />
-                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-primary" />
+                        <div className="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary" />
                       </label>
                     </div>
 
@@ -350,7 +350,7 @@ export default function AlertThresholdsPage() {
                               type="checkbox"
                               checked={rule.notifyEmail}
                               onChange={(e) => updateThreshold(rule.id, { notifyEmail: e.target.checked })}
-                              className="rounded border-gray-300"
+                              className="rounded border-gray-300 dark:border-gray-600"
                             />
                             <Mail className="h-3 w-3" /> Email
                           </label>
@@ -359,7 +359,7 @@ export default function AlertThresholdsPage() {
                               type="checkbox"
                               checked={rule.notifyDashboard}
                               onChange={(e) => updateThreshold(rule.id, { notifyDashboard: e.target.checked })}
-                              className="rounded border-gray-300"
+                              className="rounded border-gray-300 dark:border-gray-600"
                             />
                             <Bell className="h-3 w-3" /> Dashboard
                           </label>
@@ -368,7 +368,7 @@ export default function AlertThresholdsPage() {
                               type="checkbox"
                               checked={rule.autoRemediate}
                               onChange={(e) => updateThreshold(rule.id, { autoRemediate: e.target.checked })}
-                              className="rounded border-gray-300"
+                              className="rounded border-gray-300 dark:border-gray-600"
                             />
                             <Zap className="h-3 w-3" /> Auto-fix
                           </label>

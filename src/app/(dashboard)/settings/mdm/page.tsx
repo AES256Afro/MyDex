@@ -316,7 +316,7 @@ export default function MdmSettingsPage() {
                           </Badge>
                         )}
                         {p.lastSyncStatus === "SYNCING" && (
-                          <Badge className="bg-blue-100 text-blue-800">
+                          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                             <Loader2 className="h-3 w-3 mr-1 animate-spin" /> Syncing
                           </Badge>
                         )}

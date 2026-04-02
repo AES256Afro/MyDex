@@ -345,7 +345,7 @@ export default function AccountPage() {
               )}
             </Button>
             {profileSuccess && (
-              <span className="text-sm text-green-600 flex items-center gap-1">
+              <span className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
                 <Check className="h-4 w-4" /> Profile updated
               </span>
             )}
@@ -372,7 +372,7 @@ export default function AccountPage() {
             </div>
             <Badge
               variant={monitoringPaused ? "outline" : "default"}
-              className={monitoringPaused ? "border-amber-300 text-amber-700" : "bg-green-500"}
+              className={monitoringPaused ? "border-amber-300 text-amber-700 dark:text-amber-300" : "bg-green-500"}
             >
               {monitoringPaused ? "Paused" : "Active"}
             </Badge>
@@ -386,9 +386,9 @@ export default function AccountPage() {
           }`}>
             <div className="flex items-start gap-3">
               {monitoringPaused ? (
-                <Pause className="h-5 w-5 text-amber-600 mt-0.5" />
+                <Pause className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
               ) : (
-                <Play className="h-5 w-5 text-green-600 mt-0.5" />
+                <Play className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
               )}
               <div>
                 <p className={`font-medium ${monitoringPaused ? "text-amber-800 dark:text-amber-200" : "text-green-800 dark:text-green-200"}`}>
@@ -627,7 +627,7 @@ export default function AccountPage() {
                 <div className="space-y-4">
                   <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-4">
                     <div className="flex items-start gap-3">
-                      <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                      <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
                       <div>
                         <p className="font-medium text-amber-800 dark:text-amber-200">
                           Your account is not protected with 2FA
@@ -656,7 +656,7 @@ export default function AccountPage() {
                     <strong>Step 1:</strong> Scan this QR code with your authenticator app
                   </p>
                   <div className="flex justify-center">
-                    <div className="rounded-lg border p-4 bg-white">
+                    <div className="rounded-lg border p-4 bg-white dark:bg-gray-900">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={qrCode} alt="MFA QR" className="h-52 w-52" />
                     </div>
