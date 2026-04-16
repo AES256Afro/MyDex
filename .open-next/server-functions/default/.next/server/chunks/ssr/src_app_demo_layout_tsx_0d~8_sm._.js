@@ -1,0 +1,3 @@
+module.exports=[951427,a=>{"use strict";a.s(["default",0,function({children:a}){return a},"metadata",0,{title:"Live Demo",description:"Explore MyDex's full feature set with our interactive demo. See real-time monitoring, device management, productivity analytics, and 30+ modules in action.",openGraph:{title:"MyDex Live Demo - Interactive Product Tour",description:"Try all 30+ modules: fleet health, SOC 2 compliance, time tracking, MDM integration, and more."}}])},732609,a=>{a.n(a.i(951427))}];
+
+//# sourceMappingURL=src_app_demo_layout_tsx_0d~8_sm._.js.map

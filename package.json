@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "build:cf": "prisma generate && npx @opennextjs/cloudflare build",
+    "deploy": "npm run build:cf && npx wrangler deploy",
+    "preview": "npm run build:cf && npx wrangler dev",
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "next lint",
@@ -23,6 +26,7 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
     "@marsidev/react-turnstile": "^1.5.0",
+    "@opennextjs/cloudflare": "^1.19.1",
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "bcryptjs": "^3.0.3",
