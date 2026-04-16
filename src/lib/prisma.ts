@@ -7,7 +7,10 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient() {
-  const connectionString = process.env.DATABASE_URL || process.env.DIRECT_URL;
+  // On Cloudflare Workers, use Hyperdrive connection string if available
+  // Falls back to DATABASE_URL for local dev and Vercel
+  const connectionString =
+    process.env.HYPERDRIVE_URL || process.env.DATABASE_URL || process.env.DIRECT_URL;
   const pool = new pg.Pool({
     connectionString,
     max: 3, // Low pool size for serverless — prevents "too many clients" on Supabase
