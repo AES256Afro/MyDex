@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  bundler: "webpack",
   experimental: {
     serverActions: {
       bodySizeLimit: "2mb",
