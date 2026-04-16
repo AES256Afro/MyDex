@@ -63,3 +63,9 @@ mydex-agent/dist/
 .gemini/
 .antigravity/
 
+agent/dist/
+agent/dist2/
+agent/dist3/
+
+.open-next/
+.wrangler/
