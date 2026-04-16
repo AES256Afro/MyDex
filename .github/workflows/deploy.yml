@@ -19,8 +19,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build with OpenNext
-        run: npx @opennextjs/cloudflare build
+      - name: Build with Webpack + OpenNext
+        run: |
+          npx prisma generate
+          npx next build --webpack
+          npx @opennextjs/cloudflare build --skipNextBuild
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
