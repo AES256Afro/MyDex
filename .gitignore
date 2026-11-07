@@ -75,3 +75,4 @@ agent/dist3/
 .env*
 !.env.example
 .claude/settings.local.json
+/.wrangler/
