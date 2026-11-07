@@ -69,3 +69,9 @@ agent/dist3/
 
 .open-next/
 .wrangler/
+
+# OpenNext build output: holds baked-in secrets, never commit
+/.open-next/
+.env*
+!.env.example
+.claude/settings.local.json
